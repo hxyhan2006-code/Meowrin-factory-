@@ -108,7 +108,7 @@
       }
     }
   }
-  document.addEventListener("mw:tab", function(e){ if(e.detail === "script") refresh(); });
+  document.addEventListener("mw:tab", function(e){ $("histBtn").hidden = e.detail !== "script"; if(e.detail === "script") refresh(); }); /* ปุ่มประวัติโชว์เฉพาะแท็บบท */
 
   /* ---------- แนะนำ prompt ---------- */
   $("recoBtn").addEventListener("click", async function(){
