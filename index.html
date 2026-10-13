@@ -13,8 +13,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600&family=Mitr:wght@500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=20261013i">
-<link rel="stylesheet" href="sheet.css?v=20261013i">
+<link rel="stylesheet" href="style.css?v=20261013k">
+<link rel="stylesheet" href="sheet.css?v=20261013k">
 </head>
 <body>
 <div class="wrap">
@@ -62,39 +62,47 @@
       <div class="card"><div class="cbody"><div class="ctitle" id="sTitle"></div><div class="meta" id="sMeta"></div></div></div>
       <div class="meta" id="sModel" style="margin:-4px 0 14px"></div>
 
-      <label style="margin-top:0">เลือก prompt</label>
-      <div class="seg" role="radiogroup" aria-label="เลือก prompt">
-        <label><input type="radio" name="pSel" value="A" checked> A · ยึดโครงต้นฉบับ</label>
-        <label><input type="radio" name="pSel" value="B"> B · เรียบเรียงใหม่</label>
-      </div>
-      <button class="btn ghost small" id="recoBtn" style="margin-top:8px">ให้ AI แนะนำ</button>
-      <div id="reco"></div>
+      <label style="margin-top:0">Prompt <span class="lhint">เลือกหลายอัน = ได้หลายเวอร์ชันพร้อมกัน</span></label>
+      <div class="fchips wrapchips" id="pChips"></div>
 
-      <label for="sTrans">ทรานสคริปต์ (ไม่บังคับ ถ้าใส่จะใช้แทนลิงก์)</label>
-      <textarea id="sTrans" rows="3" placeholder="ใช้เมื่อ AI ดึงจากลิงก์ไม่ได้"></textarea>
-      <button class="btn" id="s1Btn" style="margin-top:10px;width:100%">วิเคราะห์ซอส (State 1)</button>
+      <details class="fold" id="transFold">
+        <summary><span>ทรานสคริปต์ (ไม่บังคับ)</span></summary>
+        <div class="fbody">
+          <textarea id="sTrans" rows="4" placeholder="ใส่เมื่อ AI ดึงจากลิงก์ไม่ได้ ถ้าใส่จะใช้แทนลิงก์" aria-label="ทรานสคริปต์"></textarea>
+        </div>
+      </details>
+
+      <button class="btn" id="goBtn" style="margin-top:12px;width:100%">ทำบทเลย</button>
       <div id="sMsg"></div>
 
-      <div id="s1Wrap" hidden>
-        <label for="s1Out">State 1 (แก้เองได้ก่อนกดรัน)</label>
-        <textarea id="s1Out" rows="12"></textarea>
-        <div class="row" style="margin-top:8px">
-          <input id="s1Fb" placeholder="สั่งแก้ State 1 เช่น ลดความแรงลง">
-          <button class="btn ghost" id="s1FbBtn">ปรับ</button>
-        </div>
-        <button class="btn" id="runBtn" style="margin-top:10px;width:100%">รัน → ทำบท</button>
-      </div>
+      <div id="vWrap" hidden>
+        <div class="fchips wrapchips" id="vTabs"></div>
+        <div id="vStatus"></div>
 
-      <div id="s2Wrap" hidden>
-        <label for="s2Out">บท + ชื่อคลิป (แก้เองได้)</label>
-        <textarea id="s2Out" rows="16"></textarea>
-        <div class="row" style="margin-top:8px">
-          <button class="btn" id="copyBtn">คัดลอกเฉพาะบท</button>
-          <button class="btn ghost" id="rerunBtn">ทำใหม่</button>
-        </div>
-        <div class="row" style="margin-top:8px">
-          <input id="s2Fb" placeholder="สั่ง AI แก้บท เช่น ตัดให้สั้นลง">
-          <button class="btn ghost" id="s2FbBtn">แก้</button>
+        <details class="fold" id="s1Fold">
+          <summary><span>State 1 · ซอสที่ AI วิเคราะห์</span></summary>
+          <div class="fbody">
+            <p class="hint" id="s1Info" style="margin-top:0"></p>
+            <textarea id="s1Out" rows="12" aria-label="State 1"></textarea>
+            <div class="row" style="margin-top:8px">
+              <input id="s1Fb" placeholder="สั่งแก้ State 1 เช่น ลดความแรงลง" aria-label="สั่งแก้ State 1">
+              <button class="btn ghost" id="s1FbBtn">ปรับ</button>
+            </div>
+            <button class="btn ghost" id="s1Run" style="margin-top:8px;width:100%">เขียนบทใหม่จาก State 1 นี้</button>
+          </div>
+        </details>
+
+        <div id="s2Wrap" hidden>
+          <label for="s2Out">บท + ชื่อคลิป (แก้เองได้) <span class="lhint" id="s2Count"></span></label>
+          <textarea id="s2Out" rows="16"></textarea>
+          <div class="row" style="margin-top:8px">
+            <button class="btn" id="copyBtn" style="flex:1">คัดลอกบท</button>
+            <button class="btn ghost" id="copyTitleBtn" style="flex:1">คัดลอกชื่อคลิป</button>
+          </div>
+          <div class="row" style="margin-top:8px">
+            <input id="s2Fb" placeholder="สั่ง AI แก้บท เช่น ตัดให้สั้นลง" aria-label="สั่งแก้บท">
+            <button class="btn ghost" id="s2FbBtn">แก้</button>
+          </div>
         </div>
       </div>
     </div>
@@ -138,18 +146,24 @@
 
     <div class="panel">
       <h2>AI ทำบท</h2>
-      <label for="gModel">โมเดล</label>
+      <label for="gEye">ตัวดูคลิป (State 1)</label>
+      <select id="gEye" data-sheet>
+        <option value="google/gemini-3.8-flash" data-tag="แนะนำ" data-desc="เร็วและถูก ดูวิดีโอ YouTube จากลิงก์ได้">google/gemini-3.8-flash</option>
+        <option value="google/gemini-4-argon" data-tag="ท็อป" data-desc="ตัวท็อปของ Google ดูละเอียดกว่า แพงกว่า">google/gemini-4-argon</option>
+      </select>
+      <p class="hint">ต้องเป็นตระกูล Google เพราะดูวิดีโอจากลิงก์ได้ตรงๆ</p>
+      <label for="gModel">ตัวเขียนบท (State 2)</label>
       <select id="gModel" data-sheet>
-        <optgroup label="Google · ดูวิดีโอ YouTube จากลิงก์ได้โดยตรง">
+        <optgroup label="Google">
           <option value="google/gemini-4-argon" data-tag="ท็อป" data-desc="ตัวท็อปของ Google เก่งสุด ใช้เมื่อคลิปซับซ้อน">google/gemini-4-argon</option>
           <option value="google/gemini-3.8-flash" data-tag="แนะนำ" data-desc="เร็วและถูก ใช้ประจำได้ทุกวัน">google/gemini-3.8-flash</option>
         </optgroup>
-        <optgroup label="Anthropic · เขียนบทสำนวนธรรมชาติ (ต้องวางทรานสคริปต์)">
+        <optgroup label="Anthropic · เขียนบทสำนวนธรรมชาติ">
           <option value="anthropic/claude-opus-5.5" data-tag="ท็อป" data-desc="ตัวท็อปของ Anthropic ราคาสูงสุดในค่ายนี้">anthropic/claude-opus-5.5</option>
           <option value="anthropic/claude-sonnet-5.5" data-desc="สมดุลระหว่างคุณภาพกับราคา">anthropic/claude-sonnet-5.5</option>
           <option value="anthropic/claude-haiku-5.5" data-desc="เร็วและถูกสุดของค่าย">anthropic/claude-haiku-5.5</option>
         </optgroup>
-        <optgroup label="OpenAI · โครงสร้างคมชัด แม่นยำ (ต้องวางทรานสคริปต์)">
+        <optgroup label="OpenAI · โครงสร้างคมชัด แม่นยำ">
           <option value="openai/gpt-6-astra" data-tag="ท็อป" data-desc="ตัวท็อปของ OpenAI ราคาสูงสุดในค่ายนี้">openai/gpt-6-astra</option>
           <option value="openai/gpt-6.1-sol" data-desc="ระดับกลาง รองจาก Astra">openai/gpt-6.1-sol</option>
           <option value="openai/gpt-6-luna" data-desc="ถูกที่สุดของค่าย เหมาะงานปริมาณมาก">openai/gpt-6-luna</option>
@@ -166,15 +180,12 @@
 
     <div class="panel">
       <h2>Prompt</h2>
-      <details class="fold">
-        <summary><span>Prompt A · ยึดโครงต้นฉบับ</span></summary>
-        <div class="fbody"><div class="ftools"><button type="button" class="btn small ghost" data-paste="pA">วาง</button><button type="button" class="btn small ghost" data-clear="pA">ลบ</button></div><textarea id="pA" rows="14" placeholder="วาง prompt A ทั้งก้อนที่นี่" aria-label="Prompt A"></textarea></div>
-      </details>
-      <details class="fold">
-        <summary><span>Prompt B · เรียบเรียงใหม่</span></summary>
-        <div class="fbody"><div class="ftools"><button type="button" class="btn small ghost" data-paste="pB">วาง</button><button type="button" class="btn small ghost" data-clear="pB">ลบ</button></div><textarea id="pB" rows="14" placeholder="วาง prompt B ทั้งก้อนที่นี่" aria-label="Prompt B"></textarea></div>
-      </details>
-      <button class="btn" id="saveAi" style="margin-top:12px">บันทึก Prompt</button>
+      <p class="hint">กดชื่อเพื่อเปิดแก้ แก้เสร็จบันทึกให้อัตโนมัติ</p>
+      <div id="promptList"></div>
+      <div class="row" style="margin-top:12px">
+        <button class="btn ghost" id="addPrompt" style="flex:1">+ เพิ่ม prompt</button>
+        <button class="btn" id="saveAi" style="flex:1">บันทึก</button>
+      </div>
     </div>
 
     <div class="panel">
@@ -238,8 +249,8 @@
   </div>
 </div>
 
-<script src="sync.js?v=20261013i"></script>
-<script src="app.js?v=20261013i"></script>
-<script src="ai.js?v=20261013i"></script>
+<script src="sync.js?v=20261013k"></script>
+<script src="app.js?v=20261013k"></script>
+<script src="ai.js?v=20261013k"></script>
 </body>
 </html>

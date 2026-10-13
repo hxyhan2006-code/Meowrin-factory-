@@ -1,28 +1,58 @@
-/* ai.js — ทำบทด้วย OpenRouter (ค่าเริ่มต้น google/gemini-3.8-flash เลือกโมเดลจาก dropdown): แนะนำ prompt A/B → State 1 → รัน → แก้บท
-   ต้องโหลดหลัง app.js (ใช้ window.MW) ElevenLabs ยังไม่ทำ จะเติมในเฟสถัดไป */
+/* ai.js — ทำบทด้วย OpenRouter
+   ปุ่มเดียว "ทำบทเลย": ตัวดูคลิป (Google, State 1) → ตัวเขียนบท (โมเดลอะไรก็ได้, State 2)
+   เลือกได้หลาย prompt = ได้หลายเวอร์ชันพร้อมกัน · ประวัติเก็บต่อคลิป
+   ต้องโหลดหลัง app.js (ใช้ window.MW) */
 (function(){
   "use strict";
   var MW = window.MW; if(!MW) return;
   var $ = function(id){ return document.getElementById(id); };
+  var esc = MW.esc;
   var CFG = "mw_ai_cfg_v1", OR_KEY = "mw_openrouter_key_v1"; /* ใช้ชื่อ storage ใหม่ จะได้ไม่เอา Google key เก่าไปส่งให้ OpenRouter */
   var ENDPOINT = "https://openrouter.ai/api/v1/chat/completions";
   var DEFAULT_MODEL = "google/gemini-3.8-flash";
+  var CHARS_PER_SEC = 14; /* ความเร็วพากย์ไทยโดยประมาณ ใช้กะความยาวบท */
   function load(k, d){ try{ var v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } }
   function save(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); return true; }catch(e){ return false; } }
+  function short(m){ return String(m || "").replace(/^[^/]+\//, ""); }
+
+  /* ---------- ตั้งค่า (mw_ai_cfg_v1) ----------
+     model = ตัวเขียนบท (State 2) · eye = ตัวดูคลิป (State 1) · prompts = [{id,name,text}] · sel = prompt ที่เลือกไว้
+     A/B เก็บสำเนาไว้ด้วย เผื่อย้อนกลับไปโค้ดเก่าแล้ว prompt ไม่หาย */
   var cfg = Object.assign({ model:DEFAULT_MODEL, think:"medium", A:"", B:"" }, load(CFG, {}));
   if(cfg.model.indexOf("/") < 0) cfg.model = DEFAULT_MODEL; /* ชื่อโมเดลเก่าแบบ Gemini ตรง (ไม่มี "ค่าย/") OpenRouter ไม่รู้จัก */
-  var chat = [], s1Len = 0, chatClip = null; /* chat เก็บเป็นรูปแบบ OpenAI: { role: "user"|"assistant", content } */
+  if(!cfg.eye) cfg.eye = /^google\//.test(cfg.model) ? cfg.model : DEFAULT_MODEL;
+  if(!Array.isArray(cfg.prompts)){ /* ย้ายจาก A/B เดิม */
+    cfg.prompts = [{ id:"A", name:"A · ยึดโครงต้นฉบับ", text:cfg.A || "" }, { id:"B", name:"B · เรียบเรียงใหม่", text:cfg.B || "" }];
+  }
+  if(!cfg.prompts.length) cfg.prompts.push({ id:newId(), name:"Prompt ใหม่", text:"" });
+  if(!Array.isArray(cfg.sel)) cfg.sel = [];
+  cfg.sel = cfg.sel.filter(function(id){ return prompt(id); });
+  if(!cfg.sel.length) cfg.sel = [cfg.prompts[0].id];
+  function newId(){ return "p" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5); }
+  function prompt(id){ return cfg.prompts.find(function(p){ return p.id === id; }); }
+  function saveCfg(){
+    ["A","B"].forEach(function(k){ var p = prompt(k); if(p) cfg[k] = p.text; });
+    return save(CFG, cfg);
+  }
 
-  /* ---------- ประวัติบท (เก็บต่อคลิป 1 รายการ ล่าสุดอยู่บนสุด) ---------- */
+  /* ---------- ประวัติบท (mw_history_v1) ----------
+     ต่อคลิป 1 รายการ: { id, clip, at, trans, active, vers:[{ pid, pname, eye, writer, chat, s1Len, s1, s2, at }] } */
   var HIST = "mw_history_v1", HIST_MAX = 30;
-  var hist = load(HIST, []);
+  function normHist(h){ /* รายการแบบเก่า (เวอร์ชันเดียว) → แบบมีหลายเวอร์ชัน */
+    if(!h || !h.id || !h.clip) return null;
+    if(Array.isArray(h.vers)) return h;
+    var p = prompt(h.p);
+    return { id:h.id, clip:h.clip, at:h.at || 0, trans:h.trans || "", active:0,
+             vers:[{ pid:h.p || "A", pname:p ? p.name : "Prompt " + (h.p || "A"), eye:h.model, writer:h.model,
+                     chat:h.chat || [], s1Len:h.s1Len || 0, s1:h.s1 || "", s2:h.s2 || "", at:h.at || 0 }] };
+  }
+  var hist = load(HIST, []).map(normHist).filter(Boolean);
   function findHist(id){ return hist.find(function(h){ return h.id === id; }); }
-  function saveHist(){
-    var c = MW.data.picked; if(!c || !s1Len) return;
-    syncS1(); /* เอาที่แก้ใน State 1 เข้า chat ก่อนเก็บ */
-    var e = { id:c.id, clip:{ id:c.id, title:c.title, channel:c.channel, views:c.views, published:c.published, score:c.score },
-              p:sel(), model:cfg.model, trans:$("sTrans").value, chat:chat, s1Len:s1Len,
-              s1:$("s1Out").value, s2: $("s2Wrap").hidden ? "" : $("s2Out").value, at:Date.now() };
+  function saveHist(c){
+    var vs = c.vers.filter(function(v){ return v.s1Len; });
+    if(!vs.length) return;
+    var e = { id:c.clip.id, clip:c.clip, at:Date.now(), trans:c.trans, active:Math.max(0, vs.indexOf(c.vers[c.active])),
+              vers: vs.map(function(v){ return { pid:v.pid, pname:v.pname, eye:v.eye, writer:v.writer, chat:v.chat, s1Len:v.s1Len, s1:v.s1, s2:v.s2, at:v.at }; }) };
     hist = [e].concat(hist.filter(function(h){ return h.id !== e.id; })).slice(0, HIST_MAX);
     if(!save(HIST, hist)) MW.toast("พื้นที่เก็บเต็ม บันทึกประวัติไม่ได้", true);
     renderHistCount();
@@ -31,16 +61,14 @@
   MW.history = {
     all: function(){ return hist; },
     merge: function(arr){ /* รวมตาม id เก็บอันที่ใหม่กว่า */
-      var byId = {}; hist.concat(arr).forEach(function(h){ if(h && h.id && h.clip && (!byId[h.id] || (h.at||0) > (byId[h.id].at||0))) byId[h.id] = h; });
+      var byId = {}; hist.concat(arr.map(normHist)).forEach(function(h){ if(h && (!byId[h.id] || (h.at||0) > (byId[h.id].at||0))) byId[h.id] = h; });
       hist = Object.keys(byId).map(function(k){ return byId[k]; }).sort(function(x,y){ return (y.at||0) - (x.at||0); }).slice(0, HIST_MAX);
       save(HIST, hist); renderHistCount();
     }
   };
   function renderHistCount(){ $("histCount").textContent = hist.length; $("histCount").hidden = !hist.length; }
 
-  function note(el, text, err){ $(el).innerHTML = text ? '<div class="msg'+(err?' err':'')+'">'+MW.esc(text)+'</div>' : ""; }
-  function busy(ids, on){ ids.forEach(function(i){ $(i).disabled = on; }); }
-  function sel(){ return document.querySelector('input[name="pSel"]:checked').value; }
+  function note(el, text, err){ $(el).innerHTML = text ? '<div class="msg'+(err?' err':'')+'">'+esc(text)+'</div>' : ""; }
 
   /* ---------- OpenRouter ---------- */
   function sleep(ms){ return new Promise(function(r){ setTimeout(r, ms); }); }
@@ -48,14 +76,20 @@
   function supportsReasoning(m){
     return /^google\/gemini-(2\.5|[3-9])/.test(m)          /* Gemini 2.5 ขึ้นไป */
         || /^anthropic\/claude-/.test(m)                     /* Claude ชุดที่ใช้ในรายการ รองรับ reasoning */
-        || /^openai\/(o\d|gpt-([5-9]|\d{2,}))/.test(m);      /* o-series / GPT-5+ (gpt-4o-mini ไม่รองรับ) */
+        || /^openai\/(o\d|gpt-([5-9]|\d{2,}))/.test(m);      /* o-series / GPT-5+ */
   }
-  async function callAI(messages, system, json, think){
+  function textOnly(msg){
+    if(!Array.isArray(msg.content)) return msg;
+    return { role: msg.role, content: msg.content.map(function(p){
+      return p.type === "video_url" ? "ลิงก์วิดีโอ YouTube: " + p.video_url.url + " (เนื้อหาคลิปดูจาก State 1 ด้านล่าง)" : (p.text || "");
+    }).filter(Boolean).join("\n") };
+  }
+  async function callAI(messages, system, model){
     var key = load(OR_KEY, "");
     if(!key) throw new Error("ยังไม่ได้ใส่ OpenRouter API key (แท็บตั้งค่า)");
-    var body = { model: cfg.model, messages: system ? [{ role:"system", content: system }].concat(messages) : messages };
-    if(json) body.response_format = { type: "json_object" };
-    if(supportsReasoning(cfg.model)) body.reasoning = { effort: think || cfg.think || "medium" }; /* ส่งเฉพาะโมเดลที่รองรับ */
+    if(!isGoogle(model)) messages = messages.map(textOnly); /* ค่ายอื่นรับ video_url ไม่ได้ (เช่น ตอนเขียนบทต่อจาก State 1 ที่ Gemini ดูคลิป) */
+    var body = { model: model, messages: system ? [{ role:"system", content: system }].concat(messages) : messages };
+    if(supportsReasoning(model)) body.reasoning = { effort: cfg.think || "medium" }; /* ส่งเฉพาะโมเดลที่รองรับ */
     var res, j, delays = [2000, 5000];
     for(var attempt = 0; ; attempt++){
       res = await fetch(ENDPOINT, {
@@ -74,10 +108,10 @@
       if(st === 401) throw new Error("OpenRouter key ใช้ไม่ได้ เช็ก key ในตั้งค่า: " + m);
       if(st === 402) throw new Error("เครดิต OpenRouter ไม่พอ เติมเครดิตแล้วลองใหม่: " + m);
       if(st === 403) throw new Error("OpenRouter บล็อกคำขอนี้ (moderation): " + m);
-      if(st === 408) throw new Error("โมเดล " + cfg.model + " ตอบช้าเกินเวลา ลองใหม่อีกครั้ง");
+      if(st === 408) throw new Error("โมเดล " + model + " ตอบช้าเกินเวลา ลองใหม่อีกครั้ง");
       if(st === 429) throw new Error("ชนลิมิต/โควต้า OpenRouter ลองใหม่อีกสักพัก" + (m ? ": " + m : ""));
-      if(st === 502 || st === 503) throw new Error("โมเดล " + cfg.model + " ใช้ไม่ได้ชั่วคราว (ผู้ให้บริการล่ม/คนใช้เยอะ) ลองใหม่อีกครั้ง หรือเปลี่ยนโมเดลในตั้งค่า" + (m ? ": " + m : ""));
-      if(st === 404 || (st === 400 && /valid model|model id/i.test(m))) throw new Error("ไม่พบโมเดล/ผู้ให้บริการที่รองรับ \"" + cfg.model + "\" เช็กชื่อโมเดลในตั้งค่า" + (m ? ": " + m : ""));
+      if(st === 502 || st === 503) throw new Error("โมเดล " + model + " ใช้ไม่ได้ชั่วคราว (ผู้ให้บริการล่ม/คนใช้เยอะ) ลองใหม่อีกครั้ง หรือเปลี่ยนโมเดลในตั้งค่า" + (m ? ": " + m : ""));
+      if(st === 404 || (st === 400 && /valid model|model id/i.test(m))) throw new Error("ไม่พบโมเดล/ผู้ให้บริการที่รองรับ \"" + model + "\" เช็กชื่อโมเดลในตั้งค่า" + (m ? ": " + m : ""));
       if(st === 400 && /reasoning|thinking/i.test(m)) throw new Error("โมเดลนี้ไม่รับระดับการคิดที่ตั้งไว้ ลองเปลี่ยนระดับในตั้งค่า: " + m);
       var e = new Error("OpenRouter error " + st + (m ? ": " + m : "")); e.status = st; throw e;
     }
@@ -85,142 +119,252 @@
     if(typeof t !== "string" || !t.trim()) throw new Error("โมเดลไม่ตอบ" + (c && c.finish_reason ? " (finish_reason: " + c.finish_reason + ")" : ""));
     return t.trim();
   }
-  function needPrompt(p){
-    if(!cfg[p] || !cfg[p].trim()) throw new Error("ยังไม่ได้วาง prompt "+p+" (แท็บตั้งค่า)");
-    return cfg[p];
+  function promptText(v){
+    var p = prompt(v.pid);
+    if(!p || !p.text.trim()) throw new Error("prompt \"" + v.pname + "\" ว่างอยู่ (แท็บตั้งค่า)");
+    return p.text;
   }
-  function sourceContent(){
-    var c = MW.data.picked, t = $("sTrans").value.trim();
+  function sourceFor(c, model){
+    var t = c.trans.trim();
     if(t) return t;
-    if(isGoogle(cfg.model)) return [{ type:"video_url", video_url:{ url: "https://www.youtube.com/watch?v=" + c.id } }, { type:"text", text: "https://www.youtube.com/shorts/" + c.id }];
+    if(isGoogle(model)) return [{ type:"video_url", video_url:{ url: "https://www.youtube.com/watch?v=" + c.clip.id } }, { type:"text", text: "https://www.youtube.com/shorts/" + c.clip.id }];
     /* โมเดลค่ายอื่นรับ YouTube video_url ตรงๆ ไม่ได้ ส่งลิงก์เป็นข้อความธรรมดากัน API error */
-    return "ลิงก์วิดีโอ YouTube: https://www.youtube.com/watch?v=" + c.id + "\n(โมเดลนี้เปิดดูวิดีโอจากลิงก์โดยตรงไม่ได้ และไม่มีทรานสคริปต์แนบมา)";
+    return "ลิงก์วิดีโอ YouTube: https://www.youtube.com/watch?v=" + c.clip.id + "\n(โมเดลนี้เปิดดูวิดีโอจากลิงก์โดยตรงไม่ได้ และไม่มีทรานสคริปต์แนบมา)";
   }
-  function srcHint(err){ return err.message + (err.status === 400 || /video|URL|youtube/i.test(err.message) ? "\nถ้าดึงจากลิงก์ไม่ได้ ลองวางทรานสคริปต์ในช่องด้านบนแทน" : ""); }
+  function srcHint(err){ return err.message + (err.status === 400 || /video|URL|youtube/i.test(err.message) ? " · ถ้าดึงจากลิงก์ไม่ได้ ลองวางทรานสคริปต์แทน" : ""); }
+  /* บทสนทนาจนถึง State 1 (ใช้ State 1 ที่แก้ในจอ) */
+  function chatS1(v){ var ch = v.chat.slice(0, v.s1Len); ch[v.s1Len - 1] = { role:"assistant", content: v.s1 }; return ch; }
+
+  /* ---------- งานของคลิปที่เปิดอยู่ ----------
+     cur = { clip, trans, active, vers:[...] } — งานที่ยังวิ่งอยู่ผูกกับ cur ของคลิปนั้นเสมอ สลับคลิประหว่างรอก็ไม่ปนกัน */
+  var cur = null;
+  function loadCur(clip){
+    var h = findHist(clip.id);
+    return h ? { clip:h.clip, trans:h.trans || "", active:h.active || 0, vers:h.vers.map(function(v){ return Object.assign({ busy:false, step:"", err:"" }, v); }) }
+             : { clip:{ id:clip.id, title:clip.title, channel:clip.channel, views:clip.views, published:clip.published, score:clip.score }, trans:"", active:0, vers:[] };
+  }
+  function activeV(){ return cur && cur.vers[cur.active]; }
+  function running(c){ return c.vers.some(function(v){ return v.busy; }); }
+  function paint(c, v){ if(c !== cur) return; renderRun(); if(v === activeV()) renderVersion(); }
+  function finishMade(c){
+    if(!c.vers.some(function(v){ return v.s2; })) return;
+    MW.data.made[c.clip.id] = true; MW.persist(); MW.onMadeChange();
+    if(c === cur) $("sMeta").textContent = (c.clip.channel || "") + " · เคยทำแล้ว";
+  }
+
+  async function step(c, v, label, fn){
+    v.busy = true; v.step = label; v.err = ""; paint(c, v);
+    try{ await fn(); v.at = Date.now(); saveHist(c); }
+    catch(err){ v.err = srcHint(err); }
+    v.busy = false; v.step = ""; paint(c, v);
+  }
+  /* ทำครบ: ดูคลิป → เขียนบท */
+  function runFull(c, v){
+    return step(c, v, "กำลังดูคลิป...", async function(){
+      var sys = promptText(v);
+      var ch = [{ role:"user", content: sourceFor(c, v.eye) }];
+      v.s1 = await callAI(ch, sys, v.eye);
+      v.chat = ch.concat([{ role:"assistant", content: v.s1 }]); v.s1Len = v.chat.length;
+      saveHist(c); v.step = "กำลังเขียนบท..."; paint(c, v);
+      v.s2 = await callAI(chatS1(v).concat([{ role:"user", content:"รัน" }]), sys, v.writer);
+    });
+  }
+
+  $("goBtn").addEventListener("click", async function(){
+    var c = cur; if(!c || running(c)) return;
+    var vs = cfg.sel.map(function(pid){
+      var p = prompt(pid), v = c.vers.find(function(x){ return x.pid === pid; });
+      if(!v){ v = { pid:pid }; c.vers.push(v); }
+      return Object.assign(v, { pname:p.name, eye:cfg.eye, writer:cfg.model, chat:[], s1Len:0, s1:"", s2:"", busy:false, step:"", err:"" });
+    });
+    c.active = c.vers.indexOf(vs[0]); renderVersion();
+    await Promise.all(vs.map(function(v){ return runFull(c, v); }));
+    finishMade(c);
+  });
 
   /* ---------- หน้า ---------- */
+  function renderChips(){
+    $("pChips").innerHTML = cfg.prompts.map(function(p){
+      return '<button class="fchip'+(cfg.sel.indexOf(p.id) >= 0 ? ' on' : '')+'" data-pid="'+esc(p.id)+'">'+esc(p.name)+'</button>';
+    }).join("");
+  }
+  $("pChips").addEventListener("click", function(e){
+    var b = e.target.closest("button[data-pid]"); if(!b) return;
+    var id = b.dataset.pid, i = cfg.sel.indexOf(id);
+    if(i >= 0){ if(cfg.sel.length > 1) cfg.sel.splice(i, 1); else MW.toast("ต้องเลือกอย่างน้อย 1 prompt", true); }
+    else cfg.sel.push(id);
+    saveCfg(); renderChips(); renderRun();
+  });
+
+  /* ปุ่ม/แท็บเวอร์ชัน/สถานะ (ไม่แตะช่องพิมพ์ จะได้ไม่ทับตอนกำลังแก้) */
+  function renderRun(){
+    if(!cur) return;
+    var n = cfg.sel.length, busy = running(cur);
+    $("goBtn").disabled = busy;
+    $("goBtn").textContent = busy ? "กำลังทำบท..." : cur.vers.length ? (n > 1 ? "ทำใหม่ " + n + " เวอร์ชัน" : "ทำบทใหม่") : (n > 1 ? "ทำบท " + n + " เวอร์ชัน" : "ทำบทเลย");
+    $("vWrap").hidden = !cur.vers.length;
+    $("vTabs").innerHTML = cur.vers.length < 2 ? "" : cur.vers.map(function(v, i){
+      var ic = v.busy ? "⏳ " : v.err ? "⚠ " : v.s2 ? "✓ " : "";
+      return '<button class="fchip'+(i === cur.active ? ' on' : '')+'" data-v="'+i+'">'+ic+esc(v.pname)+'</button>';
+    }).join("");
+    var v = activeV();
+    if(!v) return;
+    $("vStatus").innerHTML = v.busy ? '<div class="msg">'+esc(v.step)+'</div>' : v.err ? '<div class="msg err">'+esc(v.err)+'</div>' : "";
+    ["s1FbBtn","s1Run","s2FbBtn"].forEach(function(id){ $(id).disabled = v.busy || !v.s1Len; });
+    $("s2Wrap").hidden = !v.s2;
+  }
+  /* เนื้อหาของเวอร์ชันที่เปิดอยู่ลงช่องพิมพ์ */
+  function renderVersion(){
+    var v = activeV(); if(!v) return;
+    $("s1Out").value = v.s1 || "";
+    $("s1Info").textContent = "ตัวดูคลิป: " + short(v.eye) + " · ตัวเขียนบท: " + short(v.writer);
+    $("s1Fold").hidden = !v.s1Len;
+    $("s2Out").value = v.s2 || "";
+    renderCount(); renderRun();
+  }
+  $("vTabs").addEventListener("click", function(e){
+    var b = e.target.closest("button[data-v]"); if(!b || !cur) return;
+    cur.active = +b.dataset.v; renderVersion();
+  });
+
   function refresh(){
     var c = MW.data.picked;
     $("sNoClip").hidden = !!c; $("sBody").hidden = !c;
+    renderChips(); updateModelLine();
     if(!c) return;
     $("sTitle").textContent = c.title;
     $("sMeta").textContent = (c.channel || "") + (MW.data.made[c.id] ? " · เคยทำแล้ว" : "");
-    if(chatClip !== c.id){
-      chat = []; s1Len = 0; chatClip = c.id; $("s1Wrap").hidden = true; $("s2Wrap").hidden = true; $("reco").innerHTML = ""; $("sTrans").value = ""; note("sMsg","");
-      var h = findHist(c.id); /* เคยทำคลิปนี้ไว้ → โหลดกลับมาให้ต่อได้เลย */
-      if(h){
-        chat = h.chat || []; s1Len = h.s1Len || 0;
-        $("s1Out").value = h.s1 || ""; $("s1Wrap").hidden = !s1Len;
-        if(h.s2){ $("s2Out").value = h.s2; $("s2Wrap").hidden = false; }
-        $("sTrans").value = h.trans || "";
-        var r = document.querySelector('input[name="pSel"][value="'+h.p+'"]'); if(r) r.checked = true;
-      }
+    if(!cur || cur.clip.id !== c.id){
+      cur = loadCur(c); /* เคยทำคลิปนี้ไว้ → โหลดกลับมาให้ต่อได้เลย */
+      $("sTrans").value = cur.trans; $("transFold").open = !!cur.trans;
+      renderVersion(); renderRun();
     }
   }
   document.addEventListener("mw:tab", function(e){ $("histBtn").hidden = e.detail !== "script"; if(e.detail === "script") refresh(); }); /* ปุ่มประวัติโชว์เฉพาะแท็บบท */
 
-  /* ---------- แนะนำ prompt ---------- */
-  $("recoBtn").addEventListener("click", async function(){
-    busy(["recoBtn"], true); note("sMsg","กำลังดูคลิป...");
-    try{
-      var sys = 'คุณคัดเลือกวิธีทำบทพากย์ One Piece Shorts ภาษาไทย ตอบเป็น JSON เท่านั้นรูปแบบ {"prompt":"A" หรือ "B","reason":"เหตุผลสั้นๆ 1 ประโยคภาษาไทย"}\n'
-        + 'A = ยึดโครงเรื่องและจังหวะต้นฉบับ เหมาะกับคอมเมดี้/WTF ที่ลำดับ setup→punchline คือตัวขาย คลิปสั้น เสียง OG เยอะ ลิสต์นับจำนวนที่ลำดับสำคัญ\n'
-        + 'B = ดึงแก่นไวรัลแล้วเรียบเรียงใหม่ เหมาะกับคลิปเล่า lore/ข้อมูลที่โครงเรื่องไม่คม หรือยาวและต้องจัดใหม่ ถ้าไม่แน่ใจให้เลือก B';
-      var out = await callAI([{ role:"user", content: sourceContent() }], sys, true, "low");
-      var r = JSON.parse(out.replace(/```json|```/g, "").trim());
-      var p = r.prompt === "A" ? "A" : "B";
-      document.querySelector('input[name="pSel"][value="'+p+'"]').checked = true;
-      $("reco").innerHTML = '<div class="reco"><b>แนะนำ '+p+'</b> · '+MW.esc(r.reason || "")+'</div>';
-      note("sMsg","");
-    }catch(err){ note("sMsg", srcHint(err), true); }
-    busy(["recoBtn"], false);
+  /* ---------- แก้เอง / สั่งแก้ ---------- */
+  $("sTrans").addEventListener("input", function(){ if(cur) cur.trans = this.value; });
+  $("s1Out").addEventListener("input", function(){ var v = activeV(); if(v) v.s1 = this.value; });
+  $("s2Out").addEventListener("input", function(){ var v = activeV(); if(v){ v.s2 = this.value; renderCount(); } });
+  ["s1Out","s2Out","sTrans"].forEach(function(id){ $(id).addEventListener("change", function(){ if(cur) saveHist(cur); }); }); /* แก้เองแล้วเก็บให้ด้วย */
+
+  $("s1FbBtn").addEventListener("click", function(){
+    var c = cur, v = activeV(), fb = $("s1Fb").value.trim(); if(!v || !fb || !v.s1Len) return;
+    $("s1Fb").value = "";
+    step(c, v, "กำลังปรับ State 1...", async function(){
+      var next = chatS1(v).concat([{ role:"user", content: fb }]);
+      v.s1 = await callAI(next, promptText(v), v.eye);
+      v.chat = next.concat([{ role:"assistant", content: v.s1 }]); v.s1Len = v.chat.length;
+    });
+  });
+  $("s1Run").addEventListener("click", function(){
+    var c = cur, v = activeV(); if(!v || !v.s1Len) return;
+    v.writer = cfg.model; /* เขียนใหม่ด้วยตัวเขียนบทที่ตั้งไว้ตอนนี้ */
+    step(c, v, "กำลังเขียนบท...", async function(){
+      v.s2 = await callAI(chatS1(v).concat([{ role:"user", content:"รัน" }]), promptText(v), v.writer);
+    }).then(function(){ finishMade(c); });
+  });
+  $("s2FbBtn").addEventListener("click", function(){
+    var c = cur, v = activeV(), fb = $("s2Fb").value.trim(), txt = (v && v.s2 || "").trim(); if(!fb || !txt) return;
+    $("s2Fb").value = "";
+    step(c, v, "กำลังแก้บท...", async function(){
+      v.s2 = await callAI([{ role:"user", content: "แก้บทพากย์ด้านล่างตามคำสั่ง แล้วตอบกลับมาเป็นฉบับแก้ไขทั้งหมด คงรูปแบบ PART 1 / PART 2 เดิม ไม่ต้องมีคำอธิบายเพิ่ม\n\nคำสั่ง: " + fb + "\n\n----\n" + txt }], "", v.writer);
+    });
   });
 
-  /* ---------- State 1 ---------- */
-  $("s1Btn").addEventListener("click", async function(){
-    busy(["s1Btn"], true); note("sMsg","กำลังวิเคราะห์ซอส...");
-    try{
-      var sys = needPrompt(sel());
-      chat = [{ role:"user", content: sourceContent() }];
-      var out = await callAI(chat, sys);
-      chat.push({ role:"assistant", content: out }); s1Len = chat.length;
-      $("s1Out").value = out; $("s1Wrap").hidden = false; $("s2Wrap").hidden = true; note("sMsg",""); saveHist();
-    }catch(err){ note("sMsg", srcHint(err), true); }
-    busy(["s1Btn"], false);
-  });
-
-  function syncS1(){ chat[s1Len-1] = { role:"assistant", content: $("s1Out").value }; chat.length = s1Len; }
-
-  $("s1FbBtn").addEventListener("click", async function(){
-    var fb = $("s1Fb").value.trim(); if(!fb || !s1Len) return;
-    busy(["s1FbBtn"], true); note("sMsg","กำลังปรับ State 1...");
-    try{
-      syncS1();
-      var next = chat.concat([{ role:"user", content: fb }]);
-      var out = await callAI(next, needPrompt(sel()));
-      chat = next.concat([{ role:"assistant", content: out }]); s1Len = chat.length;
-      $("s1Out").value = out; $("s1Fb").value = ""; note("sMsg",""); saveHist();
-    }catch(err){ note("sMsg", err.message, true); }
-    busy(["s1FbBtn"], false);
-  });
-
-  /* ---------- State 2 (รัน) ---------- */
-  async function runState2(){
-    busy(["runBtn","rerunBtn"], true); note("sMsg","กำลังเขียนบท...");
-    try{
-      syncS1();
-      var next = chat.concat([{ role:"user", content: "รัน" }]);
-      var out = await callAI(next, needPrompt(sel()));
-      $("s2Out").value = out; $("s2Wrap").hidden = false; note("sMsg","");
-      var id = MW.data.picked.id; MW.data.made[id] = true; MW.persist(); MW.onMadeChange(); saveHist();
-    }catch(err){ note("sMsg", err.message, true); }
-    busy(["runBtn","rerunBtn"], false);
+  /* ---------- แยกชื่อคลิป (PART 1) กับบท (PART 2) ---------- */
+  function parts(t){
+    var m2 = /^[^\n]*PART\s*2[^\n]*$/im.exec(t);
+    if(!m2) return { title:"", script:t.trim() };
+    var m1 = /^[^\n]*PART\s*1[^\n]*$/im.exec(t.slice(0, m2.index));
+    return { title: m1 ? t.slice(m1.index + m1[0].length, m2.index).trim() : "", script: t.slice(m2.index + m2[0].length).trim() };
   }
-  $("runBtn").addEventListener("click", runState2);
-  $("rerunBtn").addEventListener("click", runState2);
-
-  $("s2FbBtn").addEventListener("click", async function(){
-    var fb = $("s2Fb").value.trim(), txt = $("s2Out").value.trim(); if(!fb || !txt) return;
-    busy(["s2FbBtn"], true); note("sMsg","กำลังแก้บท...");
-    try{
-      var out = await callAI([{ role:"user", content: "แก้บทพากย์ด้านล่างตามคำสั่ง แล้วตอบกลับมาเป็นฉบับแก้ไขทั้งหมด คงรูปแบบ PART 1 / PART 2 เดิม ไม่ต้องมีคำอธิบายเพิ่ม\n\nคำสั่ง: " + fb + "\n\n----\n" + txt }]);
-      $("s2Out").value = out; $("s2Fb").value = ""; note("sMsg",""); saveHist();
-    }catch(err){ note("sMsg", err.message, true); }
-    busy(["s2FbBtn"], false);
-  });
-
-  $("copyBtn").addEventListener("click", function(){
-    var t = $("s2Out").value, m = /PART 2[^\n]*\n/i.exec(t);
-    var txt = (m ? t.slice(m.index + m[0].length) : t).trim();
-    var done = function(){ $("copyBtn").textContent = "คัดลอกแล้ว"; setTimeout(function(){ $("copyBtn").textContent = "คัดลอกเฉพาะบท"; }, 1500); };
-    (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(done).catch(function(){ window.prompt("คัดลอกบทนี้", txt); });
-  });
+  function renderCount(){
+    var s = parts($("s2Out").value).script, n = s.replace(/\s/g, "").length;
+    $("s2Count").textContent = n ? "บท " + n.toLocaleString() + " ตัวอักษร · พากย์ประมาณ " + Math.round(n / CHARS_PER_SEC) + " วิ" : "";
+  }
+  function copy(btn, txt, idle){
+    if(!txt){ MW.toast("ไม่เจอส่วนนี้ในบท (ต้องมีหัว PART 1 / PART 2)", true); return; }
+    var done = function(){ btn.textContent = "คัดลอกแล้ว"; setTimeout(function(){ btn.textContent = idle; }, 1500); };
+    (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(done).catch(function(){ window.prompt("คัดลอกตรงนี้", txt); });
+  }
+  $("copyBtn").addEventListener("click", function(){ copy(this, parts($("s2Out").value).script, "คัดลอกบท"); });
+  $("copyTitleBtn").addEventListener("click", function(){ copy(this, parts($("s2Out").value).title, "คัดลอกชื่อคลิป"); });
 
   /* ---------- ตั้งค่า AI ---------- */
-  $("gKey").value = load(OR_KEY, ""); $("gModel").value = cfg.model;
-  if($("gModel").value !== cfg.model){ cfg.model = DEFAULT_MODEL; $("gModel").value = DEFAULT_MODEL; } /* โมเดลที่เซฟไว้เก่าและไม่อยู่ใน dropdown → ใช้ค่าเริ่มต้น */
-  $("gThink").value = cfg.think; $("pA").value = cfg.A; $("pB").value = cfg.B;
+  function pickModel(selId, val, fallback){ $(selId).value = val; if($(selId).value !== val){ $(selId).value = fallback; return fallback; } return val; } /* โมเดลที่เซฟไว้แต่ไม่อยู่ในรายการ → ค่าเริ่มต้น */
+  $("gKey").value = load(OR_KEY, "");
+  cfg.model = pickModel("gModel", cfg.model, DEFAULT_MODEL);
+  cfg.eye = pickModel("gEye", cfg.eye, DEFAULT_MODEL);
+  $("gThink").value = cfg.think;
   var THINK_TH = { low:"ต่ำสุด", medium:"ปานกลาง", high:"สูงสุด" };
-  function updateModelLine(){ $("sModel").textContent = "โมเดล: " + cfg.model + " · ระดับการคิด: " + (THINK_TH[cfg.think] || cfg.think); }
+  function updateModelLine(){ $("sModel").textContent = "ดูคลิป: " + short(cfg.eye) + " · เขียนบท: " + short(cfg.model) + " · คิด" + (THINK_TH[cfg.think] || cfg.think); }
   function orState(){ var on = !!$("gKey").value.trim(); $("gState").textContent = on ? "✓ ตั้งแล้ว" : "ยังไม่ได้ตั้ง"; $("gState").classList.toggle("ok", on); }
   orState();
   function saveAi(){
-    cfg = { model: $("gModel").value || DEFAULT_MODEL, think: $("gThink").value, A: $("pA").value, B: $("pB").value };
-    var ok = save(CFG, cfg) && save(OR_KEY, $("gKey").value.trim());
+    cfg.model = $("gModel").value || DEFAULT_MODEL; cfg.eye = $("gEye").value || DEFAULT_MODEL; cfg.think = $("gThink").value;
+    var ok = saveCfg() && save(OR_KEY, $("gKey").value.trim());
     MW.toast(ok ? "บันทึกแล้ว" : "บันทึกไม่ได้", !ok);
     updateModelLine(); orState();
   }
-  ["gKey","gModel","gThink","pA","pB"].forEach(function(id){ $(id).addEventListener("change", saveAi); }); /* บันทึกอัตโนมัติทุกครั้งที่แก้ */
+  ["gKey","gModel","gEye","gThink"].forEach(function(id){ $(id).addEventListener("change", saveAi); }); /* บันทึกอัตโนมัติทุกครั้งที่แก้ */
   $("saveAi").addEventListener("click", saveAi);
 
+  /* ---------- รายการ prompt (เพิ่ม/ตั้งชื่อ/ทำสำเนา/ลบ) ---------- */
+  function promptState(p){ var n = p.text.trim().length; return n ? n.toLocaleString() + " ตัวอักษร" : "ว่าง"; }
+  function renderPrompts(openId){
+    $("promptList").innerHTML = cfg.prompts.map(function(p){
+      var id = esc(p.id);
+      return '<details class="fold" data-fold="'+id+'"'+(p.id === openId ? ' open' : '')+'><summary><span>'+esc(p.name)+'</span><em class="state'+(p.text.trim() ? ' ok' : '')+'">'+promptState(p)+'</em></summary><div class="fbody">'
+        + '<label for="pn_'+id+'" style="margin-top:0">ชื่อ</label><input id="pn_'+id+'" data-pname="'+id+'" value="'+esc(p.name)+'" autocomplete="off">'
+        + '<div class="ftools" style="margin-top:12px"><button type="button" class="btn small ghost" data-paste="pt_'+id+'">วาง</button><button type="button" class="btn small ghost" data-clear="pt_'+id+'">ลบ</button></div>'
+        + '<textarea id="pt_'+id+'" data-ptext="'+id+'" rows="14" placeholder="วาง prompt ทั้งก้อนที่นี่" aria-label="ข้อความ prompt">'+esc(p.text)+'</textarea>'
+        + '<div class="row" style="margin-top:10px"><button type="button" class="btn small ghost" data-pdup="'+id+'">ทำสำเนา</button><button type="button" class="btn small ghost" data-pdel="'+id+'">ลบ prompt นี้</button></div>'
+        + '</div></details>';
+    }).join("");
+  }
+  $("promptList").addEventListener("change", function(e){
+    var t = e.target, p;
+    if(t.dataset.pname && (p = prompt(t.dataset.pname))){
+      p.name = t.value.trim() || "ไม่มีชื่อ";
+      t.closest("details").querySelector("summary span").textContent = p.name;
+    }else if(t.dataset.ptext && (p = prompt(t.dataset.ptext))){
+      p.text = t.value;
+      var st = t.closest("details").querySelector("summary .state"); st.textContent = promptState(p); st.classList.toggle("ok", !!p.text.trim());
+    }else return;
+    var ok = saveCfg(); MW.toast(ok ? "บันทึกแล้ว" : "บันทึกไม่ได้", !ok); renderChips();
+  });
+  $("promptList").addEventListener("click", function(e){
+    var b = e.target.closest("button[data-pdup], button[data-pdel]"); if(!b) return;
+    if(b.dataset.pdup){
+      var src = prompt(b.dataset.pdup), cp = { id:newId(), name:src.name + " (สำเนา)", text:src.text };
+      cfg.prompts.splice(cfg.prompts.indexOf(src) + 1, 0, cp); saveCfg(); renderPrompts(cp.id); renderChips(); MW.toast("ทำสำเนาแล้ว");
+      return;
+    }
+    if(cfg.prompts.length < 2){ MW.toast("ต้องมีอย่างน้อย 1 prompt", true); return; }
+    MW.confirmTap(b, "ลบ prompt นี้", function(){
+      cfg.prompts = cfg.prompts.filter(function(p){ return p.id !== b.dataset.pdel; });
+      cfg.sel = cfg.sel.filter(function(id){ return prompt(id); }); if(!cfg.sel.length) cfg.sel = [cfg.prompts[0].id];
+      saveCfg(); renderPrompts(); renderChips(); MW.toast("ลบ prompt แล้ว");
+    });
+  });
+  $("addPrompt").addEventListener("click", function(){
+    var p = { id:newId(), name:"Prompt ใหม่", text:"" };
+    cfg.prompts.push(p); saveCfg(); renderPrompts(p.id); renderChips();
+    var inp = $("pn_" + p.id); inp.focus(); inp.select();
+  });
+
   /* ---------- ปุ่มประวัติ (มุมขวาบน) ---------- */
-  function histMeta(h){ return [h.clip.channel, MW.ago(new Date(h.at).toISOString()), "Prompt " + h.p, h.model.replace(/^[^/]+\//, "")].filter(Boolean).join(" · "); }
+  function histMeta(h){
+    return [h.clip.channel, MW.ago(new Date(h.at).toISOString()), h.vers.map(function(v){ return v.pname; }).join(", "), short(h.vers[0] && h.vers[0].writer)].filter(Boolean).join(" · ");
+  }
   function renderHist(){
     $("histList").innerHTML = hist.length ? hist.map(function(h){
-      return '<div class="hrow"><button class="hopen" data-open="'+MW.esc(h.id)+'"><img loading="lazy" alt="" src="'+MW.thumbUrl(h.id)+'">'
-        + '<span class="ht"><b>'+MW.esc(h.clip.title)+'</b><small>'+MW.esc(histMeta(h))+'</small></span>'
-        + '<span class="sel-tag">'+(h.s2 ? "บทเสร็จ" : "State 1")+'</span></button>'
-        + '<button class="btn small ghost hdel" data-del="'+MW.esc(h.id)+'" aria-label="ลบรายการนี้">ลบ</button></div>';
+      var done = h.vers.filter(function(v){ return v.s2; }).length;
+      return '<div class="hrow"><button class="hopen" data-open="'+esc(h.id)+'"><img loading="lazy" alt="" src="'+MW.thumbUrl(h.id)+'">'
+        + '<span class="ht"><b>'+esc(h.clip.title)+'</b><small>'+esc(histMeta(h))+'</small></span>'
+        + '<span class="sel-tag">'+(done ? "บทเสร็จ" + (done > 1 ? " ×" + done : "") : "State 1")+'</span></button>'
+        + '<button class="btn small ghost hdel" data-del="'+esc(h.id)+'" aria-label="ลบรายการนี้">ลบ</button></div>';
     }).join("") : '<div class="empty"><div class="empty-ico">🕘</div>ยังไม่มีประวัติ ทำบทแล้วจะมาอยู่ตรงนี้</div>';
     $("histClear").hidden = !hist.length;
   }
@@ -232,17 +376,17 @@
     var b = e.target.closest("button"); if(!b) return;
     if(b.dataset.open){
       var h = findHist(b.dataset.open); if(!h) return;
-      MW.closeModal("histSheet"); MW.setPick(h.clip); MW.showTab("script"); /* refresh() โหลดบทจากประวัติให้เอง */
+      MW.closeModal("histSheet");
+      if(cur && cur.clip.id === h.id && !running(cur)) cur = null; /* โหลดจากประวัติใหม่ */
+      MW.setPick(h.clip); MW.showTab("script");
     }
     if(b.dataset.del) MW.confirmTap(b, "ลบ", function(){ hist = hist.filter(function(x){ return x.id !== b.dataset.del; }); save(HIST, hist); renderHist(); renderHistCount(); });
   });
   $("histClear").addEventListener("click", function(){
     var b = this; MW.confirmTap(b, "ล้างทั้งหมด", function(){ hist = []; save(HIST, hist); renderHist(); renderHistCount(); MW.toast("ล้างประวัติแล้ว"); });
   });
-  ["s1Out","s2Out","sTrans"].forEach(function(id){ $(id).addEventListener("change", saveHist); }); /* แก้เองแล้วเก็บให้ด้วย */
-  document.querySelectorAll('input[name="pSel"]').forEach(function(r){ r.addEventListener("change", saveHist); });
-  renderHistCount();
 
-  updateModelLine();
+  if(!load(CFG, null) || !Array.isArray(load(CFG, {}).prompts)) saveCfg(); /* บันทึกรูปแบบใหม่ครั้งแรก */
+  renderPrompts(); renderHistCount();
   refresh();
 })();
