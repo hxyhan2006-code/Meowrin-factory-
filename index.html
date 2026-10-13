@@ -13,8 +13,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600&family=Mitr:wght@500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=20261013n">
-<link rel="stylesheet" href="sheet.css?v=20261013n">
+<link rel="stylesheet" href="style.css?v=20261013o">
+<link rel="stylesheet" href="sheet.css?v=20261013o">
 </head>
 <body>
 <div class="wrap">
@@ -100,6 +100,17 @@
           <div class="row" style="margin-top:8px">
             <button class="btn" id="copyBtn" style="flex:1">คัดลอกบท</button>
             <button class="btn ghost" id="copyTitleBtn" style="flex:1">คัดลอกชื่อคลิป</button>
+          </div>
+          <div class="tts">
+            <button class="btn" id="ttsBtn" style="width:100%">🔊 สร้างเสียง</button>
+            <div id="ttsMsg"></div>
+            <div id="ttsOut" hidden>
+              <audio id="ttsAudio" controls preload="auto"></audio>
+              <div class="row">
+                <button class="btn" id="ttsShare" style="flex:1">แชร์ไป CapCut</button>
+                <a class="btn ghost" id="ttsDl" style="flex:1">ดาวน์โหลด mp3</a>
+              </div>
+            </div>
           </div>
           <label style="margin-top:14px">สั่งแก้บท <span class="lhint">แตะแล้วแก้ให้เลย</span></label>
           <div class="fchips wrapchips" id="quickFb">
@@ -187,6 +198,35 @@
     </div>
 
     <div class="panel">
+      <h2>เสียงพากย์ (ElevenLabs)</h2>
+      <details class="fold">
+        <summary><span>ElevenLabs API key</span><em class="state" id="elState"></em></summary>
+        <div class="fbody">
+          <div class="ftools"><button type="button" class="btn small ghost" data-paste="elKey" data-trim>วาง</button><button type="button" class="btn small ghost" data-clear="elKey">ลบ</button></div>
+          <input id="elKey" type="password" placeholder="sk_..." autocomplete="off" aria-label="ElevenLabs API key">
+          <p class="hint">แนะนำสร้าง key ใหม่ที่เปิดสิทธิ์ Text to Speech อย่างเดียว เก็บในเครื่องนี้เท่านั้น บันทึกอัตโนมัติ</p>
+        </div>
+      </details>
+      <label for="elVoice">Voice ID (เสียงที่ใช้)</label>
+      <div class="row">
+        <input id="elVoice" placeholder="คัดลอกจากหน้าเสียงใน ElevenLabs" autocomplete="off" autocapitalize="none">
+        <button type="button" class="btn ghost" data-paste="elVoice" data-trim>วาง</button>
+      </div>
+      <label for="elModel">โมเดลเสียง</label>
+      <select id="elModel" data-sheet>
+        <option value="eleven_v3" data-tag="แนะนำ" data-desc="ตัวเดียวกับที่ใช้บนเว็บ รองรับภาษาไทย">Eleven v3</option>
+        <option value="eleven_multilingual_v2" data-desc="รุ่นก่อน ยังไม่ได้ยืนยันว่ารองรับไทย">Multilingual v2</option>
+      </select>
+      <label for="elStab">Stability</label>
+      <select id="elStab" data-sheet>
+        <option value="0" data-desc="อารมณ์มาก แต่อาจเพี้ยนหรือเล่นเกิน">Creative</option>
+        <option value="0.5" data-tag="แนะนำ" data-desc="สมดุล ใกล้เสียงต้นแบบที่สุด (ที่ใช้อยู่บนเว็บ)">Natural</option>
+        <option value="1" data-desc="นิ่งและคงที่ ใกล้เคียง v2">Robust</option>
+      </select>
+      <p class="hint" id="ttsUsage"></p>
+    </div>
+
+    <div class="panel">
       <h2>Prompt</h2>
       <p class="hint">กดชื่อเพื่อเปิดแก้ แก้เสร็จบันทึกให้อัตโนมัติ</p>
       <div id="promptList"></div>
@@ -257,8 +297,9 @@
   </div>
 </div>
 
-<script src="sync.js?v=20261013n"></script>
-<script src="app.js?v=20261013n"></script>
-<script src="ai.js?v=20261013n"></script>
+<script src="sync.js?v=20261013o"></script>
+<script src="app.js?v=20261013o"></script>
+<script src="ai.js?v=20261013o"></script>
+<script src="tts.js?v=20261013o"></script>
 </body>
 </html>

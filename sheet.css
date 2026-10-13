@@ -204,3 +204,9 @@ select[data-sheet]{display:none}
 .ht small{display:block;color:var(--muted);font-size:12px;margin-top:2px}
 .hdel{flex:none;align-self:center;min-width:44px;padding:0 8px}
 .hdel.armed,#histClear.armed{background:var(--err);border-color:var(--err);color:#fff}
+
+/* ---------- 10h. สร้างเสียง (ElevenLabs) ---------- */
+.tts{margin-top:12px}
+#ttsOut{margin-top:10px;display:flex;flex-direction:column;gap:8px}
+#ttsOut[hidden]{display:none}
+#ttsAudio{width:100%;height:44px;border-radius:12px}

@@ -308,12 +308,14 @@
     var s = parts($("s2Out").value).script, n = s.replace(/\s/g, "").length;
     var v = activeV();
     $("s2Count").textContent = n ? "บท " + n.toLocaleString() + " ตัวอักษร · พากย์ประมาณ " + Math.round(n / CHARS_PER_SEC) + " วิ" + (v && v.cost ? " · ค่าใช้จ่ายเวอร์ชันนี้ " + money(v.cost) : "") : "";
+    document.dispatchEvent(new CustomEvent("mw:script")); /* บทในจอเปลี่ยน → tts.js อัปเดตปุ่มสร้างเสียง */
   }
   function copy(btn, txt, idle){
     if(!txt){ MW.toast("ไม่เจอส่วนนี้ในบท (ต้องมีหัว PART 1 / PART 2)", true); return; }
     var done = function(){ btn.textContent = "คัดลอกแล้ว"; setTimeout(function(){ btn.textContent = idle; }, 1500); };
     (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(done).catch(function(){ window.prompt("คัดลอกตรงนี้", txt); });
   }
+  MW.parts = parts; /* tts.js ใช้แยกบท PART 2 */
   $("copyBtn").addEventListener("click", function(){ copy(this, parts($("s2Out").value).script, "คัดลอกบท"); });
   $("copyTitleBtn").addEventListener("click", function(){ copy(this, parts($("s2Out").value).title, "คัดลอกชื่อคลิป"); });
 
