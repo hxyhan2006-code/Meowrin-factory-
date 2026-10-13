@@ -49,31 +49,65 @@
   });
 
   /* ---------- clip list ---------- */
+  var chanFilter = ""; /* id ช่องที่กรองอยู่ ("" = ทุกช่อง) */
+  function thumbUrl(id, q){ return "https://i.ytimg.com/vi/"+id+"/"+(q||"hq720")+".jpg"; } /* hq720 = 1280×720 คมกว่า mqdefault (320×180) ที่โดนซูมจนเบลอ */
+  var THUMB_FALLBACK = { "hq720.jpg":"hqdefault.jpg", "hqdefault.jpg":"mqdefault.jpg" }; /* คลิปที่ไม่มี hq720 ถอยไปขนาดเล็กลง */
+  document.addEventListener("error", function(e){
+    var img = e.target; if(!img || img.tagName !== "IMG") return;
+    var f = img.src.replace(/[^/]+$/, function(n){ return THUMB_FALLBACK[n] || n; });
+    if(f !== img.src) img.src = f;
+  }, true);
+  function saveClips(){ save(CACHE_STORE, { at: Date.now(), clips: clips }); cache.at = Date.now(); }
+  function isChan(c, ch){ return c.chId === ch.id || (!c.chId && c.channel === ch.title); }
+
+  function renderChips(){
+    var box = $("chanChips");
+    if(data.channels.length < 2){ box.innerHTML = ""; return; }
+    var chips = [{ id:"", title:"ทุกช่อง", n:clips.length }].concat(data.channels.map(function(ch){
+      return { id:ch.id, title:ch.title, n:clips.filter(function(c){ return isChan(c, ch); }).length };
+    }));
+    box.innerHTML = chips.map(function(x){
+      return '<button class="fchip'+(x.id===chanFilter?' on':'')+'" data-chan="'+esc(x.id)+'">'+esc(x.title)+' <i>'+x.n+'</i></button>';
+    }).join("");
+  }
+  $("chanChips").addEventListener("click", function(e){
+    var b = e.target.closest("button[data-chan]"); if(!b) return;
+    chanFilter = b.dataset.chan; render();
+  });
+
   function render(){
+    if(chanFilter && !data.channels.some(function(ch){ return ch.id === chanFilter; })) chanFilter = "";
+    renderChips();
     var list = clips.slice();
-    var hide = $("hideMade").checked;
-    if(hide) list = list.filter(function(c){ return !data.made[c.id]; });
+    var fch = data.channels.find(function(ch){ return ch.id === chanFilter; });
+    if(fch) list = list.filter(function(c){ return isChan(c, fch); });
+    var total = list.length;
+    if($("hideMade").checked) list = list.filter(function(c){ return !data.made[c.id]; });
     var s = $("sortSel").value;
     list.sort(function(a,b){
       if(s==="views") return b.views - a.views;
       if(s==="new") return new Date(b.published) - new Date(a.published);
       return b.score - a.score;
     });
+    $("listInfo").textContent = clips.length ? "แสดง "+list.length+" จาก "+total+" คลิป" + (cache.at ? " · อัปเดต "+ago(new Date(cache.at).toISOString()) : "") : "";
     if(!list.length){
-      $("list").innerHTML = '<div class="empty">'+(clips.length ? "ไม่มีคลิปที่ยังไม่ได้ทำ" : "ยังไม่มีคลิป เพิ่มช่องแล้วกด ดึงคลิป")+'</div>';
+      $("list").innerHTML = '<div class="empty"><div class="empty-ico">🎬</div>'+(clips.length ? "ไม่มีคลิปที่ยังไม่ได้ทำ" : data.channels.length ? "ยังไม่ได้ดึงคลิป กดปุ่ม ดึงคลิป ด้านบน" : "ยังไม่มีช่อง ไปแท็บ ช่อง เพื่อเพิ่มช่องก่อน")+'</div>';
       return;
     }
     $("list").innerHTML = list.map(function(c){
       var made = !!data.made[c.id];
       return '<article class="card'+(made?' made':'')+'">'
-        + '<img class="thumb" loading="lazy" src="https://i.ytimg.com/vi/'+c.id+'/mqdefault.jpg" alt="">'
+        + '<div class="tbox"><img class="thumb" loading="lazy" decoding="async" src="'+thumbUrl(c.id)+'" alt="">'
+        + (c.score ? '<span class="chip hot">🔥 '+c.score.toFixed(1)+'×</span>' : '')
+        + (made ? '<span class="chip done">✓ ทำแล้ว</span>' : '')
+        + '<span class="chip views">'+fmtNumTh(c.views)+' วิว</span></div>'
         + '<div class="cbody">'
-        + '<div class="ctitle">'+esc(c.title)+(made?'<span class="badge">ทำแล้ว</span>':'')+'</div>'
-        + '<div class="meta"><span>'+esc(c.channel)+'</span><span>'+fmtNumTh(c.views)+' วิว</span><span class="score">'+c.score.toFixed(1)+'× ผู้ติดตาม</span><span>'+ago(c.published)+'</span></div>'
+        + '<div class="ctitle">'+esc(c.title)+'</div>'
+        + '<div class="meta"><span>'+esc(c.channel)+'</span><span>'+ago(c.published)+'</span></div>'
         + '<div class="actions">'
-        + '<button class="btn small" data-pick="'+c.id+'">เลือกคลิปนี้</button>'
-        + '<a class="btn small ghost" href="https://youtube.com/shorts/'+c.id+'" target="_blank" rel="noopener">เปิดดู</a>'
-        + '<button class="btn small ghost" data-made="'+c.id+'">'+(made?'ยกเลิกทำแล้ว':'ทำแล้ว')+'</button>'
+        + '<button class="btn small" data-pick="'+c.id+'">เลือก</button>'
+        + '<a class="btn small ghost ico" href="https://youtube.com/shorts/'+c.id+'" target="_blank" rel="noopener" aria-label="เปิดดูใน YouTube" title="เปิดดู">▶</a>'
+        + '<button class="btn small ghost ico'+(made?' on':'')+'" data-made="'+c.id+'" aria-label="'+(made?'ยกเลิกทำแล้ว':'ทำเครื่องหมายว่าทำแล้ว')+'" title="'+(made?'ยกเลิกทำแล้ว':'ทำแล้ว')+'">✓</button>'
         + '</div></div></article>';
     }).join("");
   }
@@ -85,6 +119,26 @@
   $("sortSel").addEventListener("change", render);
   $("hideMade").addEventListener("change", render);
 
+  /* ดึง Shorts ล่าสุดของช่องเดียว (ใช้ทั้งตอนกด ดึงคลิป และตอนเพิ่มช่องใหม่) */
+  async function fetchChannel(ch){
+    var pl = await yt("playlistItems", { part:"contentDetails", playlistId: ch.uploads, maxResults: 25 });
+    var ids = (pl.items||[]).map(function(it){ return it.contentDetails.videoId; });
+    if(!ids.length) return [];
+    var vs = await yt("videos", { part:"snippet,contentDetails,statistics", id: ids.join(",") });
+    var cs = await yt("channels", { part:"statistics", id: ch.id });
+    var subs = Number(cs.items && cs.items[0] && cs.items[0].statistics.subscriberCount) || 0;
+    ch.subs = subs;
+    var out = [];
+    (vs.items||[]).forEach(function(v){
+      var d = secs(v.contentDetails.duration);
+      if(d === 0 || d > 180) return; /* เก็บเฉพาะคลิปสั้น */
+      var views = Number(v.statistics.viewCount)||0;
+      out.push({ id:v.id, title:v.snippet.title, channel:ch.title, chId:ch.id, views:views,
+                 published:v.snippet.publishedAt, score: views / Math.max(subs, 1000) });
+    });
+    return out;
+  }
+
   async function fetchClips(){
     if(!data.channels.length){ msg("status","เพิ่มช่องในแท็บ ช่อง ก่อน",true); return; }
     $("fetchBtn").disabled = true; msg("status","กำลังดึงคลิป...");
@@ -92,24 +146,10 @@
       var out = [], failed = [];
       for(var i=0;i<data.channels.length;i++){
         var ch = data.channels[i];
-        try{
-          var pl = await yt("playlistItems", { part:"contentDetails", playlistId: ch.uploads, maxResults: 25 });
-          var ids = (pl.items||[]).map(function(it){ return it.contentDetails.videoId; });
-          if(!ids.length) continue;
-          var vs = await yt("videos", { part:"snippet,contentDetails,statistics", id: ids.join(",") });
-          var cs = await yt("channels", { part:"statistics", id: ch.id });
-          var subs = Number(cs.items && cs.items[0] && cs.items[0].statistics.subscriberCount) || 0;
-          ch.subs = subs;
-          (vs.items||[]).forEach(function(v){
-            var d = secs(v.contentDetails.duration);
-            if(d === 0 || d > 180) return; /* เก็บเฉพาะคลิปสั้น */
-            var views = Number(v.statistics.viewCount)||0;
-            out.push({ id:v.id, title:v.snippet.title, channel:ch.title, views:views,
-                       published:v.snippet.publishedAt, score: views / Math.max(subs, 1000) });
-          });
-        }catch(err){ if(/โควต้า|API key/.test(err.message)) throw err; failed.push(ch.title); }
+        try{ out = out.concat(await fetchChannel(ch)); }
+        catch(err){ if(/โควต้า|API key/.test(err.message)) throw err; failed.push(ch.title); }
       }
-      clips = out; save(CACHE_STORE, { at: Date.now(), clips: clips }); persist();
+      clips = out; saveClips(); persist();
       msg("status", failed.length ? "ดึงไม่ได้: "+failed.join(", ") : "", !!failed.length);
       render(); renderChannels();
     }catch(err){ msg("status", err.message, true); }
@@ -140,7 +180,7 @@
   function renderPick(){
     var c = data.picked, bar = $("pickBar");
     if(!c){ bar.classList.remove("on"); return; }
-    $("pickImg").src = "https://i.ytimg.com/vi/"+c.id+"/mqdefault.jpg";
+    $("pickImg").src = thumbUrl(c.id);
     $("pickTitle").textContent = c.title;
     $("pickSub").textContent = (c.channel||"") + (data.made[c.id] ? " · เคยทำแล้ว" : "");
     bar.classList.add("on");
@@ -151,12 +191,15 @@
   /* ---------- channels ---------- */
   function renderChannels(){
     $("chanList").innerHTML = data.channels.length ? data.channels.map(function(c,i){
-      return '<div class="chan"><div><b>'+esc(c.title)+'</b><small>'+esc(c.handle)+(c.subs?' · '+fmtNumTh(c.subs)+' ผู้ติดตาม':'')+'</small></div><button class="btn small ghost" data-del="'+i+'">ลบ</button></div>';
+      var n = clips.filter(function(x){ return isChan(x, c); }).length;
+      return '<div class="chan"><div><b>'+esc(c.title)+'</b><small>'+esc(c.handle)+(c.subs?' · '+fmtNumTh(c.subs)+' ผู้ติดตาม':'')+' · '+n+' คลิป</small></div><button class="btn small ghost" data-del="'+i+'">ลบ</button></div>';
     }).join("") : '<div class="empty">ยังไม่มีช่อง</div>';
   }
   $("chanList").addEventListener("click", function(e){
     var b = e.target.closest("button[data-del]"); if(!b) return;
-    data.channels.splice(+b.dataset.del, 1); persist(); renderChannels();
+    var gone = data.channels.splice(+b.dataset.del, 1)[0];
+    clips = clips.filter(function(c){ return !isChan(c, gone); }); saveClips(); /* ลบช่อง = เอาคลิปของช่องนั้นออกจากหน้าคลิปด้วย */
+    persist(); renderChannels(); render();
   });
   $("addChanBtn").addEventListener("click", async function(){
     var h = $("handleInput").value.trim().replace(/^https?:\/\/(www\.)?youtube\.com\//,"").replace(/\/.*$/,"");
@@ -169,8 +212,12 @@
       var it = r.items && r.items[0];
       if(!it){ msg("chanMsg","ไม่เจอช่อง "+h+" เช็กตัวสะกด",true); }
       else{
-        data.channels.push({ handle:h, id:it.id, title:it.snippet.title, uploads:it.contentDetails.relatedPlaylists.uploads, subs:Number(it.statistics.subscriberCount)||0 });
-        persist(); renderChannels(); $("handleInput").value = ""; msg("chanMsg","");
+        var ch = { handle:h, id:it.id, title:it.snippet.title, uploads:it.contentDetails.relatedPlaylists.uploads, subs:Number(it.statistics.subscriberCount)||0 };
+        data.channels.push(ch); persist(); renderChannels(); $("handleInput").value = "";
+        msg("chanMsg","เพิ่มแล้ว กำลังดึงคลิปของ "+ch.title+"...");
+        var got = await fetchChannel(ch); /* ดึงคลิปของช่องใหม่ทันที ไม่ต้องกดดึงคลิปเอง */
+        clips = clips.filter(function(c){ return !isChan(c, ch); }).concat(got); saveClips(); persist();
+        renderChannels(); render(); msg("chanMsg","เพิ่ม "+ch.title+" แล้ว · ได้ "+got.length+" คลิป");
       }
     }catch(err){ msg("chanMsg", err.message, true); }
     $("addChanBtn").disabled = false;

@@ -65,7 +65,7 @@ html,body{
   line-height:1.5;
   -webkit-font-smoothing:antialiased;
 }
-body{padding:env(safe-area-inset-top) 0 calc(108px + env(safe-area-inset-bottom))}
+body{padding:env(safe-area-inset-top) 0 calc(150px + env(safe-area-inset-bottom))}
 ::selection{background:var(--accent-soft);color:var(--accent)}
 
 h1,h2{
@@ -76,44 +76,61 @@ h1,h2{
 
 .wrap{max-width:var(--wrap);margin:0 auto;padding:0 14px}
 
-header{padding:20px 0 12px}
-header h1{font-size:22px;line-height:1.25;color:var(--text)}
-header p{color:var(--muted);font-size:13px;margin-top:2px}
+header{display:flex;align-items:center;gap:12px;padding:18px 0 6px}
+header h1{font-size:20px;line-height:1.2;color:var(--text)}
+header p{color:var(--muted);font-size:12.5px;margin-top:1px}
+.logo{
+  flex:none;width:40px;height:40px;border-radius:12px;
+  display:grid;place-items:center;
+  font:500 22px/1 Mitr,sans-serif;color:var(--accent-ink);
+  background:linear-gradient(145deg,#fbbf24,#f59e0b 55%,#d97706);
+  box-shadow:0 4px 16px var(--accent-glow);
+}
+h2{font-size:16px;margin-bottom:2px}
 
 section{display:none;padding-top:16px}
 section.on{display:block}
 
-/* ---------- 3. Navigation (glass) ---------- */
+/* ---------- 3. Navigation (bottom tab bar — เอื้อมนิ้วโป้งถึง) ---------- */
 nav{
+  position:fixed;
+  left:0;right:0;bottom:0;
+  z-index:30;
   display:flex;
-  gap:6px;
-  position:sticky;
-  top:0;
-  z-index:10;
-  margin:0 -14px;
-  padding:8px 14px;
-  background:rgba(9,9,11,.85);
-  -webkit-backdrop-filter:blur(12px);
-  backdrop-filter:blur(12px);
-  border-bottom:1px solid var(--line);
+  max-width:var(--wrap);
+  margin:0 auto;
+  padding:6px 8px calc(6px + env(safe-area-inset-bottom));
+  background:rgba(14,14,17,.92);
+  -webkit-backdrop-filter:blur(16px);
+  backdrop-filter:blur(16px);
+  border-top:1px solid var(--line-strong);
 }
 nav button{
   flex:1;
-  min-height:40px;
-  padding:0 4px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:3px;
+  min-height:52px;
+  padding:4px 0;
   border:0;
-  border-radius:10px;
+  border-radius:12px;
   background:transparent;
   color:var(--muted);
   font:inherit;
-  font-size:14px;
+  font-size:11.5px;
   font-weight:500;
 }
+nav svg{
+  width:22px;height:22px;
+  fill:none;stroke:currentColor;stroke-width:1.8;
+  stroke-linecap:round;stroke-linejoin:round;
+}
 nav button[aria-selected="true"]{
-  background:var(--accent-soft);
   color:var(--accent);
   font-weight:600;
-  box-shadow:inset 0 0 0 1px rgba(245,158,11,.28);
+  background:var(--accent-soft);
 }
 
 /* ---------- 4. Buttons ---------- */
@@ -229,10 +246,55 @@ label{
 /* ---------- 6. Layout helpers ---------- */
 .row{display:flex;gap:8px;align-items:center}
 .row input{flex:1;min-width:0}
-.tools{display:flex;gap:8px;margin:12px 0}
+.tools{display:flex;gap:8px;margin:0}
 .tools select{flex:1;min-width:0}
 
-.empty{color:var(--muted);text-align:center;padding:40px 8px}
+.empty{color:var(--muted);text-align:center;padding:48px 8px}
+.empty-ico{font-size:34px;margin-bottom:8px;opacity:.7}
+
+.panel{
+  background:var(--surface);
+  border:1px solid var(--line);
+  border-radius:var(--r-card);
+  padding:14px;
+  margin-bottom:14px;
+}
+.panel .msg{background:var(--field)}
+
+.fchips{
+  display:flex;gap:8px;
+  overflow-x:auto;
+  margin:12px -14px 0;
+  padding:0 14px 2px;
+  scrollbar-width:none;
+}
+.fchips::-webkit-scrollbar{display:none}
+.fchips:empty{display:none}
+.fchip{
+  flex:none;
+  min-height:34px;
+  padding:0 12px;
+  border-radius:999px;
+  border:1px solid var(--line-strong);
+  background:var(--surface);
+  color:var(--muted);
+  font-size:13px;
+  font-weight:500;
+  white-space:nowrap;
+}
+.fchip i{font-style:normal;opacity:.7;margin-left:2px}
+.fchip.on{
+  background:var(--accent-soft);
+  border-color:rgba(245,158,11,.55);
+  color:var(--accent);
+}
+
+.listbar{
+  display:flex;justify-content:space-between;align-items:center;gap:10px;
+  margin:12px 0;
+  font-size:12px;color:var(--muted);
+}
+.chk{display:flex;gap:8px;align-items:center;margin:0;font-size:13px;color:var(--text)}
 
 .msg{
   padding:11px 14px;
@@ -271,34 +333,39 @@ label{
 }
 #list .card{margin-bottom:0}
 .card.made{opacity:.5}
-.card.made .thumb{filter:grayscale(.7)}
+.card.made .thumb{filter:grayscale(.8)}
 
+/* กรอบรูป 9:16 + ป้ายซ้อนบนรูป */
+.tbox{
+  position:relative;
+  aspect-ratio:9/16;
+  background:var(--field);
+  flex:none;
+}
 .thumb{
   display:block;
   width:100%;
-  aspect-ratio:9/16;
-  object-fit:cover;       /* ซูมเจาะกลางภาพ ตัดขอบดำ/เบลอด้านข้างทิ้ง */
-  object-position:center;
-  background:var(--field);
-  flex:none;
-}
-
-/* (ทางเลือก) ถ้าอยากซูมเพิ่มเพื่อตัดขอบดำบนล่างของ hqdefault
-   ให้ห่อ <img class="thumb"> ด้วย <div class="thumbwrap"> */
-.thumbwrap{
-  position:relative;
-  overflow:hidden;
-  aspect-ratio:9/16;
-  background:var(--field);
-  flex:none;
-}
-.thumbwrap .thumb{
-  position:absolute;
-  inset:0;
   height:100%;
-  aspect-ratio:auto;
-  transform:scale(1.32);
+  object-fit:cover;       /* hq720 เป็น 16:9 มีขอบดำข้าง → ซูมเจาะกลางให้เต็มกรอบ 9:16 */
+  object-position:center;
 }
+.tbox::after{
+  content:"";position:absolute;inset:auto 0 0 0;height:38%;
+  background:linear-gradient(to top,rgba(0,0,0,.78),transparent);
+  pointer-events:none;
+}
+.chip{
+  position:absolute;z-index:1;
+  padding:2px 8px;
+  border-radius:999px;
+  font-size:11.5px;font-weight:600;line-height:1.6;
+  background:rgba(9,9,11,.72);
+  -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+  color:var(--text);
+}
+.chip.hot{top:8px;left:8px;color:var(--ok);border:1px solid rgba(16,185,129,.45)}
+.chip.done{top:8px;right:8px;background:var(--ok);color:#04130c}
+.chip.views{bottom:8px;left:8px;background:none;-webkit-backdrop-filter:none;backdrop-filter:none;padding:0;text-shadow:0 1px 4px rgba(0,0,0,.8)}
 
 .cbody{
   display:flex;
@@ -340,40 +407,22 @@ label{
 
 .score{color:var(--ok);font-weight:600}
 
-.badge{
-  display:inline-block;
-  background:var(--ok-soft);
-  color:var(--ok);
-  border:1px solid rgba(16,185,129,.35);
-  border-radius:999px;
-  padding:0 8px;
-  font-size:11.5px;
-  font-weight:600;
-  line-height:1.6;
-  margin-left:6px;
-  white-space:nowrap;
-}
 
 .actions{
   display:flex;
   gap:6px;
   margin-top:auto;       /* ดันปุ่มไปชิดล่างการ์ด ให้แถวเท่ากัน */
   padding-top:10px;
-  flex-wrap:nowrap;
 }
-.actions a{text-decoration:none}
-.actions .btn,
-.actions button,
-.actions a{
-  flex:1 1 0;
-  min-width:0;
-  min-height:34px;
-  padding:0 8px;
-  font-size:12.5px;
+.actions .btn{
+  min-height:38px;
+  padding:0 10px;
+  font-size:13.5px;
   border-radius:10px;
-  overflow:hidden;
-  text-overflow:ellipsis;
 }
+.actions .btn:first-child{flex:1;min-width:0}
+.actions .ico{flex:none;width:40px;padding:0;font-size:14px}
+.actions .ico.on{background:var(--ok-soft);border-color:rgba(16,185,129,.5);color:var(--ok)}
 
 /* ---------- 8. Script tab ---------- */
 .seg{display:flex;gap:8px}
@@ -427,7 +476,7 @@ label{
   position:fixed;
   left:0;
   right:0;
-  bottom:calc(10px + env(safe-area-inset-bottom));
+  bottom:calc(70px + env(safe-area-inset-bottom)); /* เหนือแถบแท็บล่าง */
   width:calc(100% - 20px);
   max-width:var(--wrap);
   margin:0 auto;
@@ -445,7 +494,7 @@ label{
 .pick .inner{display:flex;gap:10px;align-items:center}
 .pick img{
   flex:none;
-  width:40px;
+  width:36px;
   aspect-ratio:9/16;
   object-fit:cover;
   border-radius:8px;
