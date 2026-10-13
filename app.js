@@ -42,6 +42,7 @@
   function showTab(name){
     document.querySelectorAll("nav button").forEach(function(x){ x.setAttribute("aria-selected", x.dataset.tab === name ? "true":"false"); });
     document.querySelectorAll("section").forEach(function(s){ s.classList.toggle("on", s.id === "tab-"+name); });
+    renderPick(); /* แถบคลิปที่เลือกโชว์เฉพาะแท็บ คลิป */
     document.dispatchEvent(new CustomEvent("mw:tab", { detail: name }));
   }
   document.querySelectorAll("nav button").forEach(function(b){
@@ -217,7 +218,7 @@
   function setPick(c){ data.picked = c; persist(); renderPick(); }
   function renderPick(){
     var c = data.picked, bar = $("pickBar");
-    if(!c){ bar.classList.remove("on"); return; }
+    if(!c || !$("tab-clips").classList.contains("on")){ bar.classList.remove("on"); return; }
     $("pickImg").src = thumbUrl(c.id);
     $("pickTitle").textContent = c.title;
     $("pickSub").textContent = (c.channel||"") + (data.made[c.id] ? " · เคยทำแล้ว" : "");
