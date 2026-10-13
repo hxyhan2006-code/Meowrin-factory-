@@ -181,7 +181,7 @@
       v.s1 = await callAI(ch, sys, v.eye, v);
       v.chat = ch.concat([{ role:"assistant", content: v.s1 }]); v.s1Len = v.chat.length;
       saveHist(c); v.step = "กำลังเขียนบท..."; paint(c, v);
-      v.s2 = await callAI(chatS1(v).concat([{ role:"user", content:"รัน" }]), sys, v.writer, v);
+      v.s2 = await callAI(chatS1(v).concat([{ role:"user", content:"รัน" }]), sys, v.writer, v); tidy(v);
     });
   }
 
@@ -292,7 +292,7 @@
     var c = cur, v = activeV(); if(!v || !v.s1Len) return;
     v.writer = cfg.model; /* เขียนใหม่ด้วยตัวเขียนบทที่ตั้งไว้ตอนนี้ */
     step(c, v, "กำลังเขียนบท...", async function(){
-      v.s2 = await callAI(chatS1(v).concat([{ role:"user", content:"รัน" }]), promptText(v), v.writer, v);
+      v.s2 = await callAI(chatS1(v).concat([{ role:"user", content:"รัน" }]), promptText(v), v.writer, v); tidy(v);
     }).then(function(){ finishMade(c); });
   });
   /* แก้บท: อันเดิมเก็บไว้ใน v.prev ให้สลับกลับได้ */
@@ -303,7 +303,7 @@
     var c = cur, v = activeV(), txt = v ? parts(v.s2 || "").script : ""; if(!v || v.busy || !fb || !txt) return;
     step(c, v, "กำลังแก้บท...", async function(){
       var out = await callAI([{ role:"user", content: "แก้บทพากย์ด้านล่างตามคำสั่ง แล้วตอบกลับมาเฉพาะบทพากย์ฉบับแก้ทั้งหมด ไม่ต้องมีหัวข้อ ชื่อคลิป หรือคำอธิบายเพิ่ม\nคงรูปแบบการขึ้นบรรทัดแบบเดิม: หนึ่งประโยคหรือหนึ่งช่วงหายใจต่อหนึ่งบรรทัด ไม่เว้นบรรทัดว่าง ห้ามรวมเป็นย่อหน้ายาว\n\nคำสั่ง: " + fb + "\n\n----\n" + txt }], "", v.writer, v);
-      v.prev = v.s2; setScript(v, parts(out).script);
+      v.prev = v.s2; setScript(v, reflow(parts(out).script));
     });
   }
   $("s2FbBtn").addEventListener("click", function(){ var fb = $("s2Fb").value.trim(); if(!fb) return; $("s2Fb").value = ""; editScript(fb); });
@@ -320,6 +320,21 @@
     var m1 = /^[^\n]*PART\s*1[^\n]*$/im.exec(t.slice(0, m2.index));
     return { head: t.slice(0, m2.index + m2[0].length), title: m1 ? t.slice(m1.index + m1[0].length, m2.index).trim() : "", script: t.slice(m2.index + m2[0].length).trim() };
   }
+  /* รับประกันรูปแบบบท: บรรทัดไหนยาวเกิน (AI รวมเป็นย่อหน้า) ตัดที่ช่องว่างระหว่างวลี ให้บรรทัดละไม่เกิน ~50 ตัวอักษร
+     บรรทัดสั้นอยู่แล้วและบรรทัดว่างไม่แตะ · ข้อความยาวที่ไม่มีช่องว่างเลยตัดไม่ได้ (ใช้ปุ่ม จัดบรรทัดใหม่ ให้ AI ช่วย) */
+  var LINE_MAX = 50, LINE_LONG = 70;
+  function reflow(text){
+    return text.split("\n").map(function(line){
+      if(line.length <= LINE_LONG) return line;
+      var out = [], row = "";
+      line.trim().split(/\s+/).forEach(function(w){
+        if(row && (row + " " + w).length > LINE_MAX){ out.push(row); row = w; } else row = row ? row + " " + w : w;
+      });
+      if(row) out.push(row);
+      return out.join("\n");
+    }).join("\n");
+  }
+  function tidy(v){ setScript(v, reflow(parts(v.s2 || "").script)); } /* ใช้หลังทุกครั้งที่ AI ส่งบทมา */
   function setScript(v, script){ var h = parts(v.s2 || "").head; v.s2 = h ? h + "\n" + script : script; }
   /* PART 1 → ชื่อคลิป 3 อัน + ข้อความบนจอ (อ่านจากรูปแบบที่ prompt สร้าง ถ้าอ่านไม่ออกจะโชว์ข้อความดิบ) */
   var pk = { titles:[], hook:"" };
