@@ -314,8 +314,33 @@
   /* ---------- settings ---------- */
   function keyState(){ $("ytState").textContent = getKey() ? "✓ ตั้งแล้ว" : "ยังไม่ได้ตั้ง"; $("ytState").classList.toggle("ok", !!getKey()); }
   $("ytKey").value = getKey(); keyState();
-  $("saveKey").addEventListener("click", function(){
+  function saveYt(){
     try{ localStorage.setItem(KEY_STORE, JSON.stringify($("ytKey").value.trim())); msg("setMsg","บันทึก key แล้ว"); keyState(); }catch(e){ msg("setMsg","บันทึกไม่ได้",true); }
+  }
+  $("saveKey").addEventListener("click", saveYt);
+  $("ytKey").addEventListener("change", saveYt); /* วาง/ลบ ผ่านปุ่มแล้วบันทึกให้เลย */
+
+  /* ปุ่ม วาง / ลบ ของช่องกรอกในตั้งค่า (key, prompt) — ลบต้องกดซ้ำเพื่อยืนยัน กันพลาด prompt ยาวๆ หาย */
+  function fireChange(el){ el.dispatchEvent(new Event("input", { bubbles:true })); el.dispatchEvent(new Event("change", { bubbles:true })); }
+  $("tab-settings").addEventListener("click", async function(e){
+    var b = e.target.closest("button[data-paste], button[data-clear]"); if(!b) return;
+    var el = $(b.dataset.paste || b.dataset.clear);
+    if(b.dataset.paste){
+      try{
+        var t = await navigator.clipboard.readText();
+        if(!t){ toast("คลิปบอร์ดว่างอยู่", true); return; }
+        el.value = "trim" in b.dataset ? t.trim() : t; fireChange(el); toast("วางแล้ว");
+      }catch(err){ toast("วางไม่ได้ อนุญาตให้เข้าถึงคลิปบอร์ด หรือกดค้างที่ช่องแล้ววางเอง", true); }
+      return;
+    }
+    if(!el.value){ toast("ช่องนี้ว่างอยู่แล้ว", true); return; }
+    if(!b.classList.contains("armed")){
+      b.classList.add("armed"); b.textContent = "แน่ใจนะ?";
+      setTimeout(function(){ b.classList.remove("armed"); b.textContent = "ลบ"; }, 3000);
+      return;
+    }
+    b.classList.remove("armed"); b.textContent = "ลบ";
+    el.value = ""; fireChange(el); toast("ลบแล้ว");
   });
   $("exportBtn").addEventListener("click", function(){
     var blob = new Blob([JSON.stringify({ channels:data.channels, made:data.made }, null, 2)], { type:"application/json" });

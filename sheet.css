@@ -57,6 +57,11 @@
 .hint{color:var(--muted);font-size:12.5px;margin:8px 0 12px}
 .panel > .hint{margin-top:4px}
 
+/* ปุ่ม วาง / ลบ เหนือช่องกรอก */
+.ftools{display:flex;gap:8px;justify-content:flex-end;margin-bottom:8px}
+.ftools .btn{min-width:64px}
+.ftools .btn.armed{background:var(--err);border-color:var(--err);color:#fff}
+
 /* ---------- 10d. Player sheet ---------- */
 .noscroll{overflow:hidden}
 .modal{

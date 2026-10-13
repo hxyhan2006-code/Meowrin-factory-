@@ -13,8 +13,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600&family=Mitr:wght@500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=20261013c">
-<link rel="stylesheet" href="sheet.css?v=20261013c">
+<link rel="stylesheet" href="style.css?v=20261013d">
+<link rel="stylesheet" href="sheet.css?v=20261013d">
 </head>
 <body>
 <div class="wrap">
@@ -116,6 +116,7 @@
       <details class="fold">
         <summary><span>YouTube Data API key</span><em class="state" id="ytState"></em></summary>
         <div class="fbody">
+          <div class="ftools"><button type="button" class="btn small ghost" data-paste="ytKey" data-trim>วาง</button><button type="button" class="btn small ghost" data-clear="ytKey">ลบ</button></div>
           <input id="ytKey" type="password" placeholder="AIza..." autocomplete="off" aria-label="YouTube Data API key">
           <p class="hint">เก็บในเครื่องนี้เท่านั้น แนะนำให้จำกัด key ให้ใช้ได้เฉพาะโดเมน GitHub Pages ของนาย และเฉพาะ YouTube Data API v3</p>
           <button class="btn" id="saveKey">บันทึก key</button>
@@ -124,6 +125,7 @@
       <details class="fold">
         <summary><span>OpenRouter API key</span><em class="state" id="gState"></em></summary>
         <div class="fbody">
+          <div class="ftools"><button type="button" class="btn small ghost" data-paste="gKey" data-trim>วาง</button><button type="button" class="btn small ghost" data-clear="gKey">ลบ</button></div>
           <input id="gKey" type="password" placeholder="sk-or-v1-..." autocomplete="off" aria-label="OpenRouter API key">
           <p class="hint">บันทึกอัตโนมัติเมื่อแก้เสร็จ</p>
         </div>
@@ -161,11 +163,11 @@
       <h2>Prompt</h2>
       <details class="fold">
         <summary><span>Prompt A · ยึดโครงต้นฉบับ</span></summary>
-        <div class="fbody"><textarea id="pA" rows="14" placeholder="วาง prompt A ทั้งก้อนที่นี่" aria-label="Prompt A"></textarea></div>
+        <div class="fbody"><div class="ftools"><button type="button" class="btn small ghost" data-paste="pA">วาง</button><button type="button" class="btn small ghost" data-clear="pA">ลบ</button></div><textarea id="pA" rows="14" placeholder="วาง prompt A ทั้งก้อนที่นี่" aria-label="Prompt A"></textarea></div>
       </details>
       <details class="fold">
         <summary><span>Prompt B · เรียบเรียงใหม่</span></summary>
-        <div class="fbody"><textarea id="pB" rows="14" placeholder="วาง prompt B ทั้งก้อนที่นี่" aria-label="Prompt B"></textarea></div>
+        <div class="fbody"><div class="ftools"><button type="button" class="btn small ghost" data-paste="pB">วาง</button><button type="button" class="btn small ghost" data-clear="pB">ลบ</button></div><textarea id="pB" rows="14" placeholder="วาง prompt B ทั้งก้อนที่นี่" aria-label="Prompt B"></textarea></div>
       </details>
       <button class="btn" id="saveAi" style="margin-top:12px">บันทึก Prompt</button>
     </div>
@@ -223,7 +225,7 @@
   </div>
 </div>
 
-<script src="app.js?v=20261013c"></script>
-<script src="ai.js?v=20261013c"></script>
+<script src="app.js?v=20261013d"></script>
+<script src="ai.js?v=20261013d"></script>
 </body>
 </html>
