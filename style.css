@@ -514,10 +514,95 @@ label{
   padding:0;
 }
 
+/* ---------- 10b. Preview button on thumbnail ---------- */
+.tplay{
+  position:absolute;inset:0;
+  width:100%;height:100%;
+  padding:0;border:0;background:none;
+  display:block;
+}
+.pbtn{
+  position:absolute;top:50%;left:50%;
+  width:46px;height:46px;margin:-23px 0 0 -23px;
+  display:grid;place-items:center;
+  border-radius:50%;
+  background:rgba(9,9,11,.55);
+  -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+  border:1px solid rgba(255,255,255,.25);
+  color:#fff;font-size:16px;padding-left:3px;
+  z-index:1;
+}
+.chip{pointer-events:none}
+
+/* ---------- 10c. Settings: collapsible rows ---------- */
+.fold{
+  background:var(--field);
+  border:1px solid var(--line);
+  border-radius:var(--r-ctl);
+  margin-top:8px;
+}
+.fold summary{
+  display:flex;align-items:center;gap:8px;
+  min-height:48px;padding:0 14px;
+  list-style:none;cursor:pointer;
+  font-size:14.5px;
+}
+.fold summary::-webkit-details-marker{display:none}
+.fold summary span{flex:1;min-width:0}
+.fold summary::after{
+  content:"";flex:none;width:8px;height:8px;
+  border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);
+  transform:rotate(45deg);transition:transform .15s ease;margin:-3px 2px 0 0;
+}
+.fold[open] summary::after{transform:rotate(-135deg);margin-top:3px}
+.fold[open] summary{border-bottom:1px solid var(--line)}
+.fbody{padding:12px 14px 14px}
+.fbody input,.fbody textarea{background-color:var(--bg)}
+.fbody textarea{min-height:240px;font-size:14px}
+.state{
+  font-style:normal;font-size:12px;font-weight:600;
+  padding:1px 9px;border-radius:999px;
+  background:var(--err-soft);color:#fda4af;
+}
+.state.ok{background:var(--ok-soft);color:var(--ok)}
+.hint{color:var(--muted);font-size:12.5px;margin:8px 0 12px}
+.panel > .hint{margin-top:4px}
+
+/* ---------- 10d. Player sheet ---------- */
+.noscroll{overflow:hidden}
+.modal{
+  position:fixed;inset:0;z-index:40;
+  display:flex;align-items:flex-end;justify-content:center;
+  background:rgba(0,0,0,.72);
+  -webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);
+}
+.sheet{
+  width:100%;max-width:var(--wrap);
+  max-height:100%;
+  display:flex;flex-direction:column;gap:10px;
+  padding:12px 14px calc(14px + env(safe-area-inset-bottom));
+  background:var(--surface);
+  border:1px solid var(--line-strong);border-bottom:0;
+  border-radius:20px 20px 0 0;
+}
+.phead{display:flex;align-items:center;gap:10px}
+.phead b{flex:1;min-width:0;font-weight:500;font-size:14px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pframe{
+  align-self:center;
+  height:min(68vh, 640px);
+  aspect-ratio:9/16;max-width:100%;
+  background:#000;border-radius:12px;overflow:hidden;
+}
+.pframe iframe{width:100%;height:100%;border:0;display:block}
+.pact{display:flex;gap:8px}
+.pact .btn{flex:1;min-width:0;padding:0 8px}
+
 /* ---------- 11. Motion ---------- */
 @media (prefers-reduced-motion:no-preference){
   .card{transition:opacity .15s ease}
   .pick.on{animation:pick-in .22s ease-out}
+  .sheet{animation:pick-in .22s ease-out}
   @keyframes pick-in{
     from{opacity:0;transform:translateY(14px)}
     to{opacity:1;transform:none}

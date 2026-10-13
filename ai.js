@@ -167,11 +167,13 @@
   $("gThink").value = cfg.think; $("pA").value = cfg.A; $("pB").value = cfg.B;
   var THINK_TH = { low:"ต่ำสุด", medium:"ปานกลาง", high:"สูงสุด" };
   function updateModelLine(){ $("sModel").textContent = "โมเดล: " + cfg.model + " · ระดับการคิด: " + (THINK_TH[cfg.think] || cfg.think); }
+  function orState(){ var on = !!$("gKey").value.trim(); $("gState").textContent = on ? "✓ ตั้งแล้ว" : "ยังไม่ได้ตั้ง"; $("gState").classList.toggle("ok", on); }
+  orState();
   function saveAi(){
     cfg = { model: $("gModel").value || DEFAULT_MODEL, think: $("gThink").value, A: $("pA").value, B: $("pB").value };
     var ok = save(CFG, cfg) && save(OR_KEY, $("gKey").value.trim());
     note("aiSetMsg", ok ? "บันทึกแล้ว · ใช้โมเดล " + cfg.model + " · คิด" + (THINK_TH[cfg.think] || cfg.think) : "บันทึกไม่ได้", !ok);
-    updateModelLine();
+    updateModelLine(); orState();
   }
   ["gKey","gModel","gThink","pA","pB"].forEach(function(id){ $(id).addEventListener("change", saveAi); }); /* บันทึกอัตโนมัติทุกครั้งที่แก้ */
   $("saveAi").addEventListener("click", saveAi);

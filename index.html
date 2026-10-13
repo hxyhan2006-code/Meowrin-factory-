@@ -111,52 +111,67 @@
   <!-- ตั้งค่า -->
   <section id="tab-settings">
     <div class="panel">
-    <h2>YouTube</h2>
-    <label for="ytKey">YouTube Data API key</label>
-    <input id="ytKey" type="password" placeholder="AIza..." autocomplete="off">
-    <div class="msg">key เก็บในเครื่องนี้เท่านั้น แนะนำให้จำกัด key ให้ใช้ได้เฉพาะโดเมน GitHub Pages ของนายใน Google Cloud Console และจำกัดเฉพาะ YouTube Data API v3 ด้วย</div>
-    <button class="btn" id="saveKey">บันทึก key</button>
+      <h2>คีย์ API</h2>
+      <details class="fold">
+        <summary><span>YouTube Data API key</span><em class="state" id="ytState"></em></summary>
+        <div class="fbody">
+          <input id="ytKey" type="password" placeholder="AIza..." autocomplete="off" aria-label="YouTube Data API key">
+          <p class="hint">เก็บในเครื่องนี้เท่านั้น แนะนำให้จำกัด key ให้ใช้ได้เฉพาะโดเมน GitHub Pages ของนาย และเฉพาะ YouTube Data API v3</p>
+          <button class="btn" id="saveKey">บันทึก key</button>
+        </div>
+      </details>
+      <details class="fold">
+        <summary><span>OpenRouter API key</span><em class="state" id="gState"></em></summary>
+        <div class="fbody">
+          <input id="gKey" type="password" placeholder="sk-or-v1-..." autocomplete="off" aria-label="OpenRouter API key">
+          <p class="hint">บันทึกอัตโนมัติเมื่อแก้เสร็จ</p>
+        </div>
+      </details>
     </div>
 
     <div class="panel">
-    <h2>AI ทำบท (OpenRouter)</h2>
-    <div id="aiSetMsg"></div>
-    <label for="gKey" style="margin-top:8px">OpenRouter API Key (sk-or-v1-...)</label>
-    <input id="gKey" type="password" placeholder="sk-or-v1-..." autocomplete="off">
-    <label for="gModel">โมเดล AI</label>
-    <select id="gModel">
-      <optgroup label="Google (วิเคราะห์วิดีโอ YouTube ได้โดยตรง)">
-        <option value="google/gemini-3.8-flash" selected>google/gemini-3.8-flash (ค่าเริ่มต้น แนะนำ)</option>
-        <option value="google/gemini-2.5-flash">google/gemini-2.5-flash</option>
-        <option value="google/gemini-2.5-pro">google/gemini-2.5-pro</option>
-      </optgroup>
-      <optgroup label="Anthropic (เขียนบทสำนวนธรรมชาติ)">
-        <option value="anthropic/claude-haiku-5.5">anthropic/claude-haiku-5.5</option>
-        <option value="anthropic/claude-sonnet-5.5">anthropic/claude-sonnet-5.5</option>
-      </optgroup>
-      <optgroup label="OpenAI (โครงสร้างคมชัด แม่นยำ)">
-        <option value="openai/gpt-4o-mini">openai/gpt-4o-mini</option>
-        <option value="openai/gpt-6.1-sol">openai/gpt-6.1-sol</option>
-      </optgroup>
-    </select>
-    <label for="gThink">ระดับการคิด (ต่ำ = เร็ว/ถูก, สูง = ละเอียด/แพง)</label>
-    <select id="gThink"><option value="low">ต่ำสุด</option><option value="medium">ปานกลาง</option><option value="high">สูงสุด</option></select>
-    <label for="pA">Prompt A (ยึดโครงต้นฉบับ)</label>
-    <textarea id="pA" rows="6" placeholder="วาง prompt A ทั้งก้อนที่นี่"></textarea>
-    <label for="pB">Prompt B (เรียบเรียงใหม่)</label>
-    <textarea id="pB" rows="6" placeholder="วาง prompt B ทั้งก้อนที่นี่"></textarea>
-    <button class="btn" id="saveAi" style="margin-top:10px">บันทึกการตั้งค่า AI</button>
+      <h2>AI ทำบท</h2>
+      <label for="gModel">โมเดล</label>
+      <select id="gModel">
+        <optgroup label="Google (วิเคราะห์วิดีโอ YouTube ได้โดยตรง)">
+          <option value="google/gemini-3.8-flash" selected>google/gemini-3.8-flash (แนะนำ)</option>
+          <option value="google/gemini-2.5-flash">google/gemini-2.5-flash</option>
+          <option value="google/gemini-2.5-pro">google/gemini-2.5-pro</option>
+        </optgroup>
+        <optgroup label="Anthropic (เขียนบทสำนวนธรรมชาติ)">
+          <option value="anthropic/claude-haiku-5.5">anthropic/claude-haiku-5.5</option>
+          <option value="anthropic/claude-sonnet-5.5">anthropic/claude-sonnet-5.5</option>
+        </optgroup>
+        <optgroup label="OpenAI (โครงสร้างคมชัด แม่นยำ)">
+          <option value="openai/gpt-4o-mini">openai/gpt-4o-mini</option>
+          <option value="openai/gpt-6.1-sol">openai/gpt-6.1-sol</option>
+        </optgroup>
+      </select>
+      <label for="gThink">ระดับการคิด (ต่ำ = เร็ว/ถูก, สูง = ละเอียด/แพง)</label>
+      <select id="gThink"><option value="low">ต่ำสุด</option><option value="medium">ปานกลาง</option><option value="high">สูงสุด</option></select>
+
+      <label>Prompt</label>
+      <details class="fold">
+        <summary><span>Prompt A · ยึดโครงต้นฉบับ</span></summary>
+        <div class="fbody"><textarea id="pA" rows="14" placeholder="วาง prompt A ทั้งก้อนที่นี่" aria-label="Prompt A"></textarea></div>
+      </details>
+      <details class="fold">
+        <summary><span>Prompt B · เรียบเรียงใหม่</span></summary>
+        <div class="fbody"><textarea id="pB" rows="14" placeholder="วาง prompt B ทั้งก้อนที่นี่" aria-label="Prompt B"></textarea></div>
+      </details>
+      <button class="btn" id="saveAi" style="margin-top:12px">บันทึกการตั้งค่า AI</button>
+      <div id="aiSetMsg"></div>
     </div>
 
     <div class="panel">
-    <h2>สำรองข้อมูล</h2>
-    <div class="msg">รายชื่อช่องกับรายการ "ทำแล้ว" เก็บในเครื่อง ถ้าล้างเบราว์เซอร์จะหาย โหลดสำรองไว้เป็นระยะ (ไม่รวม key)</div>
-    <div class="row">
-      <button class="btn ghost" id="exportBtn">โหลดไฟล์สำรอง</button>
-      <button class="btn ghost" id="importBtn">นำเข้า</button>
-      <input type="file" id="importFile" accept="application/json" hidden>
-    </div>
-    <div id="setMsg"></div>
+      <h2>สำรองข้อมูล</h2>
+      <p class="hint">รายชื่อช่องกับรายการ "ทำแล้ว" เก็บในเครื่อง ถ้าล้างเบราว์เซอร์จะหาย โหลดสำรองไว้เป็นระยะ (ไม่รวม key)</p>
+      <div class="row">
+        <button class="btn ghost" id="exportBtn">โหลดไฟล์สำรอง</button>
+        <button class="btn ghost" id="importBtn">นำเข้า</button>
+        <input type="file" id="importFile" accept="application/json" hidden>
+      </div>
+      <div id="setMsg"></div>
     </div>
   </section>
 </div>
@@ -167,6 +182,19 @@
   <button role="tab" data-tab="channels" aria-selected="false"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="18" height="13" rx="2.5"/><path d="M9.5 10v5l4.5-2.5zM8 3l4 3 4-3"/></svg><span>ช่อง</span></button>
   <button role="tab" data-tab="settings" aria-selected="false"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg><span>ตั้งค่า</span></button>
 </nav>
+
+<!-- ตัวเล่นคลิป -->
+<div class="modal" id="player" hidden>
+  <div class="sheet">
+    <div class="phead"><b id="pTitle"></b><button class="btn small ghost" id="pClose" aria-label="ปิด">✕</button></div>
+    <div class="pframe" id="pFrame"></div>
+    <div class="pact">
+      <button class="btn" id="pPick">เลือกคลิปนี้</button>
+      <button class="btn ghost" id="pMade">ทำแล้ว</button>
+      <a class="btn ghost" id="pOpen" target="_blank" rel="noopener">YouTube ↗</a>
+    </div>
+  </div>
+</div>
 
 <!-- แถบคลิปที่เลือก -->
 <div class="pick" id="pickBar">

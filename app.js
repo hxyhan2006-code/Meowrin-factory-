@@ -97,7 +97,7 @@
     $("list").innerHTML = list.map(function(c){
       var made = !!data.made[c.id];
       return '<article class="card'+(made?' made':'')+'">'
-        + '<div class="tbox"><img class="thumb" loading="lazy" decoding="async" src="'+thumbUrl(c.id)+'" alt="">'
+        + '<div class="tbox"><button class="tplay" data-play="'+c.id+'" aria-label="ดูตัวอย่างคลิป"><img class="thumb" loading="lazy" decoding="async" src="'+thumbUrl(c.id)+'" alt=""><span class="pbtn">▶</span></button>'
         + (c.score ? '<span class="chip hot">🔥 '+c.score.toFixed(1)+'×</span>' : '')
         + (made ? '<span class="chip done">✓ ทำแล้ว</span>' : '')
         + '<span class="chip views">'+fmtNumTh(c.views)+' วิว</span></div>'
@@ -106,7 +106,7 @@
         + '<div class="meta"><span>'+esc(c.channel)+'</span><span>'+ago(c.published)+'</span></div>'
         + '<div class="actions">'
         + '<button class="btn small" data-pick="'+c.id+'">เลือก</button>'
-        + '<a class="btn small ghost ico" href="https://youtube.com/shorts/'+c.id+'" target="_blank" rel="noopener" aria-label="เปิดดูใน YouTube" title="เปิดดู">▶</a>'
+        + '<button class="btn small ghost ico" data-play="'+c.id+'" aria-label="ดูตัวอย่างคลิป" title="ดูตัวอย่าง">▶</button>'
         + '<button class="btn small ghost ico'+(made?' on':'')+'" data-made="'+c.id+'" aria-label="'+(made?'ยกเลิกทำแล้ว':'ทำเครื่องหมายว่าทำแล้ว')+'" title="'+(made?'ยกเลิกทำแล้ว':'ทำแล้ว')+'">✓</button>'
         + '</div></div></article>';
     }).join("");
@@ -115,14 +115,49 @@
     var b = e.target.closest("button"); if(!b) return;
     if(b.dataset.made){ data.made[b.dataset.made] = !data.made[b.dataset.made]; if(!data.made[b.dataset.made]) delete data.made[b.dataset.made]; persist(); render(); }
     if(b.dataset.pick){ var c = clips.find(function(x){ return x.id === b.dataset.pick; }); if(c) setPick(c); }
+    if(b.dataset.play){ var p = clips.find(function(x){ return x.id === b.dataset.play; }); if(p) openPlayer(p); }
+  });
+
+  /* ---------- ตัวเล่นในแอพ (embed ไม่ต้องออกไปหน้า YouTube) ---------- */
+  var playing = null;
+  function openPlayer(c){
+    playing = c;
+    $("pTitle").textContent = c.title;
+    $("pFrame").innerHTML = '<iframe src="https://www.youtube.com/embed/'+c.id+'?autoplay=1&playsinline=1&rel=0&modestbranding=1" title="'+esc(c.title)+'" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe>';
+    $("pOpen").href = "https://youtube.com/shorts/" + c.id;
+    $("pMade").textContent = data.made[c.id] ? "ยกเลิกทำแล้ว" : "ทำแล้ว";
+    $("player").hidden = false; document.body.classList.add("noscroll");
+  }
+  function closePlayer(){ $("pFrame").innerHTML = ""; $("player").hidden = true; document.body.classList.remove("noscroll"); playing = null; } /* ล้าง iframe เพื่อหยุดเสียง */
+  $("pClose").addEventListener("click", closePlayer);
+  $("player").addEventListener("click", function(e){ if(e.target === this) closePlayer(); });
+  document.addEventListener("keydown", function(e){ if(e.key === "Escape" && playing) closePlayer(); });
+  $("pPick").addEventListener("click", function(){ var c = playing; closePlayer(); if(c) setPick(c); });
+  $("pMade").addEventListener("click", function(){
+    var id = playing.id; if(data.made[id]) delete data.made[id]; else data.made[id] = true;
+    persist(); render(); $("pMade").textContent = data.made[id] ? "ยกเลิกทำแล้ว" : "ทำแล้ว";
   });
   $("sortSel").addEventListener("change", render);
   $("hideMade").addEventListener("change", render);
 
   /* ดึง Shorts ล่าสุดของช่องเดียว (ใช้ทั้งตอนกด ดึงคลิป และตอนเพิ่มช่องใหม่) */
+  var PER_CHANNEL = 50; /* เพดานของ YouTube ต่อหนึ่งคำขอ */
+  async function channelVideoIds(ch){
+    /* playlist Shorts ล้วนของช่อง (UC… → UUSH…) ไม่งั้นช่องที่ลงวิดีโอยาวเยอะจะได้ Shorts น้อยหรือ 0
+       ถ้าช่องไม่มี playlist นี้ ถอยไปใช้ playlist อัปโหลดทั้งหมด */
+    var lists = [ch.uploads];
+    if(/^UC/.test(ch.id)) lists.unshift("UUSH" + ch.id.slice(2));
+    for(var i=0;i<lists.length;i++){
+      try{
+        var pl = await yt("playlistItems", { part:"contentDetails", playlistId: lists[i], maxResults: PER_CHANNEL });
+        var ids = (pl.items||[]).map(function(it){ return it.contentDetails.videoId; });
+        if(ids.length) return ids;
+      }catch(err){ if(/โควต้า|API key/.test(err.message)) throw err; }
+    }
+    return [];
+  }
   async function fetchChannel(ch){
-    var pl = await yt("playlistItems", { part:"contentDetails", playlistId: ch.uploads, maxResults: 25 });
-    var ids = (pl.items||[]).map(function(it){ return it.contentDetails.videoId; });
+    var ids = await channelVideoIds(ch);
     if(!ids.length) return [];
     var vs = await yt("videos", { part:"snippet,contentDetails,statistics", id: ids.join(",") });
     var cs = await yt("channels", { part:"statistics", id: ch.id });
@@ -224,9 +259,10 @@
   });
 
   /* ---------- settings ---------- */
-  $("ytKey").value = getKey();
+  function keyState(){ $("ytState").textContent = getKey() ? "✓ ตั้งแล้ว" : "ยังไม่ได้ตั้ง"; $("ytState").classList.toggle("ok", !!getKey()); }
+  $("ytKey").value = getKey(); keyState();
   $("saveKey").addEventListener("click", function(){
-    try{ localStorage.setItem(KEY_STORE, JSON.stringify($("ytKey").value.trim())); msg("setMsg","บันทึก key แล้ว"); }catch(e){ msg("setMsg","บันทึกไม่ได้",true); }
+    try{ localStorage.setItem(KEY_STORE, JSON.stringify($("ytKey").value.trim())); msg("setMsg","บันทึก key แล้ว"); keyState(); }catch(e){ msg("setMsg","บันทึกไม่ได้",true); }
   });
   $("exportBtn").addEventListener("click", function(){
     var blob = new Blob([JSON.stringify({ channels:data.channels, made:data.made }, null, 2)], { type:"application/json" });
