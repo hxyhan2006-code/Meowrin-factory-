@@ -65,7 +65,7 @@ html,body{
   line-height:1.5;
   -webkit-font-smoothing:antialiased;
 }
-body{padding:0 0 calc(150px + env(safe-area-inset-bottom))}
+body{padding:0 0 calc(92px + env(safe-area-inset-bottom))} /* เว้นที่ให้แถบแท็บล่าง แท็บที่มีแถบลอยเพิ่มช่องว่างของตัวเอง */
 ::selection{background:var(--accent-soft);color:var(--accent)}
 
 h1,h2{
@@ -99,6 +99,8 @@ h2{font-size:16px;margin-bottom:2px}
 
 section{display:none;padding-top:16px}
 section.on{display:block}
+#tab-clips{padding-bottom:78px}  /* เผื่อแถบ "คลิปที่เลือก" ที่ลอยเหนือแถบแท็บ */
+#tab-voice{padding-bottom:84px}  /* เผื่อปุ่ม ⚙ + สร้างเสียง ที่ลอยเหนือแถบแท็บ */
 
 /* ---------- 3. Navigation (bottom tab bar — เอื้อมนิ้วโป้งถึง) ---------- */
 nav{

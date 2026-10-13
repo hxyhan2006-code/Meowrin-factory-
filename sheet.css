@@ -235,7 +235,8 @@ select[data-sheet]{display:none}
 textarea.vtext,#tab-voice textarea.vtext:focus{display:block;width:100%;min-height:38vh;padding:0;border:0;border-radius:0;background:none;box-shadow:none;resize:none;overflow:hidden;font-size:17.5px;line-height:1.85;color:var(--text)}
 .vcount{margin:10px 0 4px}
 #tab-voice .fold{margin-top:12px}
-.vbar2{position:sticky;bottom:calc(76px + env(safe-area-inset-bottom));z-index:5;display:flex;gap:10px;margin-top:14px;padding:10px 0 4px;background:linear-gradient(transparent,var(--bg) 35%)}
+/* ปุ่มล่างติดจอจริง (fixed) เหนือแถบแท็บ — อยู่ใน #tab-voice จึงโผล่เฉพาะแท็บเสียง */
+.vbar2{position:fixed;left:0;right:0;bottom:calc(66px + env(safe-area-inset-bottom));z-index:12;max-width:var(--wrap);margin:0 auto;padding:12px 14px 6px;display:flex;gap:10px;background:linear-gradient(transparent,var(--bg) 38%)}
 .vbar2 .btn{flex:1;min-width:0;min-height:54px;border-radius:999px;font-size:16px}
 .vset{flex:none;width:54px;height:54px;padding:0;display:grid;place-items:center;border-radius:50%;border:1px solid var(--line-strong);background:var(--surface);color:var(--text)}
 .vset svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
