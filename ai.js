@@ -228,6 +228,9 @@
     ["s1FbBtn","s1Run","s2FbBtn"].forEach(function(id){ $(id).disabled = v.busy || !v.s1Len; });
     $("s2Wrap").hidden = !v.s2;
     $("s2Undo").hidden = !v.prev;
+    $("vBody").hidden = !v.s2; $("vNo").hidden = !!v.s2;
+    $("vMsg").innerHTML = $("vStatus").innerHTML; /* แก้บทด้วย AI จากหน้าเสียงก็เห็นสถานะ */
+    $("vText").readOnly = v.busy;
   }
   /* เนื้อหาของเวอร์ชันที่เปิดอยู่ลงช่องพิมพ์ */
   function renderVersion(){
@@ -235,7 +238,12 @@
     $("s1Out").value = v.s1 || "";
     $("s1Info").textContent = "ตัวดูคลิป: " + short(v.eye) + " · ตัวเขียนบท: " + short(v.writer);
     $("s1Fold").hidden = !v.s1Len;
-    $("s2Out").value = v.s2 || "";
+    var p = parts(v.s2 || "");
+    renderP1(p.title);
+    $("s2View").textContent = p.script;
+    $("vText").value = p.script;
+    $("vClip").textContent = cur.clip.title;
+    $("vVer").textContent = v.pname + " · เขียนโดย " + short(v.writer);
     renderCount(); renderRun();
   }
   $("vTabs").addEventListener("click", function(e){
@@ -247,7 +255,7 @@
     var c = MW.data.picked;
     $("sNoClip").hidden = !!c; $("sBody").hidden = !c;
     renderChips(); updateModelLine();
-    if(!c) return;
+    if(!c){ $("vBody").hidden = true; $("vNo").hidden = false; return; }
     $("sTitle").textContent = c.title;
     $("sMeta").textContent = (c.channel || "") + (MW.data.made[c.id] ? " · เคยทำแล้ว" : "");
     if(!cur || cur.clip.id !== c.id){
@@ -256,13 +264,17 @@
       renderVersion(); renderRun();
     }
   }
-  document.addEventListener("mw:tab", function(e){ $("histBtn").hidden = e.detail !== "script"; if(e.detail === "script") refresh(); }); /* ปุ่มประวัติโชว์เฉพาะแท็บบท */
+  document.addEventListener("mw:tab", function(e){ $("histBtn").hidden = e.detail !== "script"; if(e.detail === "script" || e.detail === "voice") refresh(); }); /* ปุ่มประวัติโชว์เฉพาะแท็บบท */
 
   /* ---------- แก้เอง / สั่งแก้ ---------- */
   $("sTrans").addEventListener("input", function(){ if(cur) cur.trans = this.value; });
   $("s1Out").addEventListener("input", function(){ var v = activeV(); if(v) v.s1 = this.value; });
-  $("s2Out").addEventListener("input", function(){ var v = activeV(); if(v){ v.s2 = this.value; renderCount(); } });
-  ["s1Out","s2Out","sTrans"].forEach(function(id){ $(id).addEventListener("change", function(){ if(cur) saveHist(cur); }); }); /* แก้เองแล้วเก็บให้ด้วย */
+  /* แก้บทในหน้าเสียง = แก้เฉพาะ PART 2 ของเวอร์ชันที่เปิดอยู่ (PART 1 คงเดิม) */
+  $("vText").addEventListener("input", function(){
+    var v = activeV(); if(!v) return;
+    setScript(v, this.value); $("s2View").textContent = this.value; renderCount();
+  });
+  ["s1Out","vText","sTrans"].forEach(function(id){ $(id).addEventListener("change", function(){ if(cur) saveHist(cur); }); }); /* แก้เองแล้วเก็บให้ด้วย */
 
   $("s1FbBtn").addEventListener("click", function(){
     var c = cur, v = activeV(), fb = $("s1Fb").value.trim(); if(!v || !fb || !v.s1Len) return;
@@ -284,10 +296,10 @@
   var QUICK = { short:"ตัดให้สั้นลงประมาณ 20% โดยคงใจความและมุกสำคัญไว้", long:"ขยายให้ยาวขึ้นเล็กน้อย เพิ่มรายละเอียดและจังหวะให้เนื้อเรื่องเต็มขึ้น",
                 punch:"ปรับให้แรงขึ้น เปิดประโยคแรกให้ดึงดูด จังหวะกระชับ ตัดคำฟุ่มเฟือย", funny:"ปรับให้ตลกขึ้น เพิ่มมุกและจังหวะ punchline ให้ชัด" };
   function editScript(fb){
-    var c = cur, v = activeV(), txt = (v && v.s2 || "").trim(); if(!v || v.busy || !fb || !txt) return;
+    var c = cur, v = activeV(), txt = v ? parts(v.s2 || "").script : ""; if(!v || v.busy || !fb || !txt) return;
     step(c, v, "กำลังแก้บท...", async function(){
-      var out = await callAI([{ role:"user", content: "แก้บทพากย์ด้านล่างตามคำสั่ง แล้วตอบกลับมาเป็นฉบับแก้ไขทั้งหมด คงรูปแบบ PART 1 / PART 2 เดิม ไม่ต้องมีคำอธิบายเพิ่ม\n\nคำสั่ง: " + fb + "\n\n----\n" + txt }], "", v.writer, v);
-      v.prev = v.s2; v.s2 = out;
+      var out = await callAI([{ role:"user", content: "แก้บทพากย์ด้านล่างตามคำสั่ง แล้วตอบกลับมาเฉพาะบทพากย์ฉบับแก้ทั้งหมด ไม่ต้องมีหัวข้อ ชื่อคลิป หรือคำอธิบายเพิ่ม\n\nคำสั่ง: " + fb + "\n\n----\n" + txt }], "", v.writer, v);
+      v.prev = v.s2; setScript(v, parts(out).script);
     });
   }
   $("s2FbBtn").addEventListener("click", function(){ var fb = $("s2Fb").value.trim(); if(!fb) return; $("s2Fb").value = ""; editScript(fb); });
@@ -300,24 +312,55 @@
   /* ---------- แยกชื่อคลิป (PART 1) กับบท (PART 2) ---------- */
   function parts(t){
     var m2 = /^[^\n]*PART\s*2[^\n]*$/im.exec(t);
-    if(!m2) return { title:"", script:t.trim() };
+    if(!m2) return { head:"", title:"", script:t.trim() };
     var m1 = /^[^\n]*PART\s*1[^\n]*$/im.exec(t.slice(0, m2.index));
-    return { title: m1 ? t.slice(m1.index + m1[0].length, m2.index).trim() : "", script: t.slice(m2.index + m2[0].length).trim() };
+    return { head: t.slice(0, m2.index + m2[0].length), title: m1 ? t.slice(m1.index + m1[0].length, m2.index).trim() : "", script: t.slice(m2.index + m2[0].length).trim() };
   }
+  function setScript(v, script){ var h = parts(v.s2 || "").head; v.s2 = h ? h + "\n" + script : script; }
+  /* PART 1 → ชื่อคลิป 3 อัน + ข้อความบนจอ (อ่านจากรูปแบบที่ prompt สร้าง ถ้าอ่านไม่ออกจะโชว์ข้อความดิบ) */
+  var pk = { titles:[], hook:"" };
+  function clean(s){ return s.replace(/^["“'*\s]+|["”'*\s]+$/g, ""); }
+  function packaging(t){
+    var out = { titles:[], hook:"" }, hook = [], inHook = false;
+    t.split("\n").map(function(l){ return l.trim(); }).filter(Boolean).forEach(function(l){
+      var after = clean(l.split(/[:：]/).slice(1).join(":"));
+      if(/hook\s*text|ข้อความบนจอ/i.test(l)){ inHook = true; if(after) hook.push(after); return; }
+      if(/video\s*titles?|ชื่อคลิป/i.test(l)){ inHook = false; return; }
+      var m = /^(?:\d+[.)]|[-•*])\s*(.+)$/.exec(l), s = clean(m ? m[1] : l);
+      if(!s) return;
+      if(inHook) hook.push(s); else if(m) out.titles.push(s);
+    });
+    out.hook = hook.join(" ");
+    return out;
+  }
+  function renderP1(t){
+    pk = packaging(t);
+    var row = function(k, i, s){ return '<button class="p1row" data-k="'+k+'" data-i="'+i+'"><span>'+esc(s)+'</span><em>คัดลอก</em></button>'; };
+    $("p1Card").innerHTML = pk.titles.length || pk.hook
+      ? (pk.titles.length ? '<div class="p1lab">ชื่อคลิป</div>' + pk.titles.map(function(s, i){ return row("t", i, s); }).join("") : "")
+        + (pk.hook ? '<div class="p1lab">ข้อความบนจอ</div>' + row("h", 0, pk.hook) : "")
+      : '<div class="p1raw">' + esc(t || "บทนี้ไม่มีส่วน PART 1") + '</div>';
+  }
+  $("p1Card").addEventListener("click", function(e){
+    var b = e.target.closest("button.p1row"); if(!b) return;
+    var txt = b.dataset.k === "h" ? pk.hook : pk.titles[+b.dataset.i];
+    (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(function(){
+      MW.toast("คัดลอกแล้ว"); b.classList.add("done"); b.querySelector("em").textContent = "✓ คัดลอกแล้ว";
+      setTimeout(function(){ b.classList.remove("done"); b.querySelector("em").textContent = "คัดลอก"; }, 1500);
+    }).catch(function(){ window.prompt("คัดลอกตรงนี้", txt); });
+  });
+  $("toVoice").addEventListener("click", function(){ MW.showTab("voice"); });
   function renderCount(){
-    var s = parts($("s2Out").value).script, n = s.replace(/\s/g, "").length;
-    var v = activeV();
+    var v = activeV(), s = v ? parts(v.s2 || "").script : "", n = s.replace(/\s/g, "").length;
     $("s2Count").textContent = n ? "บท " + n.toLocaleString() + " ตัวอักษร · พากย์ประมาณ " + Math.round(n / CHARS_PER_SEC) + " วิ" + (v && v.cost ? " · ค่าใช้จ่ายเวอร์ชันนี้ " + money(v.cost) : "") : "";
-    document.dispatchEvent(new CustomEvent("mw:script")); /* บทในจอเปลี่ยน → tts.js อัปเดตปุ่มสร้างเสียง */
+    document.dispatchEvent(new CustomEvent("mw:script")); /* บทในหน้าเสียงเปลี่ยน → tts.js อัปเดตปุ่มสร้างเสียง */
   }
   function copy(btn, txt, idle){
-    if(!txt){ MW.toast("ไม่เจอส่วนนี้ในบท (ต้องมีหัว PART 1 / PART 2)", true); return; }
+    if(!txt){ MW.toast("ยังไม่มีบทให้คัดลอก", true); return; }
     var done = function(){ btn.textContent = "คัดลอกแล้ว"; setTimeout(function(){ btn.textContent = idle; }, 1500); };
     (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(done).catch(function(){ window.prompt("คัดลอกตรงนี้", txt); });
   }
-  MW.parts = parts; /* tts.js ใช้แยกบท PART 2 */
-  $("copyBtn").addEventListener("click", function(){ copy(this, parts($("s2Out").value).script, "คัดลอกบท"); });
-  $("copyTitleBtn").addEventListener("click", function(){ copy(this, parts($("s2Out").value).title, "คัดลอกชื่อคลิป"); });
+  $("copyBtn").addEventListener("click", function(){ copy(this, $("vText").value.trim(), "คัดลอกบท"); });
 
   /* ---------- ตั้งค่า AI ---------- */
   function pickModel(selId, val, fallback){ $(selId).value = val; if($(selId).value !== val){ $(selId).value = fallback; return fallback; } return val; } /* โมเดลที่เซฟไว้แต่ไม่อยู่ในรายการ → ค่าเริ่มต้น */

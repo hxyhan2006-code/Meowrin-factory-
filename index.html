@@ -13,14 +13,15 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600&family=Mitr:wght@500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=20261013p">
-<link rel="stylesheet" href="sheet.css?v=20261013p">
+<link rel="stylesheet" href="style.css?v=20261013r">
+<link rel="stylesheet" href="sheet.css?v=20261013r">
 </head>
 <body>
 <div class="wrap">
   <header>
     <div class="logo" aria-hidden="true">m</div>
     <div><h1>meowrin factory</h1><p>หาคลิปต้นทาง → เลือก → ทำบท</p></div>
+    <button class="hbtn" id="chanBtn" aria-label="จัดการช่องที่ตามไว้"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="18" height="13" rx="2.5"/><path d="M9.5 10v5l4.5-2.5zM8 3l4 3 4-3"/></svg></button>
     <button class="hbtn" id="histBtn" hidden aria-label="ประวัติบทที่ทำไว้"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg><i id="histCount" hidden></i></button>
   </header>
 
@@ -95,30 +96,48 @@
         </details>
 
         <div id="s2Wrap" hidden>
-          <label for="s2Out">บท + ชื่อคลิป (แก้เองได้) <span class="lhint" id="s2Count"></span></label>
-          <textarea id="s2Out" rows="16"></textarea>
-          <div class="row" style="margin-top:8px">
-            <button class="btn" id="copyBtn" style="flex:1">คัดลอกบท</button>
-            <button class="btn ghost" id="copyTitleBtn" style="flex:1">คัดลอกชื่อคลิป</button>
+          <label>ชื่อคลิปกับข้อความบนจอ <span class="lhint">แตะเพื่อคัดลอก</span></label>
+          <div class="p1card" id="p1Card"></div>
+          <label>บทพากย์</label>
+          <div class="s2view" id="s2View"></div>
+          <button class="btn" id="toVoice" style="width:100%;margin-top:10px">แก้บท + สร้างเสียง →</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- เสียง -->
+  <section id="tab-voice">
+    <div id="vNo" class="empty">ยังไม่มีบท เลือกคลิปแล้วทำบทในแท็บ บท ก่อน</div>
+    <div id="vBody" hidden>
+      <div class="vhead">
+        <div class="vtitle"><b id="vClip"></b><small id="vVer"></small></div>
+        <button class="btn small ghost" id="vSetBtn">⚙ ตั้งค่าเสียง</button>
+      </div>
+      <div class="vvoice" id="vVoiceInfo"></div>
+      <textarea id="vText" aria-label="บทพากย์" placeholder="บทพากย์"></textarea>
+      <div class="vbar"><span class="lhint" id="s2Count"></span></div>
+      <div id="vMsg"></div>
+      <div class="row" style="margin-top:8px">
+        <button class="btn ghost" id="copyBtn" style="flex:1">คัดลอกบท</button>
+        <button class="btn ghost" id="s2Undo" style="flex:1" hidden>↶ สลับกับบทก่อนแก้</button>
+      </div>
+      <div class="tts">
+        <div id="ttsMsg"></div>
+        <div id="ttsOut" hidden>
+          <div class="fchips wrapchips" id="ttsTakes"></div>
+          <audio id="ttsAudio" controls preload="auto"></audio>
+          <p class="hint" id="ttsInfo" style="margin:0"></p>
+          <div class="row">
+            <button class="btn" id="ttsShare" style="flex:1">แชร์ไป CapCut</button>
+            <a class="btn ghost" id="ttsDl" style="flex:1">ดาวน์โหลด mp3</a>
+            <a class="btn ghost" id="ttsRaw" hidden>ไฟล์เต็ม</a>
           </div>
-          <div class="tts">
-            <button class="btn" id="ttsBtn" style="width:100%">🔊 สร้างเสียง</button>
-            <div id="ttsMsg"></div>
-            <div id="ttsOut" hidden>
-              <div class="fchips wrapchips" id="ttsTakes"></div>
-              <audio id="ttsAudio" controls preload="auto"></audio>
-              <p class="hint" id="ttsInfo" style="margin:0"></p>
-              <div class="row">
-                <button class="btn" id="ttsShare" style="flex:1">แชร์ไป CapCut</button>
-                <a class="btn ghost" id="ttsDl" style="flex:1">ดาวน์โหลด mp3</a>
-              </div>
-              <div class="row">
-                <button class="btn ghost" id="ttsMore" style="flex:1">+ สร้างอีกเทค</button>
-                <a class="btn small ghost" id="ttsRaw" hidden>ไฟล์เต็ม</a>
-              </div>
-            </div>
-          </div>
-          <label style="margin-top:14px">สั่งแก้บท <span class="lhint">แตะแล้วแก้ให้เลย</span></label>
+        </div>
+      </div>
+      <details class="fold" id="aiFixFold">
+        <summary><span>ให้ AI ช่วยแก้บท</span></summary>
+        <div class="fbody">
           <div class="fchips wrapchips" id="quickFb">
             <button class="fchip" data-q="short">สั้นลง</button><button class="fchip" data-q="long">ยาวขึ้น</button><button class="fchip" data-q="punch">แรงขึ้น</button><button class="fchip" data-q="funny">ตลกขึ้น</button>
           </div>
@@ -126,14 +145,18 @@
             <input id="s2Fb" placeholder="หรือพิมพ์เอง เช่น เปลี่ยนประโยคเปิดให้ดึงดูดกว่านี้" aria-label="สั่งแก้บท">
             <button class="btn ghost" id="s2FbBtn">แก้</button>
           </div>
-          <button class="btn ghost small" id="s2Undo" style="margin-top:8px" hidden>↶ สลับกับบทก่อนแก้</button>
         </div>
+      </details>
+      <div class="genbar">
+        <button class="btn" id="ttsBtn">🔊 สร้างเสียง</button>
+        <button class="btn" id="ttsMore" hidden>+ สร้างอีกเทค</button>
       </div>
     </div>
   </section>
 
-  <!-- ช่อง -->
+  <!-- ช่อง (เปิดจากปุ่มมุมขวาบนของแท็บคลิป) -->
   <section id="tab-channels">
+    <button class="btn small ghost" id="chanBack" style="margin-bottom:12px">← กลับหน้าคลิป</button>
     <div class="panel">
     <label for="handleInput" style="margin-top:0">เพิ่มช่องที่ตามไว้ (ใส่ @handle)</label>
     <div class="row">
@@ -203,7 +226,7 @@
       <p class="hint" id="spendInfo" style="margin-top:-6px"></p>
     </div>
 
-    <div class="panel">
+    <div class="panel" id="elPanel">
       <h2>เสียงพากย์ (ElevenLabs)</h2>
       <details class="fold">
         <summary><span>ElevenLabs API key</span><em class="state" id="elState"></em></summary>
@@ -218,6 +241,8 @@
         <input id="elVoice" placeholder="คัดลอกจากหน้าเสียงใน ElevenLabs" autocomplete="off" autocapitalize="none">
         <button type="button" class="btn ghost" data-paste="elVoice" data-trim>วาง</button>
       </div>
+      <label for="elVoiceName">ชื่อเสียง (ไว้โชว์ในหน้าเสียง ไม่บังคับ)</label>
+      <input id="elVoiceName" placeholder="เช่น Test7" autocomplete="off">
       <label for="elModel">โมเดลเสียง</label>
       <select id="elModel" data-sheet>
         <option value="eleven_v3" data-tag="แนะนำ" data-desc="ตัวเดียวกับที่ใช้บนเว็บ รองรับภาษาไทย">Eleven v3</option>
@@ -269,7 +294,7 @@
 <nav role="tablist">
   <button role="tab" data-tab="clips" aria-selected="true"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg><span>คลิป</span></button>
   <button role="tab" data-tab="script" aria-selected="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg><span>บท</span></button>
-  <button role="tab" data-tab="channels" aria-selected="false"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="18" height="13" rx="2.5"/><path d="M9.5 10v5l4.5-2.5zM8 3l4 3 4-3"/></svg><span>ช่อง</span></button>
+  <button role="tab" data-tab="voice" aria-selected="false"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3M8.5 21h7"/></svg><span>เสียง</span></button>
   <button role="tab" data-tab="settings" aria-selected="false"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg><span>ตั้งค่า</span></button>
 </nav>
 
@@ -314,9 +339,9 @@
   </div>
 </div>
 
-<script src="sync.js?v=20261013p"></script>
-<script src="app.js?v=20261013p"></script>
-<script src="ai.js?v=20261013p"></script>
-<script src="tts.js?v=20261013p"></script>
+<script src="sync.js?v=20261013r"></script>
+<script src="app.js?v=20261013r"></script>
+<script src="ai.js?v=20261013r"></script>
+<script src="tts.js?v=20261013r"></script>
 </body>
 </html>

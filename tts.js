@@ -1,11 +1,11 @@
 /* tts.js — สร้างเสียงพากย์จากบท (PART 2) ด้วย ElevenLabs แล้วฟัง / แชร์ไป CapCut / ดาวน์โหลด mp3
    ช่วงวอร์ม: ElevenLabs มักเพี้ยน 2-4 วิแรก → ใส่ hook (หรือประโยคที่ตั้งไว้) ข้างหน้าก่อนส่ง
    แล้วขอเวลาของแต่ละตัวอักษรกลับมา เพื่อตัดช่วงวอร์มทิ้งจากไฟล์ mp3 ให้เลย (ตัดทีละเฟรม ไม่ต้องเข้ารหัสใหม่)
-   โหลดหลัง ai.js (ใช้ MW.parts, MW.toast และ event "mw:script" ที่ ai.js ส่งเมื่อบทในจอเปลี่ยน)
+   อยู่ในแท็บ เสียง: อ่านบทจากช่อง #vText (ai.js ใส่บท PART 2 ของเวอร์ชันที่เลือกไว้ให้ และส่ง event "mw:script" เมื่อบทเปลี่ยน)
    ไฟล์เสียงไม่เก็บถาวร (ใหญ่เกินที่เก็บของเบราว์เซอร์) เก็บในหน่วยความจำระหว่างเปิดแอพเท่านั้น */
 (function(){
   "use strict";
-  var MW = window.MW; if(!MW || !MW.parts) return;
+  var MW = window.MW; if(!MW) return;
   var $ = function(id){ return document.getElementById(id); };
   var KEY = "mw_eleven_key_v1", CFG = "mw_tts_cfg_v1";
   var API = "https://api.elevenlabs.io/v1/text-to-speech/";
@@ -17,7 +17,7 @@
 
   /* ค่าเริ่มต้นตรงกับที่ Han ใช้บนเว็บ: Eleven v3 · Stability Natural (0.5) · ภาษาอัตโนมัติ · MP3 44.1kHz 128kbps
      warm = "hook" | "custom" | "off" · trim = ตัดช่วงวอร์มออกให้ · tsOff = เคยลองแล้วโมเดลนี้ไม่ส่งเวลาตัวอักษรมา */
-  var cfg = Object.assign({ voice:"", model:"eleven_v3", stability:0.5, fmt:"mp3_44100_128",
+  var cfg = Object.assign({ voice:"", voiceName:"", model:"eleven_v3", stability:0.5, fmt:"mp3_44100_128",
                             warm:"hook", warmText:"", trim:true, tsOff:false, usage:{ m:"", chars:0, n:0 } }, load(CFG, {}));
   function saveCfg(){ return save(CFG, cfg); }
 
@@ -126,7 +126,7 @@
   /* ---------- เทคที่สร้างแล้วในรอบนี้ (จับคู่กับข้อความบท) ---------- */
   var made = []; /* [{ text, takes:[{ raw, blob, cut, warm, url, rawUrl, name }], sel }] ล่าสุดอยู่ท้าย เก็บแค่ 5 บท */
   var busy = false;
-  function scriptText(){ return MW.parts($("s2Out").value).script; }
+  function scriptText(){ return $("vText").value.trim(); }
   function found(text){ return made.find(function(x){ return x.text === text; }); }
   function fileName(n){
     var c = MW.data.picked, t = c ? String(c.title).replace(/[^A-Za-z0-9ก-๙]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 40) : "";
@@ -138,7 +138,7 @@
   function note(text, err){ $("ttsMsg").innerHTML = text ? '<div class="msg'+(err?' err':'')+'">'+MW.esc(text)+'</div>' : ""; }
   function sync(){ /* เรียกทุกครั้งที่บทในจอเปลี่ยน */
     var text = scriptText(), n = text.length, a = found(text), label = n ? " · " + n.toLocaleString() + " ตัวอักษร" : "";
-    $("ttsBtn").hidden = !!a; $("ttsBtn").disabled = busy || !n;
+    $("ttsBtn").hidden = !!a; $("ttsBtn").disabled = busy || !n; $("ttsMore").hidden = !a; /* ปุ่มล่างจอ: ยังไม่มีเสียง = สร้างเสียง · มีแล้ว = อีกเทค */
     $("ttsBtn").textContent = busy ? "กำลังสร้างเสียง..." : "🔊 สร้างเสียง" + label;
     $("ttsMore").disabled = busy; $("ttsMore").textContent = busy ? "กำลังสร้างเสียง..." : "+ สร้างอีกเทค" + label;
     $("ttsOut").hidden = !a;
@@ -171,6 +171,7 @@
       take.rawUrl = take.blob !== take.raw ? URL.createObjectURL(take.raw) : "";
       a.takes.push(take); a.sel = a.takes.length - 1;
       MW.toast(a.takes.length > 1 ? "ได้เทค " + a.takes.length + " แล้ว" : "สร้างเสียงแล้ว");
+      setTimeout(function(){ $("ttsOut").scrollIntoView({ behavior:"smooth", block:"center" }); }, 50); /* เลื่อนไปที่ตัวเล่นให้เห็นเลย */
     }catch(err){ note(err.message, true); }
     busy = false; sync();
   }
@@ -191,8 +192,14 @@
     $("ttsUsage").textContent = u.n ? "เดือนนี้ส่งไปสร้างเสียงแล้ว " + u.chars.toLocaleString() + " ตัวอักษร (" + u.n + " ครั้ง จากแอพนี้) ยอดเครดิตจริงดูในเว็บ ElevenLabs" : "เดือนนี้ยังไม่ได้สร้างเสียงจากแอพนี้";
   }
   function renderTsNote(){ $("elTsNote").hidden = !cfg.tsOff; }
+  var MODEL_TH = { eleven_v3:"Eleven v3", eleven_multilingual_v2:"Multilingual v2" }, STAB_TH = { "0":"Creative", "0.5":"Natural", "1":"Robust" };
+  function renderVoiceInfo(){
+    $("vVoiceInfo").textContent = "🎙 " + (cfg.voiceName || (cfg.voice ? "Voice " + cfg.voice.slice(0, 6) + "…" : "ยังไม่ได้ตั้ง Voice ID")) + " · " + (MODEL_TH[cfg.model] || cfg.model)
+      + " · " + (STAB_TH[String(cfg.stability)] || cfg.stability) + (cfg.warm === "off" ? "" : " · วอร์ม" + (cfg.trim ? "+ตัดให้" : ""));
+  }
+  $("vSetBtn").addEventListener("click", function(){ MW.showTab("settings"); $("elPanel").scrollIntoView({ behavior:"smooth", block:"start" }); });
   function renderWarm(){ $("elWarmBox").hidden = cfg.warm !== "custom"; $("elTrimRow").hidden = cfg.warm === "off"; }
-  $("elKey").value = load(KEY, ""); $("elVoice").value = cfg.voice;
+  $("elKey").value = load(KEY, ""); $("elVoice").value = cfg.voice; $("elVoiceName").value = cfg.voiceName;
   $("elModel").value = cfg.model; if($("elModel").value !== cfg.model){ cfg.model = "eleven_v3"; $("elModel").value = cfg.model; }
   $("elStab").value = String(cfg.stability); if($("elStab").value !== String(cfg.stability)){ cfg.stability = 0.5; $("elStab").value = "0.5"; }
   $("elWarm").value = cfg.warm; if($("elWarm").value !== cfg.warm){ cfg.warm = "hook"; $("elWarm").value = "hook"; }
@@ -200,12 +207,12 @@
   function saveAll(e){
     var ok = save(KEY, $("elKey").value.trim());
     if(e && (e.target.id === "elModel" || e.target.id === "elTrim")) cfg.tsOff = false; /* เปลี่ยนโมเดล/เปิดตัดใหม่ → ลองแบบมีเวลาตัวอักษรอีกครั้ง */
-    cfg.voice = $("elVoice").value.trim(); cfg.model = $("elModel").value; cfg.stability = Number($("elStab").value);
+    cfg.voice = $("elVoice").value.trim(); cfg.voiceName = $("elVoiceName").value.trim(); cfg.model = $("elModel").value; cfg.stability = Number($("elStab").value);
     cfg.warm = $("elWarm").value; cfg.warmText = $("elWarmText").value; cfg.trim = $("elTrim").checked;
     ok = saveCfg() && ok;
-    MW.toast(ok ? "บันทึกแล้ว" : "บันทึกไม่ได้", !ok); keyState(); renderWarm(); renderTsNote();
+    MW.toast(ok ? "บันทึกแล้ว" : "บันทึกไม่ได้", !ok); keyState(); renderWarm(); renderTsNote(); renderVoiceInfo();
   }
-  ["elKey","elVoice","elModel","elStab","elWarm","elWarmText","elTrim"].forEach(function(id){ $(id).addEventListener("change", saveAll); }); /* บันทึกอัตโนมัติ (รวมตอนกด วาง/ลบ) */
+  ["elKey","elVoice","elVoiceName","elModel","elStab","elWarm","elWarmText","elTrim"].forEach(function(id){ $(id).addEventListener("change", saveAll); }); /* บันทึกอัตโนมัติ (รวมตอนกด วาง/ลบ) */
 
-  keyState(); renderUsage(); renderWarm(); renderTsNote(); sync();
+  keyState(); renderUsage(); renderWarm(); renderTsNote(); renderVoiceInfo(); sync();
 })();

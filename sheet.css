@@ -149,7 +149,7 @@ select[data-sheet]{display:none}
 /* ---------- 10f. Toast ---------- */
 .toast{
   position:fixed;left:50%;z-index:50;
-  bottom:calc(84px + env(safe-area-inset-bottom));
+  bottom:calc(150px + env(safe-area-inset-bottom)); /* เหนือแถบล่าง แถบคลิปที่เลือก และปุ่มสร้างเสียง */
   transform:translate(-50%,12px);
   max-width:calc(100% - 28px);
   padding:10px 16px;border-radius:999px;
@@ -212,3 +212,26 @@ select[data-sheet]{display:none}
 #ttsAudio{width:100%;height:44px;border-radius:12px}
 #ttsRaw{flex:none}
 #ttsTakes:empty{display:none}
+
+/* ---------- 10i. การ์ด PART 1 (แท็บบท) ---------- */
+.p1card{display:flex;flex-direction:column;gap:4px;padding:6px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-card)}
+.p1lab{margin:6px 8px 2px;font-size:12px;color:var(--muted)}
+.p1row{display:flex;align-items:center;gap:10px;width:100%;min-height:46px;padding:8px 12px;border:0;border-radius:10px;background:var(--field);color:var(--text);text-align:left;font-size:14.5px;line-height:1.4}
+.p1row span{flex:1;min-width:0;overflow-wrap:anywhere}
+.p1row em{flex:none;font-style:normal;font-size:12px;font-weight:600;color:var(--accent)}
+.p1row.done em{color:var(--ok)}
+.p1raw{padding:8px 10px;white-space:pre-wrap;font-size:14px;color:var(--muted)}
+.s2view{position:relative;max-height:240px;overflow:hidden;padding:12px 14px;white-space:pre-wrap;font-size:14.5px;line-height:1.6;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-card)}
+.s2view::after{content:"";position:absolute;left:0;right:0;bottom:0;height:56px;background:linear-gradient(transparent,var(--surface));pointer-events:none}
+
+/* ---------- 10j. แท็บเสียง ---------- */
+.vhead{display:flex;align-items:center;gap:10px;margin-bottom:4px}
+.vtitle{flex:1;min-width:0}
+.vtitle b{display:block;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vtitle small{color:var(--muted);font-size:12px}
+.vvoice{margin-bottom:10px;font-size:12.5px;color:var(--muted)}
+#vText{min-height:46vh;font-size:16px;line-height:1.75}
+.vbar{margin-top:6px}
+#tab-voice .fold{margin-top:12px}
+.genbar{position:sticky;bottom:calc(76px + env(safe-area-inset-bottom));z-index:5;margin-top:14px;padding:10px 0 4px;background:linear-gradient(transparent,var(--bg) 35%)}
+.genbar .btn{width:100%;min-height:52px;font-size:16px}

@@ -27,11 +27,14 @@
     document.querySelectorAll("nav button").forEach(function(x){ x.setAttribute("aria-selected", x.dataset.tab === name ? "true":"false"); });
     document.querySelectorAll("section").forEach(function(s){ s.classList.toggle("on", s.id === "tab-"+name); });
     renderPick(); /* แถบคลิปที่เลือกโชว์เฉพาะแท็บ คลิป */
+    $("chanBtn").hidden = name !== "clips"; /* ปุ่มจัดการช่องอยู่มุมขวาบนของแท็บคลิป */
     document.dispatchEvent(new CustomEvent("mw:tab", { detail: name }));
   }
   document.querySelectorAll("nav button").forEach(function(b){
     b.addEventListener("click", function(){ showTab(b.dataset.tab); });
   });
+  $("chanBtn").addEventListener("click", function(){ showTab("channels"); });
+  $("chanBack").addEventListener("click", function(){ showTab("clips"); });
 
   /* ---------- clip list ---------- */
   var chanFilter = ""; /* id ช่องที่กรองอยู่ ("" = ทุกช่อง) */
