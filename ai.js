@@ -148,11 +148,17 @@
 
   /* ---------- ตั้งค่า AI ---------- */
   $("gKey").value = load(GK, ""); $("gModel").value = cfg.model; $("gThink").value = cfg.think; $("pA").value = cfg.A; $("pB").value = cfg.B;
-  $("saveAi").addEventListener("click", function(){
+  var THINK_TH = { low:"ต่ำสุด", medium:"ปานกลาง", high:"สูงสุด" };
+  function updateModelLine(){ $("sModel").textContent = "โมเดล: " + cfg.model + " · ระดับการคิด: " + (THINK_TH[cfg.think] || cfg.think); }
+  function saveAi(){
     cfg = { model: $("gModel").value.trim() || "gemini-3.8-flash", think: $("gThink").value, A: $("pA").value, B: $("pB").value };
     var ok = save(CFG, cfg) && save(GK, $("gKey").value.trim());
-    note("aiSetMsg", ok ? "บันทึกแล้ว" : "บันทึกไม่ได้", !ok);
-  });
+    note("aiSetMsg", ok ? "บันทึกแล้ว · ใช้โมเดล " + cfg.model + " · คิด" + (THINK_TH[cfg.think] || cfg.think) : "บันทึกไม่ได้", !ok);
+    updateModelLine();
+  }
+  ["gKey","gModel","gThink","pA","pB"].forEach(function(id){ $(id).addEventListener("change", saveAi); }); /* บันทึกอัตโนมัติทุกครั้งที่แก้ */
+  $("saveAi").addEventListener("click", saveAi);
 
+  updateModelLine();
   refresh();
 })();

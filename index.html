@@ -57,6 +57,7 @@
     <div id="sNoClip" class="empty">เลือกคลิปในแท็บ คลิป ก่อน แล้วกด ทำบท</div>
     <div id="sBody" hidden>
       <div class="card"><div class="cbody"><div class="ctitle" id="sTitle"></div><div class="meta" id="sMeta"></div></div></div>
+      <div class="meta" id="sModel" style="margin:-4px 0 14px"></div>
 
       <label style="margin-top:0">เลือก prompt</label>
       <div class="seg" role="radiogroup" aria-label="เลือก prompt">
@@ -115,6 +116,7 @@
     <button class="btn" id="saveKey">บันทึก key</button>
 
     <h2 style="font-size:16px;margin:26px 0 4px">AI ทำบท (Gemini)</h2>
+    <div id="aiSetMsg"></div>
     <label for="gKey" style="margin-top:8px">Gemini API key (จาก Google AI Studio)</label>
     <input id="gKey" type="password" placeholder="AIza..." autocomplete="off">
     <label for="gModel">ชื่อโมเดล</label>
@@ -127,7 +129,6 @@
     <label for="pB">Prompt B (เรียบเรียงใหม่)</label>
     <textarea id="pB" rows="6" placeholder="วาง prompt B ทั้งก้อนที่นี่"></textarea>
     <button class="btn" id="saveAi" style="margin-top:10px">บันทึกการตั้งค่า AI</button>
-    <div id="aiSetMsg"></div>
 
     <h2 style="font-size:16px;margin:26px 0 4px">สำรองข้อมูล</h2>
     <div class="msg">รายชื่อช่องกับรายการ "ทำแล้ว" เก็บในเครื่อง ถ้าล้างเบราว์เซอร์จะหาย โหลดสำรองไว้เป็นระยะ (ไม่รวม key)</div>
