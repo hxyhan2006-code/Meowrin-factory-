@@ -1,62 +1,69 @@
-/* ai.js — ทำบทด้วย Gemini: แนะนำ prompt A/B → State 1 → รัน → แก้บท
+/* ai.js — ทำบทด้วย OpenRouter (ค่าเริ่มต้น google/gemini-2.5-flash): แนะนำ prompt A/B → State 1 → รัน → แก้บท
    ต้องโหลดหลัง app.js (ใช้ window.MW) ElevenLabs ยังไม่ทำ จะเติมในเฟสถัดไป */
 (function(){
   "use strict";
   var MW = window.MW; if(!MW) return;
   var $ = function(id){ return document.getElementById(id); };
-  var CFG = "mw_ai_cfg_v1", GK = "mw_gemini_key_v1";
-  var ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/";
+  var CFG = "mw_ai_cfg_v1", OR_KEY = "mw_openrouter_key_v1"; /* ใช้ชื่อ storage ใหม่ จะได้ไม่เอา Google key เก่าไปส่งให้ OpenRouter */
+  var ENDPOINT = "https://openrouter.ai/api/v1/chat/completions";
+  var DEFAULT_MODEL = "google/gemini-2.5-flash";
   function load(k, d){ try{ var v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } }
   function save(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); return true; }catch(e){ return false; } }
-  var cfg = Object.assign({ model:"gemini-3.8-flash", think:"medium", A:"", B:"" }, load(CFG, {}));
-  var chat = [], s1Len = 0, chatClip = null;
+  var cfg = Object.assign({ model:DEFAULT_MODEL, think:"medium", A:"", B:"" }, load(CFG, {}));
+  if(cfg.model.indexOf("/") < 0) cfg.model = DEFAULT_MODEL; /* ชื่อโมเดลเก่าแบบ Gemini ตรง (ไม่มี "ค่าย/") OpenRouter ไม่รู้จัก */
+  var chat = [], s1Len = 0, chatClip = null; /* chat เก็บเป็นรูปแบบ OpenAI: { role: "user"|"assistant", content } */
 
   function note(el, text, err){ $(el).innerHTML = text ? '<div class="msg'+(err?' err':'')+'">'+MW.esc(text)+'</div>' : ""; }
   function busy(ids, on){ ids.forEach(function(i){ $(i).disabled = on; }); }
   function sel(){ return document.querySelector('input[name="pSel"]:checked').value; }
 
-  /* ---------- Gemini ---------- */
+  /* ---------- OpenRouter ---------- */
   function sleep(ms){ return new Promise(function(r){ setTimeout(r, ms); }); }
-  async function gemini(contents, system, json, think){
-    var key = load(GK, "");
-    if(!key) throw new Error("ยังไม่ได้ใส่ Gemini API key (แท็บตั้งค่า)");
-    var body = { contents: contents }, gc = {};
-    if(system) body.systemInstruction = { parts: [{ text: system }] };
-    if(json) gc.responseMimeType = "application/json";
-    if(/^gemini-3/.test(cfg.model)) gc.thinkingConfig = { thinkingLevel: think || cfg.think || "medium" };
-    if(Object.keys(gc).length) body.generationConfig = gc;
+  async function callAI(messages, system, json, think){
+    var key = load(OR_KEY, "");
+    if(!key) throw new Error("ยังไม่ได้ใส่ OpenRouter API key (แท็บตั้งค่า)");
+    var body = { model: cfg.model, messages: system ? [{ role:"system", content: system }].concat(messages) : messages };
+    if(json) body.response_format = { type: "json_object" };
+    if(/^google\/gemini-(2\.5|3)/.test(cfg.model)) body.reasoning = { effort: think || cfg.think || "medium" };
     var res, j, delays = [2000, 5000];
     for(var attempt = 0; ; attempt++){
-      res = await fetch(ENDPOINT + encodeURIComponent(cfg.model) + ":generateContent", {
-        method: "POST", headers: { "Content-Type": "application/json", "x-goog-api-key": key }, body: JSON.stringify(body)
+      res = await fetch(ENDPOINT, {
+        method: "POST", headers: { "Content-Type": "application/json", "Authorization": "Bearer " + key }, body: JSON.stringify(body)
       });
       j = await res.json().catch(function(){ return {}; });
-      if(res.status === 503 && attempt < delays.length){ await sleep(delays[attempt]); continue; } /* โมเดลคนใช้เยอะชั่วคราว ลองซ้ำ */
+      if((res.status === 502 || res.status === 503) && attempt < delays.length){ await sleep(delays[attempt]); continue; } /* ผู้ให้บริการล่ม/คนใช้เยอะชั่วคราว ลองซ้ำ */
       break;
     }
-    if(!res.ok){
-      var m = (j.error && j.error.message) || "";
-      if(res.status === 503) throw new Error("โมเดล " + cfg.model + " คนใช้เยอะ ลองใหม่อีกครั้ง หรือเปลี่ยนโมเดลในตั้งค่า");
-      if(res.status === 429) throw new Error("ชนลิมิต/โควต้า Gemini ลองใหม่อีกสักพัก");
-      if(res.status === 403 || /API key/i.test(m)) throw new Error("Gemini key ใช้ไม่ได้: " + m);
-      if(res.status === 404) throw new Error("ไม่พบโมเดล "+cfg.model+" เช็กชื่อโมเดลในตั้งค่า");
-      if(res.status === 400 && /thinking/i.test(m)) throw new Error("โมเดลนี้ไม่รับระดับการคิดที่ตั้งไว้ ลองเปลี่ยนระดับในตั้งค่า: " + m);
-      var e = new Error("Gemini error " + res.status + (m ? ": " + m : "")); e.status = res.status; throw e;
+    var er = j.error || (j.choices && j.choices[0] && j.choices[0].error); /* OpenRouter อาจส่ง error มาใน body ทั้งที่ status 200 */
+    if(!res.ok || er){
+      var st = (er && typeof er.code === "number") ? er.code : res.status;
+      var m = (er && er.message) || "", md = (er && er.metadata) || {};
+      if(Array.isArray(md.reasons) && md.reasons.length) m += " (เหตุผล: " + md.reasons.join(", ") + ")";
+      if(typeof md.raw === "string" && md.raw) m += " — " + (md.provider_name ? md.provider_name + ": " : "") + md.raw.slice(0, 200);
+      if(st === 401) throw new Error("OpenRouter key ใช้ไม่ได้ เช็ก key ในตั้งค่า: " + m);
+      if(st === 402) throw new Error("เครดิต OpenRouter ไม่พอ เติมเครดิตแล้วลองใหม่: " + m);
+      if(st === 403) throw new Error("OpenRouter บล็อกคำขอนี้ (moderation): " + m);
+      if(st === 408) throw new Error("โมเดล " + cfg.model + " ตอบช้าเกินเวลา ลองใหม่อีกครั้ง");
+      if(st === 429) throw new Error("ชนลิมิต/โควต้า OpenRouter ลองใหม่อีกสักพัก" + (m ? ": " + m : ""));
+      if(st === 502 || st === 503) throw new Error("โมเดล " + cfg.model + " ใช้ไม่ได้ชั่วคราว (ผู้ให้บริการล่ม/คนใช้เยอะ) ลองใหม่อีกครั้ง หรือเปลี่ยนโมเดลในตั้งค่า" + (m ? ": " + m : ""));
+      if(st === 404 || (st === 400 && /valid model|model id/i.test(m))) throw new Error("ไม่พบโมเดล/ผู้ให้บริการที่รองรับ \"" + cfg.model + "\" เช็กชื่อโมเดลในตั้งค่า" + (m ? ": " + m : ""));
+      if(st === 400 && /reasoning|thinking/i.test(m)) throw new Error("โมเดลนี้ไม่รับระดับการคิดที่ตั้งไว้ ลองเปลี่ยนระดับในตั้งค่า: " + m);
+      var e = new Error("OpenRouter error " + st + (m ? ": " + m : "")); e.status = st; throw e;
     }
-    var c = j.candidates && j.candidates[0];
-    if(!c || !c.content || !c.content.parts) throw new Error("Gemini ไม่ตอบ" + (j.promptFeedback && j.promptFeedback.blockReason ? " (ถูกบล็อก: "+j.promptFeedback.blockReason+")" : ""));
-    return c.content.parts.map(function(p){ return p.text || ""; }).join("").trim();
+    var c = j.choices && j.choices[0], t = c && c.message && c.message.content;
+    if(typeof t !== "string" || !t.trim()) throw new Error("โมเดลไม่ตอบ" + (c && c.finish_reason ? " (finish_reason: " + c.finish_reason + ")" : ""));
+    return t.trim();
   }
   function needPrompt(p){
     if(!cfg[p] || !cfg[p].trim()) throw new Error("ยังไม่ได้วาง prompt "+p+" (แท็บตั้งค่า)");
     return cfg[p];
   }
-  function sourceParts(){
+  function sourceContent(){
     var c = MW.data.picked, t = $("sTrans").value.trim();
-    if(t) return [{ text: t }];
-    return [{ fileData: { fileUri: "https://www.youtube.com/watch?v=" + c.id } }, { text: "https://www.youtube.com/shorts/" + c.id }];
+    if(t) return t;
+    return [{ type:"video_url", video_url:{ url: "https://www.youtube.com/watch?v=" + c.id } }, { type:"text", text: "https://www.youtube.com/shorts/" + c.id }];
   }
-  function srcHint(err){ return err.message + (err.status === 400 || /video|URL|fileUri/i.test(err.message) ? "\nถ้าดึงจากลิงก์ไม่ได้ ลองวางทรานสคริปต์ในช่องด้านบนแทน" : ""); }
+  function srcHint(err){ return err.message + (err.status === 400 || /video|URL|youtube/i.test(err.message) ? "\nถ้าดึงจากลิงก์ไม่ได้ ลองวางทรานสคริปต์ในช่องด้านบนแทน" : ""); }
 
   /* ---------- หน้า ---------- */
   function refresh(){
@@ -76,7 +83,7 @@
       var sys = 'คุณคัดเลือกวิธีทำบทพากย์ One Piece Shorts ภาษาไทย ตอบเป็น JSON เท่านั้นรูปแบบ {"prompt":"A" หรือ "B","reason":"เหตุผลสั้นๆ 1 ประโยคภาษาไทย"}\n'
         + 'A = ยึดโครงเรื่องและจังหวะต้นฉบับ เหมาะกับคอมเมดี้/WTF ที่ลำดับ setup→punchline คือตัวขาย คลิปสั้น เสียง OG เยอะ ลิสต์นับจำนวนที่ลำดับสำคัญ\n'
         + 'B = ดึงแก่นไวรัลแล้วเรียบเรียงใหม่ เหมาะกับคลิปเล่า lore/ข้อมูลที่โครงเรื่องไม่คม หรือยาวและต้องจัดใหม่ ถ้าไม่แน่ใจให้เลือก B';
-      var out = await gemini([{ role:"user", parts: sourceParts() }], sys, true, "low");
+      var out = await callAI([{ role:"user", content: sourceContent() }], sys, true, "low");
       var r = JSON.parse(out.replace(/```json|```/g, "").trim());
       var p = r.prompt === "A" ? "A" : "B";
       document.querySelector('input[name="pSel"][value="'+p+'"]').checked = true;
@@ -91,24 +98,24 @@
     busy(["s1Btn"], true); note("sMsg","กำลังวิเคราะห์ซอส...");
     try{
       var sys = needPrompt(sel());
-      chat = [{ role:"user", parts: sourceParts() }];
-      var out = await gemini(chat, sys);
-      chat.push({ role:"model", parts:[{ text: out }] }); s1Len = chat.length;
+      chat = [{ role:"user", content: sourceContent() }];
+      var out = await callAI(chat, sys);
+      chat.push({ role:"assistant", content: out }); s1Len = chat.length;
       $("s1Out").value = out; $("s1Wrap").hidden = false; $("s2Wrap").hidden = true; note("sMsg","");
     }catch(err){ note("sMsg", srcHint(err), true); }
     busy(["s1Btn"], false);
   });
 
-  function syncS1(){ chat[s1Len-1] = { role:"model", parts:[{ text: $("s1Out").value }] }; chat.length = s1Len; }
+  function syncS1(){ chat[s1Len-1] = { role:"assistant", content: $("s1Out").value }; chat.length = s1Len; }
 
   $("s1FbBtn").addEventListener("click", async function(){
     var fb = $("s1Fb").value.trim(); if(!fb || !s1Len) return;
     busy(["s1FbBtn"], true); note("sMsg","กำลังปรับ State 1...");
     try{
       syncS1();
-      var next = chat.concat([{ role:"user", parts:[{ text: fb }] }]);
-      var out = await gemini(next, needPrompt(sel()));
-      chat = next.concat([{ role:"model", parts:[{ text: out }] }]); s1Len = chat.length;
+      var next = chat.concat([{ role:"user", content: fb }]);
+      var out = await callAI(next, needPrompt(sel()));
+      chat = next.concat([{ role:"assistant", content: out }]); s1Len = chat.length;
       $("s1Out").value = out; $("s1Fb").value = ""; note("sMsg","");
     }catch(err){ note("sMsg", err.message, true); }
     busy(["s1FbBtn"], false);
@@ -119,8 +126,8 @@
     busy(["runBtn","rerunBtn"], true); note("sMsg","กำลังเขียนบท...");
     try{
       syncS1();
-      var next = chat.concat([{ role:"user", parts:[{ text: "รัน" }] }]);
-      var out = await gemini(next, needPrompt(sel()));
+      var next = chat.concat([{ role:"user", content: "รัน" }]);
+      var out = await callAI(next, needPrompt(sel()));
       $("s2Out").value = out; $("s2Wrap").hidden = false; note("sMsg","");
       var id = MW.data.picked.id; MW.data.made[id] = true; MW.persist(); MW.onMadeChange();
     }catch(err){ note("sMsg", err.message, true); }
@@ -133,7 +140,7 @@
     var fb = $("s2Fb").value.trim(), txt = $("s2Out").value.trim(); if(!fb || !txt) return;
     busy(["s2FbBtn"], true); note("sMsg","กำลังแก้บท...");
     try{
-      var out = await gemini([{ role:"user", parts:[{ text: "แก้บทพากย์ด้านล่างตามคำสั่ง แล้วตอบกลับมาเป็นฉบับแก้ไขทั้งหมด คงรูปแบบ PART 1 / PART 2 เดิม ไม่ต้องมีคำอธิบายเพิ่ม\n\nคำสั่ง: " + fb + "\n\n----\n" + txt }] }]);
+      var out = await callAI([{ role:"user", content: "แก้บทพากย์ด้านล่างตามคำสั่ง แล้วตอบกลับมาเป็นฉบับแก้ไขทั้งหมด คงรูปแบบ PART 1 / PART 2 เดิม ไม่ต้องมีคำอธิบายเพิ่ม\n\nคำสั่ง: " + fb + "\n\n----\n" + txt }]);
       $("s2Out").value = out; $("s2Fb").value = ""; note("sMsg","");
     }catch(err){ note("sMsg", err.message, true); }
     busy(["s2FbBtn"], false);
@@ -147,12 +154,12 @@
   });
 
   /* ---------- ตั้งค่า AI ---------- */
-  $("gKey").value = load(GK, ""); $("gModel").value = cfg.model; $("gThink").value = cfg.think; $("pA").value = cfg.A; $("pB").value = cfg.B;
+  $("gKey").value = load(OR_KEY, ""); $("gModel").value = cfg.model; $("gThink").value = cfg.think; $("pA").value = cfg.A; $("pB").value = cfg.B;
   var THINK_TH = { low:"ต่ำสุด", medium:"ปานกลาง", high:"สูงสุด" };
   function updateModelLine(){ $("sModel").textContent = "โมเดล: " + cfg.model + " · ระดับการคิด: " + (THINK_TH[cfg.think] || cfg.think); }
   function saveAi(){
-    cfg = { model: $("gModel").value.trim() || "gemini-3.8-flash", think: $("gThink").value, A: $("pA").value, B: $("pB").value };
-    var ok = save(CFG, cfg) && save(GK, $("gKey").value.trim());
+    cfg = { model: $("gModel").value.trim() || DEFAULT_MODEL, think: $("gThink").value, A: $("pA").value, B: $("pB").value };
+    var ok = save(CFG, cfg) && save(OR_KEY, $("gKey").value.trim());
     note("aiSetMsg", ok ? "บันทึกแล้ว · ใช้โมเดล " + cfg.model + " · คิด" + (THINK_TH[cfg.think] || cfg.think) : "บันทึกไม่ได้", !ok);
     updateModelLine();
   }

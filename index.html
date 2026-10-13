@@ -115,13 +115,13 @@
     <div class="msg">key เก็บในเครื่องนี้เท่านั้น แนะนำให้จำกัด key ให้ใช้ได้เฉพาะโดเมน GitHub Pages ของนายใน Google Cloud Console และจำกัดเฉพาะ YouTube Data API v3 ด้วย</div>
     <button class="btn" id="saveKey">บันทึก key</button>
 
-    <h2 style="font-size:16px;margin:26px 0 4px">AI ทำบท (Gemini)</h2>
+    <h2 style="font-size:16px;margin:26px 0 4px">AI ทำบท (OpenRouter)</h2>
     <div id="aiSetMsg"></div>
-    <label for="gKey" style="margin-top:8px">Gemini API key (จาก Google AI Studio)</label>
-    <input id="gKey" type="password" placeholder="AIza..." autocomplete="off">
+    <label for="gKey" style="margin-top:8px">OpenRouter API Key (sk-or-v1-...)</label>
+    <input id="gKey" type="password" placeholder="sk-or-v1-..." autocomplete="off">
     <label for="gModel">ชื่อโมเดล</label>
-    <input id="gModel" list="modelList" placeholder="gemini-3.8-flash" autocomplete="off" autocapitalize="none">
-    <datalist id="modelList"><option value="gemini-3.8-flash"><option value="gemini-3.7-flash"><option value="gemini-3.1-pro-preview"></datalist>
+    <input id="gModel" list="modelList" placeholder="google/gemini-2.5-flash" autocomplete="off" autocapitalize="none">
+    <datalist id="modelList"><option value="google/gemini-2.5-flash"><option value="google/gemini-2.5-flash-lite"><option value="google/gemini-2.5-pro"><option value="google/gemini-3.1-pro-preview"></datalist>
     <label for="gThink">ระดับการคิด (ต่ำ = เร็ว/ถูก, สูง = ละเอียด/แพง)</label>
     <select id="gThink"><option value="low">ต่ำสุด</option><option value="medium">ปานกลาง</option><option value="high">สูงสุด</option></select>
     <label for="pA">Prompt A (ยึดโครงต้นฉบับ)</label>
