@@ -13,8 +13,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600&family=Mitr:wght@500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=20261013o">
-<link rel="stylesheet" href="sheet.css?v=20261013o">
+<link rel="stylesheet" href="style.css?v=20261013p">
+<link rel="stylesheet" href="sheet.css?v=20261013p">
 </head>
 <body>
 <div class="wrap">
@@ -105,10 +105,16 @@
             <button class="btn" id="ttsBtn" style="width:100%">🔊 สร้างเสียง</button>
             <div id="ttsMsg"></div>
             <div id="ttsOut" hidden>
+              <div class="fchips wrapchips" id="ttsTakes"></div>
               <audio id="ttsAudio" controls preload="auto"></audio>
+              <p class="hint" id="ttsInfo" style="margin:0"></p>
               <div class="row">
                 <button class="btn" id="ttsShare" style="flex:1">แชร์ไป CapCut</button>
                 <a class="btn ghost" id="ttsDl" style="flex:1">ดาวน์โหลด mp3</a>
+              </div>
+              <div class="row">
+                <button class="btn ghost" id="ttsMore" style="flex:1">+ สร้างอีกเทค</button>
+                <a class="btn small ghost" id="ttsRaw" hidden>ไฟล์เต็ม</a>
               </div>
             </div>
           </div>
@@ -223,6 +229,17 @@
         <option value="0.5" data-tag="แนะนำ" data-desc="สมดุล ใกล้เสียงต้นแบบที่สุด (ที่ใช้อยู่บนเว็บ)">Natural</option>
         <option value="1" data-desc="นิ่งและคงที่ ใกล้เคียง v2">Robust</option>
       </select>
+      <label for="elWarm">ช่วงวอร์มเสียง (กันเสียงเพี้ยน 2-4 วิแรก)</label>
+      <select id="elWarm" data-sheet>
+        <option value="hook" data-tag="แนะนำ" data-desc="พูด hook ซ้ำข้างหน้า อารมณ์เสียงต่อเนื่องกับบท">ซ้ำ hook ข้างหน้า</option>
+        <option value="custom" data-desc="ใช้ประโยคเดิมทุกคลิปตามที่ตั้งไว้ด้านล่าง">ประโยคตายตัวของฉัน</option>
+        <option value="off" data-desc="ส่งบทตรงๆ เสียงช่วงแรกอาจเพี้ยน">ไม่ใส่</option>
+      </select>
+      <div id="elWarmBox" hidden>
+        <input id="elWarmText" placeholder="เช่น ฉันคือมังกี้ ดี ลูฟี่ ชายที่จะเป็นราชาโจรสลัด" autocomplete="off" aria-label="ประโยควอร์มเสียง" style="margin-top:8px">
+      </div>
+      <label class="chk" id="elTrimRow" style="margin-top:12px"><input type="checkbox" id="elTrim" checked> ตัดช่วงวอร์มออกจากไฟล์ให้อัตโนมัติ</label>
+      <p class="hint" id="elTsNote" hidden>ครั้งล่าสุดโมเดลนี้ไม่ส่งเวลาตัวอักษรมา เลยตัดอัตโนมัติไม่ได้ ไฟล์จะยังมีช่วงวอร์ม (ปิด-เปิดช่องติ๊กนี้เพื่อลองใหม่)</p>
       <p class="hint" id="ttsUsage"></p>
     </div>
 
@@ -297,9 +314,9 @@
   </div>
 </div>
 
-<script src="sync.js?v=20261013o"></script>
-<script src="app.js?v=20261013o"></script>
-<script src="ai.js?v=20261013o"></script>
-<script src="tts.js?v=20261013o"></script>
+<script src="sync.js?v=20261013p"></script>
+<script src="app.js?v=20261013p"></script>
+<script src="ai.js?v=20261013p"></script>
+<script src="tts.js?v=20261013p"></script>
 </body>
 </html>
