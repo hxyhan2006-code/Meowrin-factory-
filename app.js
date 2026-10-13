@@ -190,7 +190,10 @@
     clips.forEach(function(c){
       if(isChan(c, ch)){ c.chId = ch.id; c.channel = ch.title; c.score = c.views / Math.max(ch.subs || 0, 1000); } /* ผู้ติดตามเปลี่ยน → คำนวณใหม่ */
     });
-    persist(); saveClips();
+    persist(); saveClips(); renderChannels();
+  }
+  function needSync(){ /* มีช่องที่ยังไม่ได้ดึงย้อนหลัง หรือครั้งล่าสุดเกิน 6 ชม. */
+    return !!getKey() && data.channels.some(function(c){ return !c.paused && (!c.full || Date.now() - (cache.at || 0) > AUTO_MS); });
   }
   async function syncAll(auto){
     var chs = data.channels.filter(function(c){ return !c.paused; });
@@ -401,7 +404,9 @@
                 setPick: setPick, ago: ago, thumbUrl: thumbUrl, openModal: openModal, closeModal: closeModal, confirmTap: confirmTap };
   render(); renderChannels(); renderPick();
   /* เปิดแอพ: ถ้ามี key และ (เกิน 6 ชม. หรือมีช่องที่ยังไม่ได้ดึงย้อนหลัง) → อัปเดตให้เอง */
-  if(getKey() && data.channels.some(function(c){ return !c.paused && (!c.full || Date.now() - (cache.at || 0) > AUTO_MS); })) syncAll(true);
+  if(needSync()) syncAll(true);
+  /* มือถือพักแท็บเบื้องหลังแล้วการดึงค้าง → กลับมาเปิดแอพแล้วดึงต่อให้ (ข้ามคลิปที่มีแล้ว) */
+  document.addEventListener("visibilitychange", function(){ if(!document.hidden && !syncing && needSync()) syncAll(true); });
 })();
 
 /* ---------- PWA: service worker ---------- */
