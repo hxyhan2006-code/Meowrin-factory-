@@ -1,4 +1,4 @@
-/* ai.js — ทำบทด้วย OpenRouter (ค่าเริ่มต้น google/gemini-2.5-flash): แนะนำ prompt A/B → State 1 → รัน → แก้บท
+/* ai.js — ทำบทด้วย OpenRouter (ค่าเริ่มต้น google/gemini-3.8-flash เลือกโมเดลจาก dropdown): แนะนำ prompt A/B → State 1 → รัน → แก้บท
    ต้องโหลดหลัง app.js (ใช้ window.MW) ElevenLabs ยังไม่ทำ จะเติมในเฟสถัดไป */
 (function(){
   "use strict";
@@ -6,7 +6,7 @@
   var $ = function(id){ return document.getElementById(id); };
   var CFG = "mw_ai_cfg_v1", OR_KEY = "mw_openrouter_key_v1"; /* ใช้ชื่อ storage ใหม่ จะได้ไม่เอา Google key เก่าไปส่งให้ OpenRouter */
   var ENDPOINT = "https://openrouter.ai/api/v1/chat/completions";
-  var DEFAULT_MODEL = "google/gemini-2.5-flash";
+  var DEFAULT_MODEL = "google/gemini-3.8-flash";
   function load(k, d){ try{ var v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } }
   function save(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); return true; }catch(e){ return false; } }
   var cfg = Object.assign({ model:DEFAULT_MODEL, think:"medium", A:"", B:"" }, load(CFG, {}));
@@ -19,12 +19,18 @@
 
   /* ---------- OpenRouter ---------- */
   function sleep(ms){ return new Promise(function(r){ setTimeout(r, ms); }); }
+  function isGoogle(m){ return /^google\//.test(m || ""); }
+  function supportsReasoning(m){
+    return /^google\/gemini-(2\.5|[3-9])/.test(m)          /* Gemini 2.5 ขึ้นไป */
+        || /^anthropic\/claude-/.test(m)                     /* Claude ชุดที่ใช้ในรายการ รองรับ reasoning */
+        || /^openai\/(o\d|gpt-([5-9]|\d{2,}))/.test(m);      /* o-series / GPT-5+ (gpt-4o-mini ไม่รองรับ) */
+  }
   async function callAI(messages, system, json, think){
     var key = load(OR_KEY, "");
     if(!key) throw new Error("ยังไม่ได้ใส่ OpenRouter API key (แท็บตั้งค่า)");
     var body = { model: cfg.model, messages: system ? [{ role:"system", content: system }].concat(messages) : messages };
     if(json) body.response_format = { type: "json_object" };
-    if(/^google\/gemini-(2\.5|3)/.test(cfg.model)) body.reasoning = { effort: think || cfg.think || "medium" };
+    if(supportsReasoning(cfg.model)) body.reasoning = { effort: think || cfg.think || "medium" }; /* ส่งเฉพาะโมเดลที่รองรับ */
     var res, j, delays = [2000, 5000];
     for(var attempt = 0; ; attempt++){
       res = await fetch(ENDPOINT, {
@@ -61,7 +67,9 @@
   function sourceContent(){
     var c = MW.data.picked, t = $("sTrans").value.trim();
     if(t) return t;
-    return [{ type:"video_url", video_url:{ url: "https://www.youtube.com/watch?v=" + c.id } }, { type:"text", text: "https://www.youtube.com/shorts/" + c.id }];
+    if(isGoogle(cfg.model)) return [{ type:"video_url", video_url:{ url: "https://www.youtube.com/watch?v=" + c.id } }, { type:"text", text: "https://www.youtube.com/shorts/" + c.id }];
+    /* โมเดลค่ายอื่นรับ YouTube video_url ตรงๆ ไม่ได้ ส่งลิงก์เป็นข้อความธรรมดากัน API error */
+    return "ลิงก์วิดีโอ YouTube: https://www.youtube.com/watch?v=" + c.id + "\n(โมเดลนี้เปิดดูวิดีโอจากลิงก์โดยตรงไม่ได้ และไม่มีทรานสคริปต์แนบมา)";
   }
   function srcHint(err){ return err.message + (err.status === 400 || /video|URL|youtube/i.test(err.message) ? "\nถ้าดึงจากลิงก์ไม่ได้ ลองวางทรานสคริปต์ในช่องด้านบนแทน" : ""); }
 
@@ -154,11 +162,13 @@
   });
 
   /* ---------- ตั้งค่า AI ---------- */
-  $("gKey").value = load(OR_KEY, ""); $("gModel").value = cfg.model; $("gThink").value = cfg.think; $("pA").value = cfg.A; $("pB").value = cfg.B;
+  $("gKey").value = load(OR_KEY, ""); $("gModel").value = cfg.model;
+  if($("gModel").value !== cfg.model){ cfg.model = DEFAULT_MODEL; $("gModel").value = DEFAULT_MODEL; } /* โมเดลที่เซฟไว้เก่าและไม่อยู่ใน dropdown → ใช้ค่าเริ่มต้น */
+  $("gThink").value = cfg.think; $("pA").value = cfg.A; $("pB").value = cfg.B;
   var THINK_TH = { low:"ต่ำสุด", medium:"ปานกลาง", high:"สูงสุด" };
   function updateModelLine(){ $("sModel").textContent = "โมเดล: " + cfg.model + " · ระดับการคิด: " + (THINK_TH[cfg.think] || cfg.think); }
   function saveAi(){
-    cfg = { model: $("gModel").value.trim() || DEFAULT_MODEL, think: $("gThink").value, A: $("pA").value, B: $("pB").value };
+    cfg = { model: $("gModel").value || DEFAULT_MODEL, think: $("gThink").value, A: $("pA").value, B: $("pB").value };
     var ok = save(CFG, cfg) && save(OR_KEY, $("gKey").value.trim());
     note("aiSetMsg", ok ? "บันทึกแล้ว · ใช้โมเดล " + cfg.model + " · คิด" + (THINK_TH[cfg.think] || cfg.think) : "บันทึกไม่ได้", !ok);
     updateModelLine();

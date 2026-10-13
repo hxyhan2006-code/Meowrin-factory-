@@ -119,9 +119,22 @@
     <div id="aiSetMsg"></div>
     <label for="gKey" style="margin-top:8px">OpenRouter API Key (sk-or-v1-...)</label>
     <input id="gKey" type="password" placeholder="sk-or-v1-..." autocomplete="off">
-    <label for="gModel">ชื่อโมเดล</label>
-    <input id="gModel" list="modelList" placeholder="google/gemini-2.5-flash" autocomplete="off" autocapitalize="none">
-    <datalist id="modelList"><option value="google/gemini-2.5-flash"><option value="google/gemini-2.5-flash-lite"><option value="google/gemini-2.5-pro"><option value="google/gemini-3.1-pro-preview"></datalist>
+    <label for="gModel">โมเดล AI</label>
+    <select id="gModel">
+      <optgroup label="Google (วิเคราะห์วิดีโอ YouTube ได้โดยตรง)">
+        <option value="google/gemini-3.8-flash" selected>google/gemini-3.8-flash (ค่าเริ่มต้น แนะนำ)</option>
+        <option value="google/gemini-2.5-flash">google/gemini-2.5-flash</option>
+        <option value="google/gemini-2.5-pro">google/gemini-2.5-pro</option>
+      </optgroup>
+      <optgroup label="Anthropic (เขียนบทสำนวนธรรมชาติ)">
+        <option value="anthropic/claude-haiku-5.5">anthropic/claude-haiku-5.5</option>
+        <option value="anthropic/claude-sonnet-5.5">anthropic/claude-sonnet-5.5</option>
+      </optgroup>
+      <optgroup label="OpenAI (โครงสร้างคมชัด แม่นยำ)">
+        <option value="openai/gpt-4o-mini">openai/gpt-4o-mini</option>
+        <option value="openai/gpt-6.1-sol">openai/gpt-6.1-sol</option>
+      </optgroup>
+    </select>
     <label for="gThink">ระดับการคิด (ต่ำ = เร็ว/ถูก, สูง = ละเอียด/แพง)</label>
     <select id="gThink"><option value="low">ต่ำสุด</option><option value="medium">ปานกลาง</option><option value="high">สูงสุด</option></select>
     <label for="pA">Prompt A (ยึดโครงต้นฉบับ)</label>
