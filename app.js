@@ -50,7 +50,7 @@
 
   var PAGE = 40; /* แสดงทีละกี่คลิป */
   var RANGES = [{ d:30, t:"30 วัน" }, { d:90, t:"90 วัน" }, { d:365, t:"1 ปี" }, { d:0, t:"ทั้งหมด" }];
-  var ui = { range:30, saved:false, q:"", shown:PAGE }; /* saved = โชว์เฉพาะที่เก็บไว้ (ไม่สนช่วงเวลา) */
+  var ui = { range:30, only:"", q:"", shown:PAGE }; /* only = "saved" ★ เก็บไว้ทำทีหลัง | "made" ทำแล้ว | "" ปกติ (สองโหมดแรกไม่สนช่วงเวลา) */
   function ageDays(c){ return (Date.now() - new Date(c.published).getTime()) / 864e5; }
   function vpd(c){ return c.views / Math.max(ageDays(c), 1); } /* วิวต่อวัน (คลิปอายุไม่ถึงวันนับเป็น 1 วัน) */
   function inRange(c, d){ return !d || ageDays(c) <= d; }
@@ -63,7 +63,7 @@
   }
   $("rangeChips").addEventListener("click", function(e){
     var b = e.target.closest("button[data-range]"); if(!b) return;
-    ui.saved = false; ui.range = +b.dataset.range; resetShown(); render();
+    ui.only = ""; ui.range = +b.dataset.range; resetShown(); render();
   });
   $("chanChips").addEventListener("click", function(e){
     var b = e.target.closest("button[data-chan]"); if(!b) return;
@@ -77,7 +77,9 @@
     2: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="8" height="16" rx="1.5"/><rect x="13" y="4" width="8" height="16" rx="1.5"/></svg>',
     3: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="4" width="5.5" height="16" rx="1.2"/><rect x="9.25" y="4" width="5.5" height="16" rx="1.2"/><rect x="16" y="4" width="5.5" height="16" rx="1.2"/></svg>'
   };
-  $("savedBtn").addEventListener("click", function(){ ui.saved = !ui.saved; resetShown(); render(); });
+  function toggleOnly(k){ ui.only = ui.only === k ? "" : k; resetShown(); render(); }
+  $("savedBtn").addEventListener("click", function(){ toggleOnly("saved"); });
+  $("madeBtn").addEventListener("click", function(){ toggleOnly("made"); });
   $("viewBtn").addEventListener("click", function(){ data.cols = data.cols === 3 ? 2 : 3; persist(); render(); });
 
   function metricChip(c, sort){
@@ -97,17 +99,20 @@
     var byChan = fch ? base.filter(function(c){ return isChan(c, fch); }) : base;
     $("rangeChips").innerHTML = chipsHtml(RANGES.map(function(r){
       return { id:r.d, t:r.t, n: byChan.filter(function(c){ return inRange(c, r.d); }).length };
-    }), ui.saved ? null : ui.range, "range"); /* เปิดดู ★ อยู่ = ไม่ไฮไลต์ช่วงเวลา */
+    }), ui.only ? null : ui.range, "range"); /* เปิดดู ★/ทำแล้ว อยู่ = ไม่ไฮไลต์ช่วงเวลา */
     var savedN = byChan.filter(function(c){ return data.saved[c.id]; }).length;
-    $("savedBtn").innerHTML = "★ " + savedN; $("savedBtn").classList.toggle("on", ui.saved);
-    var byRange = base.filter(function(c){ return ui.saved ? data.saved[c.id] : inRange(c, ui.range); });
+    var madeN = byChan.filter(function(c){ return data.made[c.id]; }).length;
+    $("savedBtn").innerHTML = "★ " + savedN; $("savedBtn").classList.toggle("on", ui.only === "saved");
+    $("madeBtn").innerHTML = "✓ " + madeN; $("madeBtn").classList.toggle("on", ui.only === "made");
+    function inView(c){ return ui.only === "saved" ? data.saved[c.id] : ui.only === "made" ? data.made[c.id] : inRange(c, ui.range); }
+    var byRange = base.filter(inView);
     $("chanChips").innerHTML = act.length < 2 ? "" : chipsHtml([{ id:"", t:"ทุกช่อง", n:byRange.length }].concat(act.map(function(ch){
       return { id:ch.id, t:ch.title, n: byRange.filter(function(c){ return isChan(c, ch); }).length };
     })), chanFilter, "chan");
 
-    var list = byChan.filter(function(c){ return ui.saved ? data.saved[c.id] : inRange(c, ui.range); });
+    var list = byChan.filter(inView);
     var matched = list.length;
-    if($("hideMade").checked) list = list.filter(function(c){ return !data.made[c.id]; });
+    if($("hideMade").checked && ui.only !== "made") list = list.filter(function(c){ return !data.made[c.id]; });
     var s = $("sortSel").value;
     list.sort(function(a,b){
       if(s==="views") return b.views - a.views;
@@ -125,7 +130,8 @@
         : !clips.length ? "ยังไม่ได้ดึงคลิป กดปุ่ม ดึงคลิป ด้านบน"
         : q ? "ไม่เจอคลิปที่ชื่อมีคำว่า \""+ui.q.trim()+"\""
         : matched ? "ไม่มีคลิปที่ยังไม่ได้ทำในช่วงนี้"
-        : ui.saved ? "ยังไม่ได้เก็บคลิปไว้ กดดาว ☆ มุมล่างขวาของรูปคลิป"
+        : ui.only === "saved" ? "ยังไม่ได้เก็บคลิปไว้ กดดาว ☆ มุมล่างขวาของรูปคลิป"
+        : ui.only === "made" ? "ยังไม่มีคลิปที่ทำแล้ว"
         : "ไม่มีคลิปในช่วงเวลานี้ ลองกดช่วงที่ยาวขึ้น";
       $("list").innerHTML = '<div class="empty"><div class="empty-ico">🎬</div>'+esc(why)+'</div>';
       return;
@@ -276,6 +282,9 @@
   }
   $("pickClear").addEventListener("click", function(){ data.picked = null; persist(); renderPick(); });
   $("pickGo").addEventListener("click", function(){ if(data.picked) showTab("script"); });
+  $("pickBar").querySelector(".inner").addEventListener("click", function(e){ /* แตะแถบ (ไม่ใช่ปุ่ม) = เปิดตัวอย่างคลิปที่เลือก */
+    if(data.picked && !e.target.closest("button")) openPlayer(data.picked);
+  });
 
   /* ---------- ชีตเลือกตัวเลือก (แทน dropdown ของระบบที่แก้หน้าตาไม่ได้) ---------- */
   var sheetSel = null;

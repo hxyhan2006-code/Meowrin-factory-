@@ -517,7 +517,7 @@ label{
   box-shadow:var(--shadow-float);
 }
 .pick.on{display:block}
-.pick .inner{display:flex;gap:10px;align-items:center}
+.pick .inner{display:flex;gap:10px;align-items:center;cursor:pointer}
 .pick img{
   flex:none;
   width:36px;
