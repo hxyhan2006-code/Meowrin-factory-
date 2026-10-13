@@ -27,6 +27,15 @@
     if(!save(HIST, hist)) MW.toast("พื้นที่เก็บเต็ม บันทึกประวัติไม่ได้", true);
     renderHistCount();
   }
+  /* ให้ไฟล์สำรอง (app.js) อ่าน/รวมประวัติได้ */
+  MW.history = {
+    all: function(){ return hist; },
+    merge: function(arr){ /* รวมตาม id เก็บอันที่ใหม่กว่า */
+      var byId = {}; hist.concat(arr).forEach(function(h){ if(h && h.id && h.clip && (!byId[h.id] || (h.at||0) > (byId[h.id].at||0))) byId[h.id] = h; });
+      hist = Object.keys(byId).map(function(k){ return byId[k]; }).sort(function(x,y){ return (y.at||0) - (x.at||0); }).slice(0, HIST_MAX);
+      save(HIST, hist); renderHistCount();
+    }
+  };
   function renderHistCount(){ $("histCount").textContent = hist.length; $("histCount").hidden = !hist.length; }
 
   function note(el, text, err){ $(el).innerHTML = text ? '<div class="msg'+(err?' err':'')+'">'+MW.esc(text)+'</div>' : ""; }

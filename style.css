@@ -457,6 +457,12 @@ label{
   font-size:13px;
 }
 
+/* ค้นหา + แถบความคืบหน้า + โหลดเพิ่ม */
+.searchbox{margin-top:10px}
+.prog{height:6px;margin-top:8px;border-radius:999px;background:var(--field);overflow:hidden}
+.prog i{display:block;height:100%;border-radius:inherit;background:var(--accent);transition:width .2s ease}
+.more{width:100%;margin-top:4px}
+
 /* ---------- 9. Channels tab ---------- */
 .chan{
   display:flex;
@@ -470,6 +476,9 @@ label{
   margin-bottom:8px;
 }
 .chan small{color:var(--muted);display:block}
+.chan > div:first-child{min-width:0}
+.chan-act{display:flex;gap:6px;flex:none}
+.chan.paused b,.chan.paused small{opacity:.55}
 
 /* ---------- 10. Floating pick bar (#pickBar) ---------- */
 .pick{

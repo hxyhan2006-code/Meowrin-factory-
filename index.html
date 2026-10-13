@@ -13,8 +13,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600&family=Mitr:wght@500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=20261013h">
-<link rel="stylesheet" href="sheet.css?v=20261013h">
+<link rel="stylesheet" href="style.css?v=20261013i">
+<link rel="stylesheet" href="sheet.css?v=20261013i">
 </head>
 <body>
 <div class="wrap">
@@ -37,12 +37,15 @@
 
     <div class="tools">
       <select id="sortSel" data-sheet aria-label="เรียงตาม">
-        <option value="score">เรียงตามความปัง (วิว ÷ ผู้ติดตาม)</option>
-        <option value="views">เรียงตามยอดวิว</option>
-        <option value="new">เรียงตามใหม่สุด</option>
+        <option value="vpd" data-desc="คลิปที่กำลังปังตอนนี้ (วิวรวม ÷ จำนวนวันที่ลง)" selected>วิวต่อวัน (ไวรัลตอนนี้)</option>
+        <option value="score" data-desc="วิวรวม ÷ ผู้ติดตามของช่อง">ความปัง (วิว ÷ ผู้ติดตาม)</option>
+        <option value="views" data-desc="ยอดวิวรวมสูงสุด">ยอดวิวรวม</option>
+        <option value="new" data-desc="คลิปที่เพิ่งลงล่าสุด">ใหม่สุด</option>
       </select>
       <button class="btn" id="fetchBtn">ดึงคลิป</button>
     </div>
+    <input id="qInput" class="searchbox" type="search" enterkeyhint="search" placeholder="ค้นหาในชื่อคลิป เช่น Luffy, Zoro" autocomplete="off" aria-label="ค้นหาในชื่อคลิป">
+    <div class="fchips" id="rangeChips"></div>
     <div class="fchips" id="chanChips"></div>
     <div class="listbar">
       <label class="chk"><input type="checkbox" id="hideMade" checked> ซ่อนคลิปที่ทำแล้ว</label>
@@ -235,7 +238,8 @@
   </div>
 </div>
 
-<script src="app.js?v=20261013h"></script>
-<script src="ai.js?v=20261013h"></script>
+<script src="sync.js?v=20261013i"></script>
+<script src="app.js?v=20261013i"></script>
+<script src="ai.js?v=20261013i"></script>
 </body>
 </html>
