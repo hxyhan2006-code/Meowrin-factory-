@@ -119,6 +119,19 @@
     if(b.dataset.play){ var p = clips.find(function(x){ return x.id === b.dataset.play; }); if(p) openPlayer(p); }
   });
 
+  /* ---------- โมดัลกลาง (ตัวเล่นคลิป / ชีตเลือก / ประวัติ) ---------- */
+  function openModal(id){ $(id).hidden = false; document.body.classList.add("noscroll"); }
+  function closeModal(id){ $(id).hidden = true; if(!document.querySelector(".modal:not([hidden])")) document.body.classList.remove("noscroll"); }
+  /* ปุ่มที่ต้องกดซ้ำเพื่อยืนยัน (ลบ) — กดครั้งแรกเปลี่ยนเป็น "แน่ใจนะ?" 3 วิ */
+  function confirmTap(b, idle, onOk){
+    if(!b.classList.contains("armed")){
+      b.classList.add("armed"); b.textContent = "แน่ใจนะ?";
+      setTimeout(function(){ b.classList.remove("armed"); b.textContent = idle; }, 3000);
+      return;
+    }
+    b.classList.remove("armed"); b.textContent = idle; onOk();
+  }
+
   /* ---------- ตัวเล่นในแอพ (embed ไม่ต้องออกไปหน้า YouTube) ---------- */
   var playing = null;
   function openPlayer(c){
@@ -127,9 +140,9 @@
     $("pFrame").innerHTML = '<iframe src="https://www.youtube.com/embed/'+c.id+'?autoplay=1&playsinline=1&rel=0&modestbranding=1" title="'+esc(c.title)+'" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe>';
     $("pOpen").href = "https://youtube.com/shorts/" + c.id;
     $("pMade").textContent = data.made[c.id] ? "ยกเลิกทำแล้ว" : "ทำแล้ว";
-    $("player").hidden = false; document.body.classList.add("noscroll");
+    openModal("player");
   }
-  function closePlayer(){ $("pFrame").innerHTML = ""; $("player").hidden = true; document.body.classList.remove("noscroll"); playing = null; } /* ล้าง iframe เพื่อหยุดเสียง */
+  function closePlayer(){ $("pFrame").innerHTML = ""; closeModal("player"); playing = null; } /* ล้าง iframe เพื่อหยุดเสียง */
   $("pClose").addEventListener("click", closePlayer);
   $("player").addEventListener("click", function(e){ if(e.target === this) closePlayer(); });
   document.addEventListener("keydown", function(e){
@@ -261,9 +274,9 @@
       else html += row(n);
     });
     $("selList").innerHTML = html;
-    $("selSheet").hidden = false; document.body.classList.add("noscroll");
+    openModal("selSheet");
   }
-  function closeSheet(){ $("selSheet").hidden = true; document.body.classList.remove("noscroll"); sheetSel = null; }
+  function closeSheet(){ closeModal("selSheet"); sheetSel = null; }
   $("selClose").addEventListener("click", closeSheet);
   $("selSheet").addEventListener("click", function(e){ if(e.target === this) closeSheet(); });
   $("selList").addEventListener("click", function(e){
@@ -345,13 +358,7 @@
       return;
     }
     if(!el.value){ toast("ช่องนี้ว่างอยู่แล้ว", true); return; }
-    if(!b.classList.contains("armed")){
-      b.classList.add("armed"); b.textContent = "แน่ใจนะ?";
-      setTimeout(function(){ b.classList.remove("armed"); b.textContent = "ลบ"; }, 3000);
-      return;
-    }
-    b.classList.remove("armed"); b.textContent = "ลบ";
-    el.value = ""; fireChange(el); toast("ลบแล้ว");
+    confirmTap(b, "ลบ", function(){ el.value = ""; fireChange(el); toast("ลบแล้ว"); });
   });
   $("exportBtn").addEventListener("click", function(){
     var blob = new Blob([JSON.stringify({ channels:data.channels, made:data.made }, null, 2)], { type:"application/json" });
@@ -372,7 +379,8 @@
     r.readAsText(f);
   });
 
-  window.MW = { toast: toast, data: data, persist: persist, esc: esc, showTab: showTab, videoId: videoId, onMadeChange: render };
+  window.MW = { toast: toast, data: data, persist: persist, esc: esc, showTab: showTab, videoId: videoId, onMadeChange: render,
+                setPick: setPick, ago: ago, thumbUrl: thumbUrl, openModal: openModal, closeModal: closeModal, confirmTap: confirmTap };
   render(); renderChannels(); renderPick();
 })();
 

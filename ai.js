@@ -13,6 +13,22 @@
   if(cfg.model.indexOf("/") < 0) cfg.model = DEFAULT_MODEL; /* ชื่อโมเดลเก่าแบบ Gemini ตรง (ไม่มี "ค่าย/") OpenRouter ไม่รู้จัก */
   var chat = [], s1Len = 0, chatClip = null; /* chat เก็บเป็นรูปแบบ OpenAI: { role: "user"|"assistant", content } */
 
+  /* ---------- ประวัติบท (เก็บต่อคลิป 1 รายการ ล่าสุดอยู่บนสุด) ---------- */
+  var HIST = "mw_history_v1", HIST_MAX = 30;
+  var hist = load(HIST, []);
+  function findHist(id){ return hist.find(function(h){ return h.id === id; }); }
+  function saveHist(){
+    var c = MW.data.picked; if(!c || !s1Len) return;
+    syncS1(); /* เอาที่แก้ใน State 1 เข้า chat ก่อนเก็บ */
+    var e = { id:c.id, clip:{ id:c.id, title:c.title, channel:c.channel, views:c.views, published:c.published, score:c.score },
+              p:sel(), model:cfg.model, trans:$("sTrans").value, chat:chat, s1Len:s1Len,
+              s1:$("s1Out").value, s2: $("s2Wrap").hidden ? "" : $("s2Out").value, at:Date.now() };
+    hist = [e].concat(hist.filter(function(h){ return h.id !== e.id; })).slice(0, HIST_MAX);
+    if(!save(HIST, hist)) MW.toast("พื้นที่เก็บเต็ม บันทึกประวัติไม่ได้", true);
+    renderHistCount();
+  }
+  function renderHistCount(){ $("histCount").textContent = hist.length; $("histCount").hidden = !hist.length; }
+
   function note(el, text, err){ $(el).innerHTML = text ? '<div class="msg'+(err?' err':'')+'">'+MW.esc(text)+'</div>' : ""; }
   function busy(ids, on){ ids.forEach(function(i){ $(i).disabled = on; }); }
   function sel(){ return document.querySelector('input[name="pSel"]:checked').value; }
@@ -80,7 +96,17 @@
     if(!c) return;
     $("sTitle").textContent = c.title;
     $("sMeta").textContent = (c.channel || "") + (MW.data.made[c.id] ? " · เคยทำแล้ว" : "");
-    if(chatClip !== c.id){ chat = []; s1Len = 0; chatClip = c.id; $("s1Wrap").hidden = true; $("s2Wrap").hidden = true; $("reco").innerHTML = ""; note("sMsg",""); }
+    if(chatClip !== c.id){
+      chat = []; s1Len = 0; chatClip = c.id; $("s1Wrap").hidden = true; $("s2Wrap").hidden = true; $("reco").innerHTML = ""; $("sTrans").value = ""; note("sMsg","");
+      var h = findHist(c.id); /* เคยทำคลิปนี้ไว้ → โหลดกลับมาให้ต่อได้เลย */
+      if(h){
+        chat = h.chat || []; s1Len = h.s1Len || 0;
+        $("s1Out").value = h.s1 || ""; $("s1Wrap").hidden = !s1Len;
+        if(h.s2){ $("s2Out").value = h.s2; $("s2Wrap").hidden = false; }
+        $("sTrans").value = h.trans || "";
+        var r = document.querySelector('input[name="pSel"][value="'+h.p+'"]'); if(r) r.checked = true;
+      }
+    }
   }
   document.addEventListener("mw:tab", function(e){ if(e.detail === "script") refresh(); });
 
@@ -109,7 +135,7 @@
       chat = [{ role:"user", content: sourceContent() }];
       var out = await callAI(chat, sys);
       chat.push({ role:"assistant", content: out }); s1Len = chat.length;
-      $("s1Out").value = out; $("s1Wrap").hidden = false; $("s2Wrap").hidden = true; note("sMsg","");
+      $("s1Out").value = out; $("s1Wrap").hidden = false; $("s2Wrap").hidden = true; note("sMsg",""); saveHist();
     }catch(err){ note("sMsg", srcHint(err), true); }
     busy(["s1Btn"], false);
   });
@@ -124,7 +150,7 @@
       var next = chat.concat([{ role:"user", content: fb }]);
       var out = await callAI(next, needPrompt(sel()));
       chat = next.concat([{ role:"assistant", content: out }]); s1Len = chat.length;
-      $("s1Out").value = out; $("s1Fb").value = ""; note("sMsg","");
+      $("s1Out").value = out; $("s1Fb").value = ""; note("sMsg",""); saveHist();
     }catch(err){ note("sMsg", err.message, true); }
     busy(["s1FbBtn"], false);
   });
@@ -137,7 +163,7 @@
       var next = chat.concat([{ role:"user", content: "รัน" }]);
       var out = await callAI(next, needPrompt(sel()));
       $("s2Out").value = out; $("s2Wrap").hidden = false; note("sMsg","");
-      var id = MW.data.picked.id; MW.data.made[id] = true; MW.persist(); MW.onMadeChange();
+      var id = MW.data.picked.id; MW.data.made[id] = true; MW.persist(); MW.onMadeChange(); saveHist();
     }catch(err){ note("sMsg", err.message, true); }
     busy(["runBtn","rerunBtn"], false);
   }
@@ -149,7 +175,7 @@
     busy(["s2FbBtn"], true); note("sMsg","กำลังแก้บท...");
     try{
       var out = await callAI([{ role:"user", content: "แก้บทพากย์ด้านล่างตามคำสั่ง แล้วตอบกลับมาเป็นฉบับแก้ไขทั้งหมด คงรูปแบบ PART 1 / PART 2 เดิม ไม่ต้องมีคำอธิบายเพิ่ม\n\nคำสั่ง: " + fb + "\n\n----\n" + txt }]);
-      $("s2Out").value = out; $("s2Fb").value = ""; note("sMsg","");
+      $("s2Out").value = out; $("s2Fb").value = ""; note("sMsg",""); saveHist();
     }catch(err){ note("sMsg", err.message, true); }
     busy(["s2FbBtn"], false);
   });
@@ -177,6 +203,36 @@
   }
   ["gKey","gModel","gThink","pA","pB"].forEach(function(id){ $(id).addEventListener("change", saveAi); }); /* บันทึกอัตโนมัติทุกครั้งที่แก้ */
   $("saveAi").addEventListener("click", saveAi);
+
+  /* ---------- ปุ่มประวัติ (มุมขวาบน) ---------- */
+  function histMeta(h){ return [h.clip.channel, MW.ago(new Date(h.at).toISOString()), "Prompt " + h.p, h.model.replace(/^[^/]+\//, "")].filter(Boolean).join(" · "); }
+  function renderHist(){
+    $("histList").innerHTML = hist.length ? hist.map(function(h){
+      return '<div class="hrow"><button class="hopen" data-open="'+MW.esc(h.id)+'"><img loading="lazy" alt="" src="'+MW.thumbUrl(h.id)+'">'
+        + '<span class="ht"><b>'+MW.esc(h.clip.title)+'</b><small>'+MW.esc(histMeta(h))+'</small></span>'
+        + '<span class="sel-tag">'+(h.s2 ? "บทเสร็จ" : "State 1")+'</span></button>'
+        + '<button class="btn small ghost hdel" data-del="'+MW.esc(h.id)+'" aria-label="ลบรายการนี้">ลบ</button></div>';
+    }).join("") : '<div class="empty"><div class="empty-ico">🕘</div>ยังไม่มีประวัติ ทำบทแล้วจะมาอยู่ตรงนี้</div>';
+    $("histClear").hidden = !hist.length;
+  }
+  $("histBtn").addEventListener("click", function(){ renderHist(); MW.openModal("histSheet"); });
+  $("histClose").addEventListener("click", function(){ MW.closeModal("histSheet"); });
+  $("histSheet").addEventListener("click", function(e){ if(e.target === this) MW.closeModal("histSheet"); });
+  document.addEventListener("keydown", function(e){ if(e.key === "Escape" && !$("histSheet").hidden) MW.closeModal("histSheet"); });
+  $("histList").addEventListener("click", function(e){
+    var b = e.target.closest("button"); if(!b) return;
+    if(b.dataset.open){
+      var h = findHist(b.dataset.open); if(!h) return;
+      MW.closeModal("histSheet"); MW.setPick(h.clip); MW.showTab("script"); /* refresh() โหลดบทจากประวัติให้เอง */
+    }
+    if(b.dataset.del) MW.confirmTap(b, "ลบ", function(){ hist = hist.filter(function(x){ return x.id !== b.dataset.del; }); save(HIST, hist); renderHist(); renderHistCount(); });
+  });
+  $("histClear").addEventListener("click", function(){
+    var b = this; MW.confirmTap(b, "ล้างทั้งหมด", function(){ hist = []; save(HIST, hist); renderHist(); renderHistCount(); MW.toast("ล้างประวัติแล้ว"); });
+  });
+  ["s1Out","s2Out","sTrans"].forEach(function(id){ $(id).addEventListener("change", saveHist); }); /* แก้เองแล้วเก็บให้ด้วย */
+  document.querySelectorAll('input[name="pSel"]').forEach(function(r){ r.addEventListener("change", saveHist); });
+  renderHistCount();
 
   updateModelLine();
   refresh();
