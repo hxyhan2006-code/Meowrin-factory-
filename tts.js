@@ -228,6 +228,29 @@
   $("vsWarmText").addEventListener("change", function(){ cfg.warmText = this.value; saveCfg(); });
   $("vsTrim").addEventListener("change", function(){ cfg.trim = this.checked; cfg.tsOff = false; changed(); });
 
+  /* ---------- สำรอง/นำเข้า (ให้ app.js เรียก) ไม่รวม key และยอดใช้งาน ---------- */
+  function ttsBackup(){ return { voices:cfg.voices, voice:cfg.voice, model:cfg.model, stability:cfg.stability, warm:cfg.warm, warmText:cfg.warmText, trim:cfg.trim }; }
+  MW.ttsCfg = {
+    get: ttsBackup,
+    differs: function(o){ return cfg.voices.length > 0 && JSON.stringify(cfg.voices) !== JSON.stringify(o && o.voices); },
+    set: function(o){
+      if(!o || typeof o !== "object") return;
+      if(Array.isArray(o.voices)){
+        var seen = {}, vs = o.voices.filter(function(v){ return v && typeof v.vid === "string" && v.vid && !seen[v.vid] && (seen[v.vid] = 1); })
+          .map(function(v){ return { id:typeof v.id === "string" && v.id ? v.id : newId(), name:String(v.name || ""), vid:v.vid }; });
+        if(vs.length) cfg.voices = vs;
+      }
+      if(typeof o.voice === "string" && cfg.voices.some(function(v){ return v.vid === o.voice; })) cfg.voice = o.voice;
+      if(!curVoice()) cfg.voice = cfg.voices.length ? cfg.voices[0].vid : "";
+      if(MODELS.some(function(m){ return m.v === o.model; })) cfg.model = o.model;
+      if(STABS.some(function(s){ return s.v === o.stability; })) cfg.stability = o.stability;
+      if(WARMS.some(function(w){ return w.v === o.warm; })) cfg.warm = o.warm;
+      if(typeof o.warmText === "string") cfg.warmText = o.warmText;
+      if(typeof o.trim === "boolean") cfg.trim = o.trim;
+      cfg.tsOff = false; saveCfg(); renderVoiceList(); renderVoiceRow(); sync();
+    }
+  };
+
   /* ---------- ตั้งค่า (แท็บตั้งค่า: key + รายการเสียงของฉัน) ---------- */
   function keyState(){ var on = !!load(KEY, ""); $("elState").textContent = on ? "✓ ตั้งแล้ว" : "ยังไม่ได้ตั้ง"; $("elState").classList.toggle("ok", on); }
   function renderUsage(){

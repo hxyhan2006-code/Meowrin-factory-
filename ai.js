@@ -431,6 +431,33 @@
   ["gKey","gModel","gEye","gThink"].forEach(function(id){ $(id).addEventListener("change", saveAi); }); /* บันทึกอัตโนมัติทุกครั้งที่แก้ */
   $("saveAi").addEventListener("click", saveAi);
 
+  /* ---------- สำรอง/นำเข้า (ให้ app.js เรียก) ไม่รวม key ---------- */
+  function aiBackup(){ return { model:cfg.model, eye:cfg.eye, think:cfg.think, prompts:cfg.prompts, sel:cfg.sel }; }
+  function hasText(p){ return !!(p && p.text && p.text.trim()); }
+  MW.aiCfg = {
+    get: aiBackup,
+    differs: function(o){ /* ของในเครื่องมีเนื้อหา และไม่เหมือนในไฟล์ → นำเข้าจะทับ */
+      return cfg.prompts.some(hasText) && JSON.stringify(cfg.prompts) !== JSON.stringify(o && o.prompts);
+    },
+    set: function(o){
+      if(!o || typeof o !== "object") return;
+      if(Array.isArray(o.prompts)){
+        var seen = {}, ps = o.prompts.filter(function(p){ return p && typeof p.id === "string" && p.id && !seen[p.id] && (seen[p.id] = 1); })
+          .map(function(p){ return { id:p.id, name:String(p.name || "ไม่มีชื่อ"), text:String(p.text || "") }; });
+        if(ps.length) cfg.prompts = ps;
+      }
+      cfg.sel = (Array.isArray(o.sel) ? o.sel : []).filter(function(id){ return prompt(id); });
+      if(!cfg.sel.length) cfg.sel = [cfg.prompts[0].id];
+      var has = function(selId, v){ return typeof v === "string" && Array.prototype.some.call($(selId).options, function(x){ return x.value === v; }); };
+      if(has("gModel", o.model)) cfg.model = o.model;
+      if(has("gEye", o.eye)) cfg.eye = o.eye;
+      if(has("gThink", o.think)) cfg.think = o.think;
+      saveCfg();
+      $("gModel").value = cfg.model; $("gEye").value = cfg.eye; $("gThink").value = cfg.think; MW.syncSelects();
+      renderPrompts(); renderChips(); updateModelLine();
+    }
+  };
+
   /* ---------- รายการ prompt (เพิ่ม/ตั้งชื่อ/ทำสำเนา/ลบ) ---------- */
   function promptState(p){ var n = p.text.trim().length; return n ? n.toLocaleString() + " ตัวอักษร" : "ว่าง"; }
   function renderPrompts(openId){

@@ -397,7 +397,8 @@
     confirmTap(b, "ลบ", function(){ el.value = ""; fireChange(el); toast("ลบแล้ว"); });
   });
   $("exportBtn").addEventListener("click", function(){
-    var blob = new Blob([JSON.stringify({ v:2, channels:data.channels, made:data.made, saved:data.saved, history: MW.history ? MW.history.all() : [] }, null, 2)], { type:"application/json" });
+    var blob = new Blob([JSON.stringify({ v:3, channels:data.channels, made:data.made, saved:data.saved, history: MW.history ? MW.history.all() : [],
+                                    ai: MW.aiCfg ? MW.aiCfg.get() : null, tts: MW.ttsCfg ? MW.ttsCfg.get() : null }, null, 2)], { type:"application/json" });
     var a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "meowrin-factory-backup.json"; a.click();
     setTimeout(function(){ URL.revokeObjectURL(a.href); }, 1000);
   });
@@ -409,16 +410,22 @@
       try{
         var j = JSON.parse(r.result);
         if(!Array.isArray(j.channels) || typeof j.made !== "object") throw 0;
+        /* prompt/เสียงในไฟล์จะทับของที่มีในเครื่อง → ถามก่อนถ้าของเดิมมีเนื้อหาและต่างจากในไฟล์ */
+        var clash = (j.ai && MW.aiCfg && MW.aiCfg.differs(j.ai)) || (j.tts && MW.ttsCfg && MW.ttsCfg.differs(j.tts));
+        if(clash && !window.confirm("ไฟล์สำรองมี prompt/เสียง ที่ต่างจากในเครื่อง นำเข้าแล้วจะทับของในเครื่อง ตกลงไหม?")){ msg("setMsg","ยกเลิกการนำเข้า ไม่มีอะไรเปลี่ยน"); return; }
         data.channels = j.channels.map(function(ch){ ch.full = false; return ch; }); /* คลิปไม่อยู่ในไฟล์สำรอง → ให้ดึงย้อนหลังใหม่ */
         data.made = j.made; if(j.saved && typeof j.saved === "object") data.saved = j.saved; persist();
         if(Array.isArray(j.history) && MW.history) MW.history.merge(j.history);
-        renderChannels(); render(); msg("setMsg","นำเข้าแล้ว กด ดึงคลิป เพื่อโหลดคลิปของช่องกลับมา");
+        if(j.ai && MW.aiCfg) MW.aiCfg.set(j.ai);
+        if(j.tts && MW.ttsCfg) MW.ttsCfg.set(j.tts);
+        renderChannels(); render();
+        msg("setMsg","นำเข้าแล้ว" + (j.ai ? " (รวม prompt" + (j.tts ? "และเสียง" : "") + ")" : "") + " กด ดึงคลิป เพื่อโหลดคลิปของช่องกลับมา · key ไม่อยู่ในไฟล์สำรอง ใส่ใหม่เองในตั้งค่า");
       }catch(e){ msg("setMsg","ไฟล์ไม่ถูกต้อง",true); }
     };
     r.readAsText(f);
   });
 
-  window.MW = { toast: toast, data: data, persist: persist, esc: esc, showTab: showTab, videoId: videoId, onMadeChange: render,
+  window.MW = { syncSelects: function(){ sheetSels.forEach(syncSel); }, toast: toast, data: data, persist: persist, esc: esc, showTab: showTab, videoId: videoId, onMadeChange: render,
                 setPick: setPick, ago: ago, thumbUrl: thumbUrl, openModal: openModal, closeModal: closeModal, confirmTap: confirmTap };
   render(); renderChannels(); renderPick();
   /* เปิดแอพ: ถ้ามี key และ (เกิน 6 ชม. หรือมีช่องที่ยังไม่ได้ดึงย้อนหลัง) → อัปเดตให้เอง */
