@@ -1,0 +1,163 @@
+/* ==========================================================================
+   Meowrin Factory — ชีต/โมดัล/แถวพับ/toast (แยกจาก style.css ให้ไฟล์ไม่ยาวเกิน)
+   ใช้ tokens จาก :root ใน style.css
+   ========================================================================== */
+
+/* ---------- 10b. Preview button on thumbnail ---------- */
+.tplay{
+  position:absolute;inset:0;
+  width:100%;height:100%;
+  padding:0;border:0;background:none;
+  display:block;
+}
+.pbtn{
+  position:absolute;top:50%;left:50%;
+  width:46px;height:46px;margin:-23px 0 0 -23px;
+  display:grid;place-items:center;
+  border-radius:50%;
+  background:rgba(9,9,11,.55);
+  -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+  border:1px solid rgba(255,255,255,.25);
+  color:#fff;font-size:16px;padding-left:3px;
+  z-index:1;
+}
+.chip{pointer-events:none}
+
+/* ---------- 10c. Settings: collapsible rows ---------- */
+.fold{
+  background:var(--field);
+  border:1px solid var(--line);
+  border-radius:var(--r-ctl);
+  margin-top:8px;
+}
+.fold summary{
+  display:flex;align-items:center;gap:8px;
+  min-height:48px;padding:0 14px;
+  list-style:none;cursor:pointer;
+  font-size:14.5px;
+}
+.fold summary::-webkit-details-marker{display:none}
+.fold summary span{flex:1;min-width:0}
+.fold summary::after{
+  content:"";flex:none;width:8px;height:8px;
+  border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);
+  transform:rotate(45deg);transition:transform .15s ease;margin:-3px 2px 0 0;
+}
+.fold[open] summary::after{transform:rotate(-135deg);margin-top:3px}
+.fold[open] summary{border-bottom:1px solid var(--line)}
+.fbody{padding:12px 14px 14px}
+.fbody input,.fbody textarea{background-color:var(--bg)}
+.fbody textarea{min-height:240px;font-size:14px}
+.state{
+  font-style:normal;font-size:12px;font-weight:600;
+  padding:1px 9px;border-radius:999px;
+  background:var(--err-soft);color:#fda4af;
+}
+.state.ok{background:var(--ok-soft);color:var(--ok)}
+.hint{color:var(--muted);font-size:12.5px;margin:8px 0 12px}
+.panel > .hint{margin-top:4px}
+
+/* ---------- 10d. Player sheet ---------- */
+.noscroll{overflow:hidden}
+.modal{
+  position:fixed;inset:0;z-index:40;
+  display:flex;align-items:flex-end;justify-content:center;
+  background:rgba(0,0,0,.72);
+  -webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);
+}
+.sheet{
+  width:100%;max-width:var(--wrap);
+  max-height:100%;
+  display:flex;flex-direction:column;gap:10px;
+  padding:12px 14px calc(14px + env(safe-area-inset-bottom));
+  background:var(--surface);
+  border:1px solid var(--line-strong);border-bottom:0;
+  border-radius:20px 20px 0 0;
+}
+.phead{display:flex;align-items:center;gap:10px}
+.phead b{flex:1;min-width:0;font-weight:500;font-size:14px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pframe{
+  align-self:center;
+  height:min(68vh, 640px);
+  aspect-ratio:9/16;max-width:100%;
+  background:#000;border-radius:12px;overflow:hidden;
+}
+.pframe iframe{width:100%;height:100%;border:0;display:block}
+.pact{display:flex;gap:8px}
+.pact .btn{flex:1;min-width:0;padding:0 8px}
+
+
+/* ---------- 10e. Sheet picker (แทน dropdown ของระบบ) ---------- */
+select[data-sheet]{display:none}
+.sel-btn{
+  display:flex;align-items:center;gap:8px;
+  width:100%;min-height:48px;padding:0 14px;
+  border-radius:var(--r-ctl);
+  border:1px solid var(--line);
+  background:var(--field);
+  color:var(--text);
+  font-size:15px;text-align:left;
+}
+.tools .sel-btn{flex:1;min-width:0}
+.sel-main{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sel-tag{
+  flex:none;font-size:11.5px;font-weight:600;
+  padding:1px 9px;border-radius:999px;
+  background:var(--accent-soft);color:var(--accent);
+}
+.sel-btn::after{
+  content:"";flex:none;width:8px;height:8px;
+  border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);
+  transform:rotate(45deg);margin:-3px 2px 0 4px;
+}
+.sel-btn:focus-visible{border-color:rgba(245,158,11,.65);box-shadow:0 0 0 3px var(--accent-glow)}
+.sel-title{font-family:Mitr,"IBM Plex Sans Thai",sans-serif;font-weight:500;font-size:16px;flex:1}
+.sel-list{overflow-y:auto;display:flex;flex-direction:column;gap:6px;max-height:68vh;margin:0 -4px;padding:0 4px}
+.sel-group{
+  margin:10px 2px 2px;font-size:12px;font-weight:600;
+  letter-spacing:.02em;color:var(--muted);
+}
+.sel-group:first-child{margin-top:0}
+.opt{
+  display:flex;align-items:center;gap:10px;
+  width:100%;min-height:52px;padding:8px 14px;
+  border-radius:var(--r-ctl);
+  border:1px solid var(--line);
+  background:var(--field);
+  color:var(--text);
+  text-align:left;font-size:15px;
+}
+.opt .on-t{flex:1;min-width:0}
+.opt b{display:block;font-weight:500;overflow-wrap:anywhere}
+.opt small{display:block;color:var(--muted);font-size:12.5px;margin-top:1px}
+.opt.on{
+  border-color:rgba(245,158,11,.6);
+  background:var(--accent-soft);
+}
+.opt.on::after{
+  content:"";flex:none;width:6px;height:11px;
+  border-right:2.5px solid var(--accent);border-bottom:2.5px solid var(--accent);
+  transform:rotate(45deg);margin:-3px 4px 0 0;
+}
+
+/* ---------- 10f. Toast ---------- */
+.toast{
+  position:fixed;left:50%;z-index:50;
+  bottom:calc(84px + env(safe-area-inset-bottom));
+  transform:translate(-50%,12px);
+  max-width:calc(100% - 28px);
+  padding:10px 16px;border-radius:999px;
+  background:var(--ok);color:#04130c;
+  font-size:13.5px;font-weight:600;
+  box-shadow:var(--shadow-float);
+  opacity:0;pointer-events:none;
+  transition:opacity .2s ease, transform .2s ease;
+}
+.toast.err{background:var(--err);color:#fff}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+
+@media (prefers-reduced-motion:no-preference){
+  .sheet{animation:sheet-in .22s ease-out}
+  @keyframes sheet-in{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+}

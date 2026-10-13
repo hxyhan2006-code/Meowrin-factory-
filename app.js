@@ -131,7 +131,10 @@
   function closePlayer(){ $("pFrame").innerHTML = ""; $("player").hidden = true; document.body.classList.remove("noscroll"); playing = null; } /* ล้าง iframe เพื่อหยุดเสียง */
   $("pClose").addEventListener("click", closePlayer);
   $("player").addEventListener("click", function(e){ if(e.target === this) closePlayer(); });
-  document.addEventListener("keydown", function(e){ if(e.key === "Escape" && playing) closePlayer(); });
+  document.addEventListener("keydown", function(e){
+    if(e.key !== "Escape") return;
+    if(!$("selSheet").hidden) closeSheet(); else if(playing) closePlayer();
+  });
   $("pPick").addEventListener("click", function(){ var c = playing; closePlayer(); if(c) setPick(c); });
   $("pMade").addEventListener("click", function(){
     var id = playing.id; if(data.made[id]) delete data.made[id]; else data.made[id] = true;
@@ -223,6 +226,55 @@
   $("pickClear").addEventListener("click", function(){ data.picked = null; persist(); renderPick(); });
   $("pickGo").addEventListener("click", function(){ if(data.picked) showTab("script"); });
 
+  /* ---------- ชีตเลือกตัวเลือก (แทน dropdown ของระบบที่แก้หน้าตาไม่ได้) ---------- */
+  var sheetSel = null;
+  function selTitle(sel){
+    var l = document.querySelector('label[for="'+sel.id+'"]');
+    return l ? l.textContent : (sel.getAttribute("aria-label") || "");
+  }
+  function syncSel(sel){
+    var o = sel.options[sel.selectedIndex];
+    sel._btn.innerHTML = '<span class="sel-main">'+esc(o ? o.textContent : "")+'</span>' + (o && o.dataset.tag ? '<span class="sel-tag">'+esc(o.dataset.tag)+'</span>' : "");
+  }
+  function openSheet(sel){
+    sheetSel = sel; $("selTitle").textContent = selTitle(sel);
+    var html = "";
+    function row(o){
+      return '<button class="opt'+(o.value === sel.value ? ' on' : '')+'" data-v="'+esc(o.value)+'"><span class="on-t"><b>'+esc(o.textContent)+'</b>'
+        + (o.dataset.desc ? '<small>'+esc(o.dataset.desc)+'</small>' : '') + '</span>'
+        + (o.dataset.tag ? '<span class="sel-tag">'+esc(o.dataset.tag)+'</span>' : '') + '</button>';
+    }
+    Array.prototype.forEach.call(sel.children, function(n){
+      if(n.tagName === "OPTGROUP"){ html += '<div class="sel-group">'+esc(n.label)+'</div>' + Array.prototype.map.call(n.children, row).join(""); }
+      else html += row(n);
+    });
+    $("selList").innerHTML = html;
+    $("selSheet").hidden = false; document.body.classList.add("noscroll");
+  }
+  function closeSheet(){ $("selSheet").hidden = true; document.body.classList.remove("noscroll"); sheetSel = null; }
+  $("selClose").addEventListener("click", closeSheet);
+  $("selSheet").addEventListener("click", function(e){ if(e.target === this) closeSheet(); });
+  $("selList").addEventListener("click", function(e){
+    var b = e.target.closest("button[data-v]"); if(!b || !sheetSel) return;
+    var sel = sheetSel; closeSheet();
+    if(sel.value !== b.dataset.v){ sel.value = b.dataset.v; sel.dispatchEvent(new Event("change", { bubbles:true })); }
+    syncSel(sel);
+  });
+  var sheetSels = Array.prototype.slice.call(document.querySelectorAll("select[data-sheet]"));
+  sheetSels.forEach(function(sel){
+    var b = document.createElement("button"); b.type = "button"; b.className = "sel-btn"; b.setAttribute("aria-haspopup","dialog");
+    sel._btn = b; sel.after(b); b.addEventListener("click", function(){ openSheet(sel); }); syncSel(sel);
+  });
+  /* ai.js ตั้งค่า select ด้วยโค้ดหลังโหลด → อัปเดตข้อความบนปุ่มทุกครั้งที่เปลี่ยนแท็บ */
+  document.addEventListener("mw:tab", function(){ sheetSels.forEach(syncSel); });
+
+  /* ---------- toast ---------- */
+  var toastT;
+  function toast(text, err){
+    var t = $("toast"); t.textContent = text; t.classList.toggle("err", !!err); t.classList.add("on");
+    clearTimeout(toastT); toastT = setTimeout(function(){ t.classList.remove("on"); }, 2200);
+  }
+
   /* ---------- channels ---------- */
   function renderChannels(){
     $("chanList").innerHTML = data.channels.length ? data.channels.map(function(c,i){
@@ -283,7 +335,7 @@
     r.readAsText(f);
   });
 
-  window.MW = { data: data, persist: persist, esc: esc, showTab: showTab, videoId: videoId, onMadeChange: render };
+  window.MW = { toast: toast, data: data, persist: persist, esc: esc, showTab: showTab, videoId: videoId, onMadeChange: render };
   render(); renderChannels(); renderPick();
 })();
 

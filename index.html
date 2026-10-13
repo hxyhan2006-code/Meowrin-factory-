@@ -13,7 +13,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600&family=Mitr:wght@500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css?v=20261013b">
+<link rel="stylesheet" href="sheet.css?v=20261013b">
 </head>
 <body>
 <div class="wrap">
@@ -34,7 +35,7 @@
     </div>
 
     <div class="tools">
-      <select id="sortSel" aria-label="เรียงตาม">
+      <select id="sortSel" data-sheet aria-label="เรียงตาม">
         <option value="score">เรียงตามความปัง (วิว ÷ ผู้ติดตาม)</option>
         <option value="views">เรียงตามยอดวิว</option>
         <option value="new">เรียงตามใหม่สุด</option>
@@ -132,25 +133,32 @@
     <div class="panel">
       <h2>AI ทำบท</h2>
       <label for="gModel">โมเดล</label>
-      <select id="gModel">
-        <optgroup label="Google (วิเคราะห์วิดีโอ YouTube ได้โดยตรง)">
-          <option value="google/gemini-3.8-flash" selected>google/gemini-3.8-flash (แนะนำ)</option>
+      <select id="gModel" data-sheet>
+        <optgroup label="Google · วิเคราะห์วิดีโอ YouTube ได้โดยตรง">
+          <option value="google/gemini-3.8-flash" data-tag="แนะนำ">google/gemini-3.8-flash</option>
           <option value="google/gemini-2.5-flash">google/gemini-2.5-flash</option>
           <option value="google/gemini-2.5-pro">google/gemini-2.5-pro</option>
         </optgroup>
-        <optgroup label="Anthropic (เขียนบทสำนวนธรรมชาติ)">
+        <optgroup label="Anthropic · เขียนบทสำนวนธรรมชาติ">
           <option value="anthropic/claude-haiku-5.5">anthropic/claude-haiku-5.5</option>
           <option value="anthropic/claude-sonnet-5.5">anthropic/claude-sonnet-5.5</option>
         </optgroup>
-        <optgroup label="OpenAI (โครงสร้างคมชัด แม่นยำ)">
+        <optgroup label="OpenAI · โครงสร้างคมชัด แม่นยำ">
           <option value="openai/gpt-4o-mini">openai/gpt-4o-mini</option>
           <option value="openai/gpt-6.1-sol">openai/gpt-6.1-sol</option>
         </optgroup>
       </select>
-      <label for="gThink">ระดับการคิด (ต่ำ = เร็ว/ถูก, สูง = ละเอียด/แพง)</label>
-      <select id="gThink"><option value="low">ต่ำสุด</option><option value="medium">ปานกลาง</option><option value="high">สูงสุด</option></select>
+      <label for="gThink">ระดับการคิด</label>
+      <select id="gThink" data-sheet>
+        <option value="low" data-desc="เร็วและถูกสุด">ต่ำสุด</option>
+        <option value="medium" data-desc="สมดุลระหว่างความเร็วกับความละเอียด">ปานกลาง</option>
+        <option value="high" data-desc="ละเอียดสุด แต่ช้ากว่าและแพงกว่า">สูงสุด</option>
+      </select>
+      <p class="hint">เลือกแล้วบันทึกให้อัตโนมัติ</p>
+    </div>
 
-      <label>Prompt</label>
+    <div class="panel">
+      <h2>Prompt</h2>
       <details class="fold">
         <summary><span>Prompt A · ยึดโครงต้นฉบับ</span></summary>
         <div class="fbody"><textarea id="pA" rows="14" placeholder="วาง prompt A ทั้งก้อนที่นี่" aria-label="Prompt A"></textarea></div>
@@ -159,8 +167,7 @@
         <summary><span>Prompt B · เรียบเรียงใหม่</span></summary>
         <div class="fbody"><textarea id="pB" rows="14" placeholder="วาง prompt B ทั้งก้อนที่นี่" aria-label="Prompt B"></textarea></div>
       </details>
-      <button class="btn" id="saveAi" style="margin-top:12px">บันทึกการตั้งค่า AI</button>
-      <div id="aiSetMsg"></div>
+      <button class="btn" id="saveAi" style="margin-top:12px">บันทึก Prompt</button>
     </div>
 
     <div class="panel">
@@ -182,6 +189,16 @@
   <button role="tab" data-tab="channels" aria-selected="false"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="18" height="13" rx="2.5"/><path d="M9.5 10v5l4.5-2.5zM8 3l4 3 4-3"/></svg><span>ช่อง</span></button>
   <button role="tab" data-tab="settings" aria-selected="false"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg><span>ตั้งค่า</span></button>
 </nav>
+
+<!-- ชีตเลือกตัวเลือก (ใช้กับ select[data-sheet]) -->
+<div class="modal" id="selSheet" hidden>
+  <div class="sheet">
+    <div class="phead"><span class="sel-title" id="selTitle"></span><button class="btn small ghost" id="selClose" aria-label="ปิด">✕</button></div>
+    <div class="sel-list" id="selList"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status"></div>
 
 <!-- ตัวเล่นคลิป -->
 <div class="modal" id="player" hidden>
@@ -206,7 +223,7 @@
   </div>
 </div>
 
-<script src="app.js"></script>
-<script src="ai.js"></script>
+<script src="app.js?v=20261013b"></script>
+<script src="ai.js?v=20261013b"></script>
 </body>
 </html>

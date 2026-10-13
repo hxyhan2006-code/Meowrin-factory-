@@ -172,7 +172,7 @@
   function saveAi(){
     cfg = { model: $("gModel").value || DEFAULT_MODEL, think: $("gThink").value, A: $("pA").value, B: $("pB").value };
     var ok = save(CFG, cfg) && save(OR_KEY, $("gKey").value.trim());
-    note("aiSetMsg", ok ? "บันทึกแล้ว · ใช้โมเดล " + cfg.model + " · คิด" + (THINK_TH[cfg.think] || cfg.think) : "บันทึกไม่ได้", !ok);
+    MW.toast(ok ? "บันทึกแล้ว" : "บันทึกไม่ได้", !ok);
     updateModelLine(); orState();
   }
   ["gKey","gModel","gThink","pA","pB"].forEach(function(id){ $(id).addEventListener("change", saveAi); }); /* บันทึกอัตโนมัติทุกครั้งที่แก้ */

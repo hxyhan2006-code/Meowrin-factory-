@@ -13,7 +13,7 @@
 
 ## โครงสร้างไฟล์
 - `index.html` โครงหน้าเท่านั้น ไม่มี inline script
-- `style.css` ธีมมืด (tokens อยู่ใน `:root`)
+- `style.css` ธีมมืด (tokens อยู่ใน `:root`) · `sheet.css` ชีต/โมดัล/แถวพับ/toast/ตัวเลือกแบบชีต (`select[data-sheet]`)
 - `app.js` คลิป/ช่อง/แท็บ/ตั้งค่า YouTube/สำรองข้อมูล — ส่ง `window.MW` ให้ไฟล์อื่นใช้
 - `ai.js` ทำบทผ่าน OpenRouter (`callAI`) — โหลดหลัง app.js
 - `manifest.json`, `sw.js` PWA (sw เป็น passthrough ห้ามแคช API)
@@ -38,6 +38,7 @@
 - เช็กว่าทุก `$("id")` ใน JS มี element id นั้นจริงใน index.html
 - ทดสอบกับ API จริงไม่ได้ (ไม่มี key ในเครื่อง) ให้บอกตรงๆ ว่าส่วนไหนยังไม่ได้ทดสอบจริง
 - ห้ามใส่ API key จริงลงในโค้ดหรือ commit
+- ทุกครั้งที่แก้ css/js ให้ bump `?v=` ของ `<link>`/`<script>` ใน index.html (เบราว์เซอร์มือถือแคชไฟล์เก่า ทำให้หน้าเพี้ยน)
 
 ## การส่งงาน (Git)
 - แก้เสร็จทุกครั้ง ให้ commit แล้ว push เข้า `main` ตรงๆ เลย ไม่ต้องสร้าง branch หรือ PR เพราะ Han ต้องเช็กบนเว็บจริง (GitHub Pages)
