@@ -13,8 +13,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600&family=Mitr:wght@500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=20261013r">
-<link rel="stylesheet" href="sheet.css?v=20261013r">
+<link rel="stylesheet" href="style.css?v=20261013s">
+<link rel="stylesheet" href="sheet.css?v=20261013s">
 </head>
 <body>
 <div class="wrap">
@@ -110,13 +110,14 @@
   <section id="tab-voice">
     <div id="vNo" class="empty">ยังไม่มีบท เลือกคลิปแล้วทำบทในแท็บ บท ก่อน</div>
     <div id="vBody" hidden>
-      <div class="vhead">
-        <div class="vtitle"><b id="vClip"></b><small id="vVer"></small></div>
-        <button class="btn small ghost" id="vSetBtn">⚙ ตั้งค่าเสียง</button>
-      </div>
-      <div class="vvoice" id="vVoiceInfo"></div>
-      <textarea id="vText" aria-label="บทพากย์" placeholder="บทพากย์"></textarea>
-      <div class="vbar"><span class="lhint" id="s2Count"></span></div>
+      <div class="vclip"><span id="vClip"></span><span id="vVer"></span></div>
+      <button class="vvoice" id="vVoiceBtn" aria-label="เปลี่ยนเสียงและตั้งค่า">
+        <i class="orb" aria-hidden="true"></i>
+        <span class="vv"><b id="vVoiceName"></b><small id="vVoiceInfo"></small></span>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
+      <textarea id="vText" class="vtext" rows="1" aria-label="บทพากย์" placeholder="บทพากย์ (แตะตรงนี้เพื่อแก้)" spellcheck="false"></textarea>
+      <div class="vcount"><span class="lhint" id="s2Count"></span></div>
       <div id="vMsg"></div>
       <div class="row" style="margin-top:8px">
         <button class="btn ghost" id="copyBtn" style="flex:1">คัดลอกบท</button>
@@ -147,7 +148,8 @@
           </div>
         </div>
       </details>
-      <div class="genbar">
+      <div class="vbar2">
+        <button class="vset" id="vSetBtn" aria-label="ตั้งค่าเสียง"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg></button>
         <button class="btn" id="ttsBtn">🔊 สร้างเสียง</button>
         <button class="btn" id="ttsMore" hidden>+ สร้างอีกเทค</button>
       </div>
@@ -226,7 +228,7 @@
       <p class="hint" id="spendInfo" style="margin-top:-6px"></p>
     </div>
 
-    <div class="panel" id="elPanel">
+    <div class="panel">
       <h2>เสียงพากย์ (ElevenLabs)</h2>
       <details class="fold">
         <summary><span>ElevenLabs API key</span><em class="state" id="elState"></em></summary>
@@ -236,35 +238,10 @@
           <p class="hint">แนะนำสร้าง key ใหม่ที่เปิดสิทธิ์ Text to Speech อย่างเดียว เก็บในเครื่องนี้เท่านั้น บันทึกอัตโนมัติ</p>
         </div>
       </details>
-      <label for="elVoice">Voice ID (เสียงที่ใช้)</label>
-      <div class="row">
-        <input id="elVoice" placeholder="คัดลอกจากหน้าเสียงใน ElevenLabs" autocomplete="off" autocapitalize="none">
-        <button type="button" class="btn ghost" data-paste="elVoice" data-trim>วาง</button>
-      </div>
-      <label for="elVoiceName">ชื่อเสียง (ไว้โชว์ในหน้าเสียง ไม่บังคับ)</label>
-      <input id="elVoiceName" placeholder="เช่น Test7" autocomplete="off">
-      <label for="elModel">โมเดลเสียง</label>
-      <select id="elModel" data-sheet>
-        <option value="eleven_v3" data-tag="แนะนำ" data-desc="ตัวเดียวกับที่ใช้บนเว็บ รองรับภาษาไทย">Eleven v3</option>
-        <option value="eleven_multilingual_v2" data-desc="รุ่นก่อน ยังไม่ได้ยืนยันว่ารองรับไทย">Multilingual v2</option>
-      </select>
-      <label for="elStab">Stability</label>
-      <select id="elStab" data-sheet>
-        <option value="0" data-desc="อารมณ์มาก แต่อาจเพี้ยนหรือเล่นเกิน">Creative</option>
-        <option value="0.5" data-tag="แนะนำ" data-desc="สมดุล ใกล้เสียงต้นแบบที่สุด (ที่ใช้อยู่บนเว็บ)">Natural</option>
-        <option value="1" data-desc="นิ่งและคงที่ ใกล้เคียง v2">Robust</option>
-      </select>
-      <label for="elWarm">ช่วงวอร์มเสียง (กันเสียงเพี้ยน 2-4 วิแรก)</label>
-      <select id="elWarm" data-sheet>
-        <option value="hook" data-tag="แนะนำ" data-desc="พูด hook ซ้ำข้างหน้า อารมณ์เสียงต่อเนื่องกับบท">ซ้ำ hook ข้างหน้า</option>
-        <option value="custom" data-desc="ใช้ประโยคเดิมทุกคลิปตามที่ตั้งไว้ด้านล่าง">ประโยคตายตัวของฉัน</option>
-        <option value="off" data-desc="ส่งบทตรงๆ เสียงช่วงแรกอาจเพี้ยน">ไม่ใส่</option>
-      </select>
-      <div id="elWarmBox" hidden>
-        <input id="elWarmText" placeholder="เช่น ฉันคือมังกี้ ดี ลูฟี่ ชายที่จะเป็นราชาโจรสลัด" autocomplete="off" aria-label="ประโยควอร์มเสียง" style="margin-top:8px">
-      </div>
-      <label class="chk" id="elTrimRow" style="margin-top:12px"><input type="checkbox" id="elTrim" checked> ตัดช่วงวอร์มออกจากไฟล์ให้อัตโนมัติ</label>
-      <p class="hint" id="elTsNote" hidden>ครั้งล่าสุดโมเดลนี้ไม่ส่งเวลาตัวอักษรมา เลยตัดอัตโนมัติไม่ได้ ไฟล์จะยังมีช่วงวอร์ม (ปิด-เปิดช่องติ๊กนี้เพื่อลองใหม่)</p>
+      <label>เสียงของฉัน</label>
+      <p class="hint" style="margin-top:0">ใส่ชื่อกับ Voice ID จากหน้าเสียงใน ElevenLabs (เลือกใช้เสียงไหน และตั้งโมเดล/Stability/วอร์ม ได้ในแท็บ เสียง ปุ่ม ⚙)</p>
+      <div id="voiceList"></div>
+      <button type="button" class="btn ghost" id="addVoice" style="margin-top:10px;width:100%">+ เพิ่มเสียง</button>
       <p class="hint" id="ttsUsage"></p>
     </div>
 
@@ -316,6 +293,26 @@
 
 <div class="toast" id="toast" role="status"></div>
 
+<!-- ตั้งค่าเสียง (เปิดจากแท็บเสียง) -->
+<div class="modal" id="vSheet" hidden>
+  <div class="sheet">
+    <div class="phead"><span class="sel-title">ตั้งค่าเสียง</span><button class="btn small ghost" id="vsClose" aria-label="ปิด">✕</button></div>
+    <div class="vsbody">
+      <label style="margin-top:0">เสียง</label>
+      <div class="sel-list" id="vsVoices"></div>
+      <label>โมเดล</label>
+      <div class="seg2" id="vsModel"></div>
+      <label>Stability</label>
+      <div class="seg2" id="vsStab"></div>
+      <label>ช่วงวอร์ม (กันเสียงเพี้ยน 2-4 วิแรก)</label>
+      <div class="seg2" id="vsWarm"></div>
+      <input id="vsWarmText" placeholder="เช่น ฉันคือมังกี้ ดี ลูฟี่ ชายที่จะเป็นราชาโจรสลัด" autocomplete="off" aria-label="ประโยควอร์มเสียง" style="margin-top:8px" hidden>
+      <label class="chk" id="vsTrimRow" style="margin-top:12px"><input type="checkbox" id="vsTrim"> ตัดช่วงวอร์มออกจากไฟล์ให้อัตโนมัติ</label>
+      <p class="hint" id="vsTsNote" hidden>ครั้งล่าสุดโมเดลนี้ไม่ส่งเวลาตัวอักษรมา เลยตัดอัตโนมัติไม่ได้ ไฟล์จะยังมีช่วงวอร์ม (ปิด-เปิดช่องติ๊กนี้เพื่อลองใหม่)</p>
+    </div>
+  </div>
+</div>
+
 <!-- ตัวเล่นคลิป -->
 <div class="modal" id="player" hidden>
   <div class="sheet">
@@ -339,9 +336,9 @@
   </div>
 </div>
 
-<script src="sync.js?v=20261013r"></script>
-<script src="app.js?v=20261013r"></script>
-<script src="ai.js?v=20261013r"></script>
-<script src="tts.js?v=20261013r"></script>
+<script src="sync.js?v=20261013s"></script>
+<script src="app.js?v=20261013s"></script>
+<script src="ai.js?v=20261013s"></script>
+<script src="tts.js?v=20261013s"></script>
 </body>
 </html>

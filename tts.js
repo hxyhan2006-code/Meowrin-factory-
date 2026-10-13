@@ -17,15 +17,22 @@
 
   /* ค่าเริ่มต้นตรงกับที่ Han ใช้บนเว็บ: Eleven v3 · Stability Natural (0.5) · ภาษาอัตโนมัติ · MP3 44.1kHz 128kbps
      warm = "hook" | "custom" | "off" · trim = ตัดช่วงวอร์มออกให้ · tsOff = เคยลองแล้วโมเดลนี้ไม่ส่งเวลาตัวอักษรมา */
-  var cfg = Object.assign({ voice:"", voiceName:"", model:"eleven_v3", stability:0.5, fmt:"mp3_44100_128",
+  var cfg = Object.assign({ voice:"", voiceName:"", voices:[], model:"eleven_v3", stability:0.5, fmt:"mp3_44100_128",
                             warm:"hook", warmText:"", trim:true, tsOff:false, usage:{ m:"", chars:0, n:0 } }, load(CFG, {}));
-  function saveCfg(){ return save(CFG, cfg); }
+  /* voices = รายการเสียงของฉัน [{id: รหัสในแอพ, name, vid: Voice ID}] · voice = Voice ID ที่เลือกใช้อยู่ (คงชื่อ key เดิมไว้) */
+  function newId(){ return "v" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5); }
+  if(!Array.isArray(cfg.voices)) cfg.voices = [];
+  if(!cfg.voices.length && cfg.voice) cfg.voices.push({ id:newId(), name:cfg.voiceName || "เสียงของฉัน", vid:cfg.voice }); /* ย้ายจาก Voice ID ช่องเดียวแบบเดิม */
+  if(cfg.voice && !cfg.voices.some(function(v){ return v.vid === cfg.voice; })) cfg.voice = "";
+  if(!cfg.voice && cfg.voices.length) cfg.voice = cfg.voices[0].vid;
+  function curVoice(){ return cfg.voices.find(function(v){ return v.vid === cfg.voice; }); }
+  function saveCfg(){ var v = curVoice(); cfg.voiceName = v ? v.name : ""; return save(CFG, cfg); }
 
   /* ---------- เรียก ElevenLabs ---------- */
   async function call(withTs, text){
     var key = load(KEY, "");
     if(!key) throw new Error("ยังไม่ได้ใส่ ElevenLabs API key (แท็บตั้งค่า)");
-    if(!cfg.voice) throw new Error("ยังไม่ได้ใส่ Voice ID (แท็บตั้งค่า)");
+    if(!cfg.voice) throw new Error("ยังไม่ได้เลือกเสียง (ตั้งค่า → เสียงพากย์ → เพิ่มเสียง แล้วเลือกที่ปุ่ม ⚙ ในแท็บ เสียง)");
     var res;
     try{
       res = await fetch(API + encodeURIComponent(cfg.voice) + (withTs ? "/with-timestamps" : "") + "?output_format=" + cfg.fmt, {
@@ -109,7 +116,7 @@
     }
     if(!full || !full.size){
       full = await (await call(false, sent)).blob();
-      if(tsTried && !cfg.tsOff){ cfg.tsOff = true; renderTsNote(); } /* แบบธรรมดาผ่าน แต่แบบมีเวลาไม่ผ่าน = โมเดลนี้ไม่รองรับ */
+      if(tsTried && !cfg.tsOff){ cfg.tsOff = true; saveCfg(); } /* แบบธรรมดาผ่าน แต่แบบมีเวลาไม่ผ่าน = โมเดลนี้ไม่รองรับ */
     }
     if(!full.size) throw new Error("ElevenLabs ส่งไฟล์เสียงว่างกลับมา ลองใหม่อีกครั้ง");
     if(cfg.usage.m !== monthKey()) cfg.usage = { m:monthKey(), chars:0, n:0 };
@@ -185,34 +192,84 @@
     catch(err){ if(err && err.name !== "AbortError") note("แชร์ไม่ได้ ใช้ปุ่มดาวน์โหลดแทน (" + err.message + ")", true); }
   });
 
-  /* ---------- ตั้งค่า ---------- */
+  /* ---------- ตั้งค่าเสียง (ชีตในแท็บเสียง: เสียง/โมเดล/Stability/วอร์ม) ---------- */
+  var MODELS = [{ v:"eleven_v3", t:"Eleven v3" }, { v:"eleven_multilingual_v2", t:"Multilingual v2" }];
+  var STABS = [{ v:0, t:"Creative" }, { v:0.5, t:"Natural" }, { v:1, t:"Robust" }];
+  var WARMS = [{ v:"hook", t:"ซ้ำ hook" }, { v:"custom", t:"ประโยคของฉัน" }, { v:"off", t:"ไม่ใส่" }];
+  function seg(el, items, cur, attr){
+    el.innerHTML = items.map(function(x){ return '<button type="button" class="'+(x.v === cur ? 'on' : '')+'" data-'+attr+'="'+x.v+'">'+MW.esc(x.t)+'</button>'; }).join("");
+  }
+  function renderSheet(){
+    $("vsVoices").innerHTML = cfg.voices.length ? cfg.voices.map(function(v){
+      return '<button class="opt'+(v.vid === cfg.voice ? ' on' : '')+'" data-voice="'+MW.esc(v.vid)+'"><span class="on-t"><b>'+MW.esc(v.name || "ไม่มีชื่อ")+'</b><small class="id">'+MW.esc(v.vid.slice(0, 10))+'…</small></span></button>';
+    }).join("") : '<div class="hint" style="margin:0">ยังไม่มีเสียง ไปเพิ่มชื่อกับ Voice ID ที่ ตั้งค่า → เสียงพากย์ ก่อน</div><button class="btn ghost" id="vsToSettings" style="margin-top:8px">ไปหน้าตั้งค่า</button>';
+    seg($("vsModel"), MODELS, cfg.model, "model"); seg($("vsStab"), STABS, cfg.stability, "stab"); seg($("vsWarm"), WARMS, cfg.warm, "warm");
+    $("vsWarmText").hidden = cfg.warm !== "custom"; $("vsWarmText").value = cfg.warmText;
+    $("vsTrimRow").hidden = cfg.warm === "off"; $("vsTrim").checked = cfg.trim; $("vsTsNote").hidden = !cfg.tsOff;
+  }
+  function renderVoiceRow(){
+    var v = curVoice(), m = MODELS.find(function(x){ return x.v === cfg.model; }), s = STABS.find(function(x){ return x.v === cfg.stability; });
+    $("vVoiceName").textContent = v ? (v.name || "ไม่มีชื่อ") : "ยังไม่ได้เลือกเสียง";
+    $("vVoiceInfo").textContent = (v ? "" : "แตะเพื่อตั้งค่า · ") + (m ? m.t : cfg.model) + " · " + (s ? s.t : cfg.stability) + (cfg.warm === "off" ? "" : " · วอร์ม" + (cfg.trim ? "+ตัดให้" : ""));
+  }
+  function changed(){ saveCfg(); renderSheet(); renderVoiceRow(); }
+  function openSheet(){ renderSheet(); MW.openModal("vSheet"); }
+  $("vSetBtn").addEventListener("click", openSheet);
+  $("vVoiceBtn").addEventListener("click", openSheet);
+  $("vsClose").addEventListener("click", function(){ MW.closeModal("vSheet"); });
+  $("vSheet").addEventListener("click", function(e){ if(e.target === this) MW.closeModal("vSheet"); });
+  $("vSheet").addEventListener("click", function(e){
+    var b = e.target.closest("button"); if(!b) return;
+    if(b.id === "vsToSettings"){ MW.closeModal("vSheet"); MW.showTab("settings"); return; }
+    if(b.dataset.voice){ cfg.voice = b.dataset.voice; changed(); return; }
+    if(b.dataset.model){ cfg.model = b.dataset.model; cfg.tsOff = false; changed(); return; } /* เปลี่ยนโมเดล → ลองแบบมีเวลาตัวอักษรอีกครั้ง */
+    if(b.dataset.stab){ cfg.stability = Number(b.dataset.stab); changed(); return; }
+    if(b.dataset.warm){ cfg.warm = b.dataset.warm; changed(); }
+  });
+  $("vsWarmText").addEventListener("change", function(){ cfg.warmText = this.value; saveCfg(); });
+  $("vsTrim").addEventListener("change", function(){ cfg.trim = this.checked; cfg.tsOff = false; changed(); });
+
+  /* ---------- ตั้งค่า (แท็บตั้งค่า: key + รายการเสียงของฉัน) ---------- */
   function keyState(){ var on = !!load(KEY, ""); $("elState").textContent = on ? "✓ ตั้งแล้ว" : "ยังไม่ได้ตั้ง"; $("elState").classList.toggle("ok", on); }
   function renderUsage(){
     var u = cfg.usage.m === monthKey() ? cfg.usage : { chars:0, n:0 };
     $("ttsUsage").textContent = u.n ? "เดือนนี้ส่งไปสร้างเสียงแล้ว " + u.chars.toLocaleString() + " ตัวอักษร (" + u.n + " ครั้ง จากแอพนี้) ยอดเครดิตจริงดูในเว็บ ElevenLabs" : "เดือนนี้ยังไม่ได้สร้างเสียงจากแอพนี้";
   }
-  function renderTsNote(){ $("elTsNote").hidden = !cfg.tsOff; }
-  var MODEL_TH = { eleven_v3:"Eleven v3", eleven_multilingual_v2:"Multilingual v2" }, STAB_TH = { "0":"Creative", "0.5":"Natural", "1":"Robust" };
-  function renderVoiceInfo(){
-    $("vVoiceInfo").textContent = "🎙 " + (cfg.voiceName || (cfg.voice ? "Voice " + cfg.voice.slice(0, 6) + "…" : "ยังไม่ได้ตั้ง Voice ID")) + " · " + (MODEL_TH[cfg.model] || cfg.model)
-      + " · " + (STAB_TH[String(cfg.stability)] || cfg.stability) + (cfg.warm === "off" ? "" : " · วอร์ม" + (cfg.trim ? "+ตัดให้" : ""));
+  function renderVoiceList(focusId){
+    $("voiceList").innerHTML = cfg.voices.map(function(v){
+      var id = MW.esc(v.id);
+      return '<div class="vrow"><input data-vname="'+id+'" value="'+MW.esc(v.name)+'" placeholder="ชื่อเสียง เช่น Test7" autocomplete="off" aria-label="ชื่อเสียง">'
+        + '<input id="vid_'+id+'" data-vid="'+id+'" value="'+MW.esc(v.vid)+'" placeholder="Voice ID" autocomplete="off" autocapitalize="none" aria-label="Voice ID">'
+        + '<button type="button" class="btn small ghost" data-paste="vid_'+id+'" data-trim>วาง</button>'
+        + '<button type="button" class="btn small ghost" data-vdel="'+id+'">ลบ</button></div>';
+    }).join("") || '<p class="hint" style="margin:0">ยังไม่มีเสียง กด "+ เพิ่มเสียง"</p>';
+    if(focusId){ var el = document.querySelector('[data-vname="'+focusId+'"]'); if(el){ el.focus(); el.select(); } }
   }
-  $("vSetBtn").addEventListener("click", function(){ MW.showTab("settings"); $("elPanel").scrollIntoView({ behavior:"smooth", block:"start" }); });
-  function renderWarm(){ $("elWarmBox").hidden = cfg.warm !== "custom"; $("elTrimRow").hidden = cfg.warm === "off"; }
-  $("elKey").value = load(KEY, ""); $("elVoice").value = cfg.voice; $("elVoiceName").value = cfg.voiceName;
-  $("elModel").value = cfg.model; if($("elModel").value !== cfg.model){ cfg.model = "eleven_v3"; $("elModel").value = cfg.model; }
-  $("elStab").value = String(cfg.stability); if($("elStab").value !== String(cfg.stability)){ cfg.stability = 0.5; $("elStab").value = "0.5"; }
-  $("elWarm").value = cfg.warm; if($("elWarm").value !== cfg.warm){ cfg.warm = "hook"; $("elWarm").value = "hook"; }
-  $("elWarmText").value = cfg.warmText; $("elTrim").checked = cfg.trim;
-  function saveAll(e){
-    var ok = save(KEY, $("elKey").value.trim());
-    if(e && (e.target.id === "elModel" || e.target.id === "elTrim")) cfg.tsOff = false; /* เปลี่ยนโมเดล/เปิดตัดใหม่ → ลองแบบมีเวลาตัวอักษรอีกครั้ง */
-    cfg.voice = $("elVoice").value.trim(); cfg.voiceName = $("elVoiceName").value.trim(); cfg.model = $("elModel").value; cfg.stability = Number($("elStab").value);
-    cfg.warm = $("elWarm").value; cfg.warmText = $("elWarmText").value; cfg.trim = $("elTrim").checked;
-    ok = saveCfg() && ok;
-    MW.toast(ok ? "บันทึกแล้ว" : "บันทึกไม่ได้", !ok); keyState(); renderWarm(); renderTsNote(); renderVoiceInfo();
-  }
-  ["elKey","elVoice","elVoiceName","elModel","elStab","elWarm","elWarmText","elTrim"].forEach(function(id){ $(id).addEventListener("change", saveAll); }); /* บันทึกอัตโนมัติ (รวมตอนกด วาง/ลบ) */
+  $("voiceList").addEventListener("change", function(e){
+    var t = e.target, v;
+    if(t.dataset.vname && (v = cfg.voices.find(function(x){ return x.id === t.dataset.vname; }))) v.name = t.value.trim();
+    else if(t.dataset.vid && (v = cfg.voices.find(function(x){ return x.id === t.dataset.vid; }))){
+      var was = v.vid; v.vid = t.value.trim(); if(cfg.voice === was) cfg.voice = v.vid; /* แก้ Voice ID ของเสียงที่ใช้อยู่ → ตามไปด้วย */
+    }else return;
+    if(!cfg.voice && cfg.voices.length) cfg.voice = cfg.voices[0].vid;
+    var ok = saveCfg(); MW.toast(ok ? "บันทึกแล้ว" : "บันทึกไม่ได้", !ok); renderVoiceRow();
+  });
+  $("voiceList").addEventListener("click", function(e){
+    var b = e.target.closest("button[data-vdel]"); if(!b) return;
+    MW.confirmTap(b, "ลบ", function(){
+      cfg.voices = cfg.voices.filter(function(v){ return v.id !== b.dataset.vdel; });
+      if(!curVoice()) cfg.voice = cfg.voices.length ? cfg.voices[0].vid : "";
+      saveCfg(); renderVoiceList(); renderVoiceRow(); MW.toast("ลบเสียงแล้ว");
+    });
+  });
+  $("addVoice").addEventListener("click", function(){
+    var v = { id:newId(), name:"", vid:"" }; cfg.voices.push(v); renderVoiceList(v.id);
+  });
+  $("elKey").value = load(KEY, "");
+  $("elKey").addEventListener("change", function(){ var ok = save(KEY, this.value.trim()); MW.toast(ok ? "บันทึกแล้ว" : "บันทึกไม่ได้", !ok); keyState(); }); /* บันทึกอัตโนมัติ (รวมตอนกด วาง/ลบ) */
 
-  keyState(); renderUsage(); renderWarm(); renderTsNote(); renderVoiceInfo(); sync();
+  if(!MODELS.some(function(m){ return m.v === cfg.model; })) cfg.model = "eleven_v3";
+  if(!STABS.some(function(s){ return s.v === cfg.stability; })) cfg.stability = 0.5;
+  if(!WARMS.some(function(w){ return w.v === cfg.warm; })) cfg.warm = "hook";
+  saveCfg(); keyState(); renderUsage(); renderVoiceList(); renderVoiceRow(); sync();
 })();

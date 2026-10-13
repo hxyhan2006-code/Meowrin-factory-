@@ -241,7 +241,7 @@
     var p = parts(v.s2 || "");
     renderP1(p.title);
     $("s2View").textContent = p.script;
-    $("vText").value = p.script;
+    $("vText").value = p.script; fit();
     $("vClip").textContent = cur.clip.title;
     $("vVer").textContent = v.pname + " · เขียนโดย " + short(v.writer);
     renderCount(); renderRun();
@@ -269,10 +269,13 @@
   /* ---------- แก้เอง / สั่งแก้ ---------- */
   $("sTrans").addEventListener("input", function(){ if(cur) cur.trans = this.value; });
   $("s1Out").addEventListener("input", function(){ var v = activeV(); if(v) v.s1 = this.value; });
+  /* กล่องบทในหน้าเสียงสูงตามเนื้อหา (หน้าเลื่อนยาวแบบ ElevenLabs ไม่มีกล่องเลื่อนซ้อน) — วัดได้เมื่อแท็บเสียงแสดงอยู่เท่านั้น */
+  function fit(){ var t = $("vText"); t.style.height = "auto"; t.style.height = t.scrollHeight + "px"; }
+  document.addEventListener("mw:tab", function(e){ if(e.detail === "voice") fit(); });
   /* แก้บทในหน้าเสียง = แก้เฉพาะ PART 2 ของเวอร์ชันที่เปิดอยู่ (PART 1 คงเดิม) */
   $("vText").addEventListener("input", function(){
     var v = activeV(); if(!v) return;
-    setScript(v, this.value); $("s2View").textContent = this.value; renderCount();
+    setScript(v, this.value); $("s2View").textContent = this.value; fit(); renderCount();
   });
   ["s1Out","vText","sTrans"].forEach(function(id){ $(id).addEventListener("change", function(){ if(cur) saveHist(cur); }); }); /* แก้เองแล้วเก็บให้ด้วย */
 
