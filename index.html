@@ -118,7 +118,10 @@
     <label for="gKey" style="margin-top:8px">Gemini API key (จาก Google AI Studio)</label>
     <input id="gKey" type="password" placeholder="AIza..." autocomplete="off">
     <label for="gModel">ชื่อโมเดล</label>
-    <input id="gModel" placeholder="gemini-3.6-flash" autocomplete="off" autocapitalize="none">
+    <input id="gModel" list="modelList" placeholder="gemini-3.8-flash" autocomplete="off" autocapitalize="none">
+    <datalist id="modelList"><option value="gemini-3.8-flash"><option value="gemini-3.7-flash"><option value="gemini-3.1-pro-preview"></datalist>
+    <label for="gThink">ระดับการคิด (ต่ำ = เร็ว/ถูก, สูง = ละเอียด/แพง)</label>
+    <select id="gThink"><option value="low">ต่ำสุด</option><option value="medium">ปานกลาง</option><option value="high">สูงสุด</option></select>
     <label for="pA">Prompt A (ยึดโครงต้นฉบับ)</label>
     <textarea id="pA" rows="6" placeholder="วาง prompt A ทั้งก้อนที่นี่"></textarea>
     <label for="pB">Prompt B (เรียบเรียงใหม่)</label>

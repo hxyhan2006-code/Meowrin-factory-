@@ -8,7 +8,7 @@
   var ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/";
   function load(k, d){ try{ var v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } }
   function save(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); return true; }catch(e){ return false; } }
-  var cfg = Object.assign({ model:"gemini-3.6-flash", A:"", B:"" }, load(CFG, {}));
+  var cfg = Object.assign({ model:"gemini-3.8-flash", think:"medium", A:"", B:"" }, load(CFG, {}));
   var chat = [], s1Len = 0, chatClip = null;
 
   function note(el, text, err){ $(el).innerHTML = text ? '<div class="msg'+(err?' err':'')+'">'+MW.esc(text)+'</div>' : ""; }
@@ -16,22 +16,32 @@
   function sel(){ return document.querySelector('input[name="pSel"]:checked').value; }
 
   /* ---------- Gemini ---------- */
-  async function gemini(contents, system, json){
+  function sleep(ms){ return new Promise(function(r){ setTimeout(r, ms); }); }
+  async function gemini(contents, system, json, think){
     var key = load(GK, "");
     if(!key) throw new Error("ยังไม่ได้ใส่ Gemini API key (แท็บตั้งค่า)");
-    var body = { contents: contents };
+    var body = { contents: contents }, gc = {};
     if(system) body.systemInstruction = { parts: [{ text: system }] };
-    if(json) body.generationConfig = { responseMimeType: "application/json" };
-    var res = await fetch(ENDPOINT + encodeURIComponent(cfg.model) + ":generateContent", {
-      method: "POST", headers: { "Content-Type": "application/json", "x-goog-api-key": key }, body: JSON.stringify(body)
-    });
-    var j = await res.json().catch(function(){ return {}; });
+    if(json) gc.responseMimeType = "application/json";
+    if(/^gemini-3/.test(cfg.model)) gc.thinkingConfig = { thinkingLevel: think || cfg.think || "medium" };
+    if(Object.keys(gc).length) body.generationConfig = gc;
+    var res, j, delays = [2000, 5000];
+    for(var attempt = 0; ; attempt++){
+      res = await fetch(ENDPOINT + encodeURIComponent(cfg.model) + ":generateContent", {
+        method: "POST", headers: { "Content-Type": "application/json", "x-goog-api-key": key }, body: JSON.stringify(body)
+      });
+      j = await res.json().catch(function(){ return {}; });
+      if(res.status === 503 && attempt < delays.length){ await sleep(delays[attempt]); continue; } /* โมเดลคนใช้เยอะชั่วคราว ลองซ้ำ */
+      break;
+    }
     if(!res.ok){
       var m = (j.error && j.error.message) || "";
+      if(res.status === 503) throw new Error("โมเดล " + cfg.model + " คนใช้เยอะ ลองใหม่อีกครั้ง หรือเปลี่ยนโมเดลในตั้งค่า");
       if(res.status === 429) throw new Error("ชนลิมิต/โควต้า Gemini ลองใหม่อีกสักพัก");
       if(res.status === 403 || /API key/i.test(m)) throw new Error("Gemini key ใช้ไม่ได้: " + m);
       if(res.status === 404) throw new Error("ไม่พบโมเดล "+cfg.model+" เช็กชื่อโมเดลในตั้งค่า");
-      throw new Error("Gemini error " + res.status + (m ? ": " + m : ""));
+      if(res.status === 400 && /thinking/i.test(m)) throw new Error("โมเดลนี้ไม่รับระดับการคิดที่ตั้งไว้ ลองเปลี่ยนระดับในตั้งค่า: " + m);
+      var e = new Error("Gemini error " + res.status + (m ? ": " + m : "")); e.status = res.status; throw e;
     }
     var c = j.candidates && j.candidates[0];
     if(!c || !c.content || !c.content.parts) throw new Error("Gemini ไม่ตอบ" + (j.promptFeedback && j.promptFeedback.blockReason ? " (ถูกบล็อก: "+j.promptFeedback.blockReason+")" : ""));
@@ -46,7 +56,7 @@
     if(t) return [{ text: t }];
     return [{ fileData: { fileUri: "https://www.youtube.com/watch?v=" + c.id } }, { text: "https://www.youtube.com/shorts/" + c.id }];
   }
-  function srcHint(err){ return err.message + (err.message.indexOf("Gemini") === 0 || /video|URL|fileUri/i.test(err.message) ? "\nถ้าดึงจากลิงก์ไม่ได้ ลองวางทรานสคริปต์ในช่องด้านบนแทน" : ""); }
+  function srcHint(err){ return err.message + (err.status === 400 || /video|URL|fileUri/i.test(err.message) ? "\nถ้าดึงจากลิงก์ไม่ได้ ลองวางทรานสคริปต์ในช่องด้านบนแทน" : ""); }
 
   /* ---------- หน้า ---------- */
   function refresh(){
@@ -66,7 +76,7 @@
       var sys = 'คุณคัดเลือกวิธีทำบทพากย์ One Piece Shorts ภาษาไทย ตอบเป็น JSON เท่านั้นรูปแบบ {"prompt":"A" หรือ "B","reason":"เหตุผลสั้นๆ 1 ประโยคภาษาไทย"}\n'
         + 'A = ยึดโครงเรื่องและจังหวะต้นฉบับ เหมาะกับคอมเมดี้/WTF ที่ลำดับ setup→punchline คือตัวขาย คลิปสั้น เสียง OG เยอะ ลิสต์นับจำนวนที่ลำดับสำคัญ\n'
         + 'B = ดึงแก่นไวรัลแล้วเรียบเรียงใหม่ เหมาะกับคลิปเล่า lore/ข้อมูลที่โครงเรื่องไม่คม หรือยาวและต้องจัดใหม่ ถ้าไม่แน่ใจให้เลือก B';
-      var out = await gemini([{ role:"user", parts: sourceParts() }], sys, true);
+      var out = await gemini([{ role:"user", parts: sourceParts() }], sys, true, "low");
       var r = JSON.parse(out.replace(/```json|```/g, "").trim());
       var p = r.prompt === "A" ? "A" : "B";
       document.querySelector('input[name="pSel"][value="'+p+'"]').checked = true;
@@ -137,9 +147,9 @@
   });
 
   /* ---------- ตั้งค่า AI ---------- */
-  $("gKey").value = load(GK, ""); $("gModel").value = cfg.model; $("pA").value = cfg.A; $("pB").value = cfg.B;
+  $("gKey").value = load(GK, ""); $("gModel").value = cfg.model; $("gThink").value = cfg.think; $("pA").value = cfg.A; $("pB").value = cfg.B;
   $("saveAi").addEventListener("click", function(){
-    cfg = { model: $("gModel").value.trim() || "gemini-3.6-flash", A: $("pA").value, B: $("pB").value };
+    cfg = { model: $("gModel").value.trim() || "gemini-3.8-flash", think: $("gThink").value, A: $("pA").value, B: $("pB").value };
     var ok = save(CFG, cfg) && save(GK, $("gKey").value.trim());
     note("aiSetMsg", ok ? "บันทึกแล้ว" : "บันทึกไม่ได้", !ok);
   });
