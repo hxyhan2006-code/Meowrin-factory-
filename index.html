@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#0f2a3d" />
+<link rel="manifest" href="manifest.json">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="meowrin">
+<title>meowrin factory</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600&family=Mitr:wght@500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>meowrin factory</h1>
+    <p>หาคลิปต้นทาง → เลือก → ทำบท</p>
+  </header>
+  <nav role="tablist">
+    <button role="tab" data-tab="clips" aria-selected="true">คลิป</button>
+    <button role="tab" data-tab="channels" aria-selected="false">ช่อง</button>
+    <button role="tab" data-tab="settings" aria-selected="false">ตั้งค่า</button>
+  </nav>
+
+  <!-- คลิป -->
+  <section id="tab-clips" class="on">
+    <label for="linkInput" style="margin-top:0">มีลิงก์อยู่แล้ว? แปะตรงนี้</label>
+    <div class="row">
+      <input id="linkInput" type="url" inputmode="url" placeholder="https://youtube.com/shorts/..." autocomplete="off">
+      <button class="btn" id="linkBtn">ใช้ลิงก์นี้</button>
+    </div>
+    <div id="linkMsg"></div>
+
+    <div class="tools">
+      <select id="sortSel" aria-label="เรียงตาม">
+        <option value="score">เรียงตามความปัง (วิว ÷ ผู้ติดตาม)</option>
+        <option value="views">เรียงตามยอดวิว</option>
+        <option value="new">เรียงตามใหม่สุด</option>
+      </select>
+      <button class="btn" id="fetchBtn">ดึงคลิป</button>
+    </div>
+    <label style="display:flex;gap:8px;align-items:center;margin:0 0 12px;color:var(--sail)">
+      <input type="checkbox" id="hideMade" style="width:auto" checked> ซ่อนคลิปที่ทำแล้ว
+    </label>
+    <div id="status"></div>
+    <div id="list"></div>
+  </section>
+
+  <!-- ช่อง -->
+  <section id="tab-channels">
+    <label for="handleInput" style="margin-top:0">เพิ่มช่องที่ตามไว้ (ใส่ @handle)</label>
+    <div class="row">
+      <input id="handleInput" placeholder="@zotrakk" autocapitalize="none" autocomplete="off">
+      <button class="btn" id="addChanBtn">เพิ่ม</button>
+    </div>
+    <div id="chanMsg"></div>
+    <div id="chanList" style="margin-top:14px"></div>
+  </section>
+
+  <!-- ตั้งค่า -->
+  <section id="tab-settings">
+    <label for="ytKey" style="margin-top:0">YouTube Data API key</label>
+    <input id="ytKey" type="password" placeholder="AIza..." autocomplete="off">
+    <div class="msg">key เก็บในเครื่องนี้เท่านั้น แนะนำให้จำกัด key ให้ใช้ได้เฉพาะโดเมน GitHub Pages ของนายใน Google Cloud Console และจำกัดเฉพาะ YouTube Data API v3 ด้วย</div>
+    <button class="btn" id="saveKey">บันทึก key</button>
+
+    <h2 style="font-size:16px;margin:26px 0 4px">สำรองข้อมูล</h2>
+    <div class="msg">รายชื่อช่องกับรายการ "ทำแล้ว" เก็บในเครื่อง ถ้าล้างเบราว์เซอร์จะหาย โหลดสำรองไว้เป็นระยะ (ไม่รวม key)</div>
+    <div class="row">
+      <button class="btn ghost" id="exportBtn">โหลดไฟล์สำรอง</button>
+      <button class="btn ghost" id="importBtn">นำเข้า</button>
+      <input type="file" id="importFile" accept="application/json" hidden>
+    </div>
+    <div id="setMsg"></div>
+  </section>
+</div>
+
+<!-- แถบคลิปที่เลือก -->
+<div class="pick" id="pickBar">
+  <div class="inner">
+    <img id="pickImg" alt="">
+    <div class="t"><b id="pickTitle"></b><span id="pickSub"></span></div>
+    <button class="btn small" id="pickCopy">คัดลอกลิงก์</button>
+    <button class="btn small ghost" id="pickClear" aria-label="ยกเลิกการเลือก">✕</button>
+  </div>
+</div>
+
+<script src="app.js"></script>
+<script src="ai.js"></script>
+</body>
+</html>
