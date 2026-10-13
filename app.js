@@ -28,13 +28,11 @@
     document.querySelectorAll("section").forEach(function(s){ s.classList.toggle("on", s.id === "tab-"+name); });
     renderPick(); /* แถบคลิปที่เลือกโชว์เฉพาะแท็บ คลิป */
     $("chanBtn").hidden = name !== "clips"; /* ปุ่มจัดการช่องอยู่มุมขวาบนของแท็บคลิป */
-    document.body.dataset.tab = name; /* ให้ CSS ปรับหน้าตาตามแท็บ (เช่นหน้าเสียงซ่อนหัวแอพ) */
     document.dispatchEvent(new CustomEvent("mw:tab", { detail: name }));
   }
   document.querySelectorAll("nav button").forEach(function(b){
     b.addEventListener("click", function(){ showTab(b.dataset.tab); });
   });
-  document.body.dataset.tab = "clips";
   $("chanBtn").addEventListener("click", function(){ showTab("channels"); });
   $("chanBack").addEventListener("click", function(){ showTab("clips"); });
 

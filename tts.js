@@ -215,7 +215,6 @@
   function changed(){ saveCfg(); renderSheet(); renderVoiceRow(); }
   function openSheet(){ renderSheet(); MW.openModal("vSheet"); }
   $("vSetBtn").addEventListener("click", openSheet);
-  $("vVoiceBtn").addEventListener("click", openSheet);
   $("vsClose").addEventListener("click", function(){ MW.closeModal("vSheet"); });
   $("vSheet").addEventListener("click", function(e){ if(e.target === this) MW.closeModal("vSheet"); });
   $("vSheet").addEventListener("click", function(e){
