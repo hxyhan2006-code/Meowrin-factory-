@@ -297,8 +297,7 @@
   });
   /* แก้บท: อันเดิมเก็บไว้ใน v.prev ให้สลับกลับได้ */
   var QUICK = { short:"ตัดให้สั้นลงประมาณ 20% โดยคงใจความและมุกสำคัญไว้", long:"ขยายให้ยาวขึ้นเล็กน้อย เพิ่มรายละเอียดและจังหวะให้เนื้อเรื่องเต็มขึ้น",
-                punch:"ปรับให้แรงขึ้น เปิดประโยคแรกให้ดึงดูด จังหวะกระชับ ตัดคำฟุ่มเฟือย", funny:"ปรับให้ตลกขึ้น เพิ่มมุกและจังหวะ punchline ให้ชัด",
-                lines:"จัดบรรทัดใหม่ ขึ้นบรรทัดใหม่ทุกประโยคหรือทุกช่วงหายใจ โดยไม่เปลี่ยนถ้อยคำและเนื้อหาเลย" };
+                punch:"ปรับให้แรงขึ้น เปิดประโยคแรกให้ดึงดูด จังหวะกระชับ ตัดคำฟุ่มเฟือย", funny:"ปรับให้ตลกขึ้น เพิ่มมุกและจังหวะ punchline ให้ชัด" };
   function editScript(fb){
     var c = cur, v = activeV(), txt = v ? parts(v.s2 || "").script : ""; if(!v || v.busy || !fb || !txt) return;
     step(c, v, "กำลังแก้บท...", async function(){
@@ -307,7 +306,12 @@
     });
   }
   $("s2FbBtn").addEventListener("click", function(){ var fb = $("s2Fb").value.trim(); if(!fb) return; $("s2Fb").value = ""; editScript(fb); });
-  $("quickFb").addEventListener("click", function(e){ var b = e.target.closest("button[data-q]"); if(b) editScript(QUICK[b.dataset.q]); });
+  $("quickFb").addEventListener("click", function(e){
+    var b = e.target.closest("button[data-q]"); if(!b) return;
+    if(b.dataset.q !== "lines") return editScript(QUICK[b.dataset.q]);
+    var v = activeV(); if(!v || v.busy || !v.s2) return; /* จัดบรรทัดด้วยโค้ด ฟรี ไม่เรียก AI */
+    v.prev = v.s2; tidy(v); saveHist(cur); renderVersion();
+  });
   $("s2Undo").addEventListener("click", function(){
     var v = activeV(); if(!v || v.busy || !v.prev) return;
     var t = v.s2; v.s2 = v.prev; v.prev = t; saveHist(cur); renderVersion(); /* กดอีกครั้งจะสลับกลับมา */
@@ -320,19 +324,46 @@
     var m1 = /^[^\n]*PART\s*1[^\n]*$/im.exec(t.slice(0, m2.index));
     return { head: t.slice(0, m2.index + m2[0].length), title: m1 ? t.slice(m1.index + m1[0].length, m2.index).trim() : "", script: t.slice(m2.index + m2[0].length).trim() };
   }
-  /* รับประกันรูปแบบบท: บรรทัดไหนยาวเกิน (AI รวมเป็นย่อหน้า) ตัดที่ช่องว่างระหว่างวลี ให้บรรทัดละไม่เกิน ~50 ตัวอักษร
-     บรรทัดสั้นอยู่แล้วและบรรทัดว่างไม่แตะ · ข้อความยาวที่ไม่มีช่องว่างเลยตัดไม่ได้ (ใช้ปุ่ม จัดบรรทัดใหม่ ให้ AI ช่วย) */
-  var LINE_MAX = 50, LINE_LONG = 70;
+  /* รับประกันรูปแบบบทด้วยโค้ด (ไม่พึ่ง AI): บรรทัดยาวเกิน LINE_MAX ตัดที่ช่องว่างระหว่างวลีให้ยาวพอๆ กัน
+     ข้อความไม่มีช่องว่างตัดด้วย Intl.Segmenter('th') ถ้ามี (ไม่มี = ปล่อยไว้ ไม่พัง) · บรรทัดสั้นกว่า LINE_MIN รวมกับบรรทัดติดกัน
+     บรรทัดว่างคั่นท่อนคงไว้ตามเดิมและไม่รวมข้ามท่อน */
+  var LINE_MAX = 40, LINE_MIN = 16, LINE_SOFT = 44;
+  var seg = null; try { seg = new Intl.Segmenter("th", { granularity:"word" }); } catch(e){}
+  function pieces(line){ /* คำ/วลี + ตัวบอกว่าต่อด้วยช่องว่างไหม */
+    var out = [];
+    line.trim().split(/\s+/).forEach(function(w){
+      if(w.length > LINE_MAX && seg){
+        var parts = Array.from(seg.segment(w), function(x){ return x.segment; });
+        parts.forEach(function(p, i){ out.push({ t:p, sp: i === parts.length - 1 }); });
+      } else out.push({ t:w, sp:true });
+    });
+    return out;
+  }
+  function wrapLine(line){
+    var t = line.trim(); if(t.length <= LINE_MAX) return [t];
+    var ps = pieces(t), n = Math.ceil(t.length / LINE_MAX), lim = Math.min(LINE_MAX, Math.ceil(t.length / n) + 8);
+    var out = [], row = "", gap = "";
+    ps.forEach(function(p){
+      if(row && (row + gap + p.t).length > lim){ out.push(row); row = p.t; } else row = row + gap + p.t;
+      gap = p.sp ? " " : "";
+    });
+    if(row) out.push(row);
+    return out;
+  }
   function reflow(text){
-    return text.split("\n").map(function(line){
-      if(line.length <= LINE_LONG) return line;
-      var out = [], row = "";
-      line.trim().split(/\s+/).forEach(function(w){
-        if(row && (row + " " + w).length > LINE_MAX){ out.push(row); row = w; } else row = row ? row + " " + w : w;
-      });
-      if(row) out.push(row);
-      return out.join("\n");
-    }).join("\n");
+    var rows = [];
+    text.split("\n").forEach(function(l){ if(!l.trim()) rows.push(""); else wrapLine(l).forEach(function(r){ rows.push(r); }); });
+    var res = [];
+    for(var i = 0; i < rows.length; i++){ /* รวมบรรทัดสั้นกับบรรทัดถัดไป (หรือก่อนหน้า) ในท่อนเดียวกัน */
+      var r = rows[i];
+      if(r && r.length < LINE_MIN){
+        if(rows[i+1] && (r + " " + rows[i+1]).length <= LINE_SOFT){ rows[i+1] = r + " " + rows[i+1]; continue; }
+        var p = res.length - 1;
+        if(p >= 0 && res[p] && (res[p] + " " + r).length <= LINE_SOFT){ res[p] += " " + r; continue; }
+      }
+      res.push(r);
+    }
+    return res.join("\n");
   }
   function tidy(v){ setScript(v, reflow(parts(v.s2 || "").script)); } /* ใช้หลังทุกครั้งที่ AI ส่งบทมา */
   function setScript(v, script){ var h = parts(v.s2 || "").head; v.s2 = h ? h + "\n" + script : script; }
