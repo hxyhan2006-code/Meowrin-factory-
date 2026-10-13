@@ -195,6 +195,11 @@
     if(!$("vSheet").hidden) closeModal("vSheet"); else if(!$("selSheet").hidden) closeSheet(); else if(playing) closePlayer();
   });
   $("pPick").addEventListener("click", function(){ var c = playing; closePlayer(); if(c) setPick(c); });
+  $("pCopy").addEventListener("click", function(){
+    var url = $("pOpen").href;
+    (navigator.clipboard ? navigator.clipboard.writeText(url) : Promise.reject()).then(function(){ toast("คัดลอกลิงก์แล้ว"); })
+      .catch(function(){ window.prompt("คัดลอกลิงก์ตรงนี้", url); });
+  });
   $("pMade").addEventListener("click", function(){
     var id = playing.id; if(data.made[id]) delete data.made[id]; else data.made[id] = true;
     persist(); render(); $("pMade").textContent = data.made[id] ? "ยกเลิกทำแล้ว" : "ทำแล้ว";

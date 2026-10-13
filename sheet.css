@@ -89,8 +89,8 @@
   background:#000;border-radius:12px;overflow:hidden;
 }
 .pframe iframe{width:100%;height:100%;border:0;display:block}
-.pact{display:flex;gap:8px}
-.pact .btn{flex:1;min-width:0;padding:0 8px}
+.pact{display:flex;flex-wrap:wrap;gap:8px}
+.pact .btn{flex:1 1 calc(50% - 4px);min-width:0;padding:0 8px}
 
 
 /* ---------- 10e. Sheet picker (แทน dropdown ของระบบ) ---------- */
