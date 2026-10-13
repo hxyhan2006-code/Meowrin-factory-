@@ -197,7 +197,18 @@
   $("fetchBtn").addEventListener("click", fetchClips);
 
   /* ---------- manual link ---------- */
+  /* ช่องว่าง = ปุ่ม "วาง" (ดึงจากคลิปบอร์ด) · มีลิงก์แล้ว = ปุ่ม "ใช้ลิงก์นี้" */
+  function syncLinkBtn(){ $("linkBtn").textContent = $("linkInput").value.trim() ? "ใช้ลิงก์นี้" : "วาง"; }
+  $("linkInput").addEventListener("input", syncLinkBtn);
   $("linkBtn").addEventListener("click", async function(){
+    if(!$("linkInput").value.trim()){
+      try{
+        var t = (await navigator.clipboard.readText()).trim();
+        if(!t){ toast("คลิปบอร์ดว่างอยู่ คัดลอกลิงก์ก่อน", true); return; }
+        $("linkInput").value = t; syncLinkBtn(); msg("linkMsg","");
+      }catch(err){ toast("วางไม่ได้ อนุญาตให้เข้าถึงคลิปบอร์ด หรือกดค้างที่ช่องแล้ววางเอง", true); $("linkInput").focus(); }
+      return;
+    }
     var id = videoId($("linkInput").value);
     if(!id){ msg("linkMsg","ลิงก์ไม่ถูกต้อง ต้องเป็นลิงก์ YouTube หรือ Shorts",true); return; }
     var made = !!data.made[id];
