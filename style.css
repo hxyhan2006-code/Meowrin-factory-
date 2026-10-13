@@ -349,6 +349,7 @@ label{
 #list .card{margin-bottom:0}
 .card.made{opacity:.5}
 .card.made .thumb{filter:grayscale(.8)}
+#list.onlymade .card.made{opacity:1} #list.onlymade .card.made .thumb{filter:none} /* โหมดดูเฉพาะทำแล้ว ไม่ต้องจาง */
 
 /* กรอบรูป 9:16 + ป้ายซ้อนบนรูป */
 .tbox{

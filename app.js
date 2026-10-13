@@ -121,6 +121,7 @@
       return vpd(b) - vpd(a);
     });
     $("list").classList.toggle("cols3", data.cols === 3);
+    $("list").classList.toggle("onlymade", ui.only === "made");
     $("viewBtn").innerHTML = VIEW_ICON[data.cols === 3 ? 2 : 3]; /* โชว์ไอคอนของมุมมองที่จะสลับไป */
     var shown = list.slice(0, ui.shown);
     $("listInfo").textContent = clips.length ? "แสดง "+shown.length+" จาก "+list.length+" คลิป"+(matched > list.length ? " (ซ่อนทำแล้ว "+(matched-list.length)+")" : "")+(cache.at ? " · อัปเดต "+ago(new Date(cache.at).toISOString()) : "") : "";
