@@ -23,6 +23,7 @@
   </header>
   <nav role="tablist">
     <button role="tab" data-tab="clips" aria-selected="true">คลิป</button>
+    <button role="tab" data-tab="script" aria-selected="false">บท</button>
     <button role="tab" data-tab="channels" aria-selected="false">ช่อง</button>
     <button role="tab" data-tab="settings" aria-selected="false">ตั้งค่า</button>
   </nav>
@@ -51,6 +52,50 @@
     <div id="list"></div>
   </section>
 
+  <!-- บท -->
+  <section id="tab-script">
+    <div id="sNoClip" class="empty">เลือกคลิปในแท็บ คลิป ก่อน แล้วกด ทำบท</div>
+    <div id="sBody" hidden>
+      <div class="card"><div class="cbody"><div class="ctitle" id="sTitle"></div><div class="meta" id="sMeta"></div></div></div>
+
+      <label style="margin-top:0">เลือก prompt</label>
+      <div class="seg" role="radiogroup" aria-label="เลือก prompt">
+        <label><input type="radio" name="pSel" value="A" checked> A · ยึดโครงต้นฉบับ</label>
+        <label><input type="radio" name="pSel" value="B"> B · เรียบเรียงใหม่</label>
+      </div>
+      <button class="btn ghost small" id="recoBtn" style="margin-top:8px">ให้ AI แนะนำ</button>
+      <div id="reco"></div>
+
+      <label for="sTrans">ทรานสคริปต์ (ไม่บังคับ ถ้าใส่จะใช้แทนลิงก์)</label>
+      <textarea id="sTrans" rows="3" placeholder="ใช้เมื่อ AI ดึงจากลิงก์ไม่ได้"></textarea>
+      <button class="btn" id="s1Btn" style="margin-top:10px;width:100%">วิเคราะห์ซอส (State 1)</button>
+      <div id="sMsg"></div>
+
+      <div id="s1Wrap" hidden>
+        <label for="s1Out">State 1 (แก้เองได้ก่อนกดรัน)</label>
+        <textarea id="s1Out" rows="12"></textarea>
+        <div class="row" style="margin-top:8px">
+          <input id="s1Fb" placeholder="สั่งแก้ State 1 เช่น ลดความแรงลง">
+          <button class="btn ghost" id="s1FbBtn">ปรับ</button>
+        </div>
+        <button class="btn" id="runBtn" style="margin-top:10px;width:100%">รัน → ทำบท</button>
+      </div>
+
+      <div id="s2Wrap" hidden>
+        <label for="s2Out">บท + ชื่อคลิป (แก้เองได้)</label>
+        <textarea id="s2Out" rows="16"></textarea>
+        <div class="row" style="margin-top:8px">
+          <button class="btn" id="copyBtn">คัดลอกเฉพาะบท</button>
+          <button class="btn ghost" id="rerunBtn">ทำใหม่</button>
+        </div>
+        <div class="row" style="margin-top:8px">
+          <input id="s2Fb" placeholder="สั่ง AI แก้บท เช่น ตัดให้สั้นลง">
+          <button class="btn ghost" id="s2FbBtn">แก้</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- ช่อง -->
   <section id="tab-channels">
     <label for="handleInput" style="margin-top:0">เพิ่มช่องที่ตามไว้ (ใส่ @handle)</label>
@@ -69,6 +114,18 @@
     <div class="msg">key เก็บในเครื่องนี้เท่านั้น แนะนำให้จำกัด key ให้ใช้ได้เฉพาะโดเมน GitHub Pages ของนายใน Google Cloud Console และจำกัดเฉพาะ YouTube Data API v3 ด้วย</div>
     <button class="btn" id="saveKey">บันทึก key</button>
 
+    <h2 style="font-size:16px;margin:26px 0 4px">AI ทำบท (Gemini)</h2>
+    <label for="gKey" style="margin-top:8px">Gemini API key (จาก Google AI Studio)</label>
+    <input id="gKey" type="password" placeholder="AIza..." autocomplete="off">
+    <label for="gModel">ชื่อโมเดล</label>
+    <input id="gModel" placeholder="gemini-3.6-flash" autocomplete="off" autocapitalize="none">
+    <label for="pA">Prompt A (ยึดโครงต้นฉบับ)</label>
+    <textarea id="pA" rows="6" placeholder="วาง prompt A ทั้งก้อนที่นี่"></textarea>
+    <label for="pB">Prompt B (เรียบเรียงใหม่)</label>
+    <textarea id="pB" rows="6" placeholder="วาง prompt B ทั้งก้อนที่นี่"></textarea>
+    <button class="btn" id="saveAi" style="margin-top:10px">บันทึกการตั้งค่า AI</button>
+    <div id="aiSetMsg"></div>
+
     <h2 style="font-size:16px;margin:26px 0 4px">สำรองข้อมูล</h2>
     <div class="msg">รายชื่อช่องกับรายการ "ทำแล้ว" เก็บในเครื่อง ถ้าล้างเบราว์เซอร์จะหาย โหลดสำรองไว้เป็นระยะ (ไม่รวม key)</div>
     <div class="row">
@@ -85,7 +142,7 @@
   <div class="inner">
     <img id="pickImg" alt="">
     <div class="t"><b id="pickTitle"></b><span id="pickSub"></span></div>
-    <button class="btn small" id="pickCopy">คัดลอกลิงก์</button>
+    <button class="btn small" id="pickGo">ทำบท</button>
     <button class="btn small ghost" id="pickClear" aria-label="ยกเลิกการเลือก">✕</button>
   </div>
 </div>

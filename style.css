@@ -48,3 +48,10 @@ label{display:block;font-size:13px;color:var(--mute);margin:14px 0 6px}
 .pick .t b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pick .t span{color:var(--mute)}
 @media (prefers-reduced-motion:no-preference){.card{transition:opacity .15s}}
+
+[hidden]{display:none !important}
+textarea{width:100%;padding:11px 12px;border-radius:10px;border:1px solid var(--line);background:var(--deep);color:var(--sail);font:inherit;resize:vertical;line-height:1.55}
+.seg{display:flex;gap:8px}
+.seg label{flex:1;margin:0;padding:10px 12px;border:1px solid var(--line);border-radius:10px;color:var(--sail);display:flex;gap:8px;align-items:center;font-size:14px}
+.seg input{width:auto}
+.reco{margin:10px 0;padding:10px 12px;border-radius:10px;background:var(--deep);border:1px solid var(--foam);font-size:13px}

@@ -39,11 +39,13 @@
   }
 
   /* ---------- tabs ---------- */
+  function showTab(name){
+    document.querySelectorAll("nav button").forEach(function(x){ x.setAttribute("aria-selected", x.dataset.tab === name ? "true":"false"); });
+    document.querySelectorAll("section").forEach(function(s){ s.classList.toggle("on", s.id === "tab-"+name); });
+    document.dispatchEvent(new CustomEvent("mw:tab", { detail: name }));
+  }
   document.querySelectorAll("nav button").forEach(function(b){
-    b.addEventListener("click", function(){
-      document.querySelectorAll("nav button").forEach(function(x){ x.setAttribute("aria-selected", x===b ? "true":"false"); });
-      document.querySelectorAll("section").forEach(function(s){ s.classList.toggle("on", s.id === "tab-"+b.dataset.tab); });
-    });
+    b.addEventListener("click", function(){ showTab(b.dataset.tab); });
   });
 
   /* ---------- clip list ---------- */
@@ -144,11 +146,7 @@
     bar.classList.add("on");
   }
   $("pickClear").addEventListener("click", function(){ data.picked = null; persist(); renderPick(); });
-  $("pickCopy").addEventListener("click", function(){
-    if(!data.picked) return;
-    var url = "https://youtube.com/shorts/"+data.picked.id;
-    (navigator.clipboard ? navigator.clipboard.writeText(url) : Promise.reject()).then(function(){ $("pickCopy").textContent = "คัดลอกแล้ว"; setTimeout(function(){ $("pickCopy").textContent = "คัดลอกลิงก์"; }, 1500); }).catch(function(){ window.prompt("คัดลอกลิงก์นี้", url); });
-  });
+  $("pickGo").addEventListener("click", function(){ if(data.picked) showTab("script"); });
 
   /* ---------- channels ---------- */
   function renderChannels(){
@@ -202,6 +200,7 @@
     r.readAsText(f);
   });
 
+  window.MW = { data: data, persist: persist, esc: esc, showTab: showTab, videoId: videoId, onMadeChange: render };
   render(); renderChannels(); renderPick();
 })();
 
