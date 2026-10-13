@@ -290,12 +290,15 @@ label{
 }
 
 .listbar{
-  display:flex;justify-content:space-between;align-items:center;gap:10px;
+  display:flex;justify-content:space-between;align-items:center;gap:8px;
   margin:12px 0;
   font-size:12px;color:var(--muted);
 }
 .chk{display:flex;gap:8px;align-items:center;margin:0;font-size:13px;color:var(--text);white-space:nowrap}
-#listInfo{flex:1;min-width:0;text-align:right}
+.listinfo{color:var(--muted);font-size:12px;margin:-4px 0 12px}
+.listbar .chk{margin-right:auto}
+.svbtn{flex:none;padding:0 12px}
+.svbtn.on{background:var(--accent-soft);border-color:rgba(245,158,11,.55);color:var(--accent)}
 
 .msg{
   padding:11px 14px;
@@ -438,6 +441,33 @@ label{
 .prog{height:6px;margin-top:8px;border-radius:999px;background:var(--field);overflow:hidden}
 .prog i{display:block;height:100%;border-radius:inherit;background:var(--accent);transition:width .2s ease}
 .more{width:100%;margin-top:4px}
+
+/* ดาวเก็บไว้ทำทีหลัง + มุมมอง 3 คอลัมน์ */
+.bm{
+  position:absolute;right:8px;bottom:8px;z-index:2;
+  width:36px;height:36px;padding:0;
+  border-radius:50%;border:1px solid rgba(255,255,255,.22);
+  background:rgba(9,9,11,.6);color:#fff;font-size:18px;line-height:1;
+  -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+}
+.bm.on{color:var(--accent);border-color:rgba(245,158,11,.6)}
+.vbtn{flex:none;width:38px;padding:0}
+.vbtn svg{width:18px;height:18px;fill:currentColor}
+#list.cols3{grid-template-columns:repeat(3, minmax(0, 1fr));gap:8px}
+#list.cols3 .cbody{padding:7px 7px 8px}
+#list.cols3 .ctitle{font-size:12px;margin-bottom:4px}
+#list.cols3 .meta{font-size:10.5px;gap:0 6px}
+#list.cols3 .meta span:first-child{display:none}
+#list.cols3 .chip{font-size:10px;padding:0 6px;line-height:1.5}
+#list.cols3 .chip.hot{top:6px;left:6px}
+#list.cols3 .chip.done{top:6px;right:6px}
+#list.cols3 .chip.views{bottom:6px;left:6px}
+#list.cols3 .bm{width:30px;height:30px;font-size:15px;right:6px;bottom:6px}
+#list.cols3 .pbtn{width:34px;height:34px;margin:-17px 0 0 -17px;font-size:13px}
+#list.cols3 .actions{padding-top:6px;gap:4px}
+#list.cols3 .actions .btn{min-height:32px;font-size:12px;padding:0 6px}
+#list.cols3 .actions .ico{width:34px}
+#list.cols3 .actions .ico[data-play]{display:none}
 
 /* ---------- 9. Channels tab ---------- */
 .chan{

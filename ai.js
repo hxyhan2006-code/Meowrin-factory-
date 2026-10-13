@@ -13,6 +13,18 @@
   var CHARS_PER_SEC = 14; /* ความเร็วพากย์ไทยโดยประมาณ ใช้กะความยาวบท */
   function load(k, d){ try{ var v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } }
   function save(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); return true; }catch(e){ return false; } }
+  var COST = "mw_cost_v1"; /* ยอดค่าใช้จ่าย OpenRouter รายเดือน (นับเฉพาะคำขอที่ทำในแอพนี้) */
+  function monthKey(){ var d = new Date(); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0"); }
+  var spend = load(COST, { m:monthKey(), usd:0, n:0 });
+  function money(x){ return "$" + (x < 0.1 ? x.toFixed(3) : x.toFixed(2)); }
+  function renderSpend(){
+    if(spend.m !== monthKey()) spend = { m:monthKey(), usd:0, n:0 };
+    $("spendInfo").textContent = spend.n ? "เดือนนี้ใช้ไป " + money(spend.usd) + " (" + spend.n + " คำขอที่ทำในแอพนี้)" : "ยังไม่มีข้อมูลค่าใช้จ่ายเดือนนี้ (จะแสดงหลังทำบทครั้งถัดไป)";
+  }
+  function addSpend(c){
+    if(spend.m !== monthKey()) spend = { m:monthKey(), usd:0, n:0 };
+    spend.usd += c; spend.n++; save(COST, spend); renderSpend();
+  }
   function short(m){ return String(m || "").replace(/^[^/]+\//, ""); }
 
   /* ---------- ตั้งค่า (mw_ai_cfg_v1) ----------
@@ -52,7 +64,7 @@
     var vs = c.vers.filter(function(v){ return v.s1Len; });
     if(!vs.length) return;
     var e = { id:c.clip.id, clip:c.clip, at:Date.now(), trans:c.trans, active:Math.max(0, vs.indexOf(c.vers[c.active])),
-              vers: vs.map(function(v){ return { pid:v.pid, pname:v.pname, eye:v.eye, writer:v.writer, chat:v.chat, s1Len:v.s1Len, s1:v.s1, s2:v.s2, at:v.at }; }) };
+              vers: vs.map(function(v){ return { pid:v.pid, pname:v.pname, eye:v.eye, writer:v.writer, chat:v.chat, s1Len:v.s1Len, s1:v.s1, s2:v.s2, prev:v.prev || "", cost:v.cost || 0, at:v.at }; }) };
     hist = [e].concat(hist.filter(function(h){ return h.id !== e.id; })).slice(0, HIST_MAX);
     if(!save(HIST, hist)) MW.toast("พื้นที่เก็บเต็ม บันทึกประวัติไม่ได้", true);
     renderHistCount();
@@ -84,12 +96,13 @@
       return p.type === "video_url" ? "ลิงก์วิดีโอ YouTube: " + p.video_url.url + " (เนื้อหาคลิปดูจาก State 1 ด้านล่าง)" : (p.text || "");
     }).filter(Boolean).join("\n") };
   }
-  async function callAI(messages, system, model){
+  async function callAI(messages, system, model, v){
     var key = load(OR_KEY, "");
     if(!key) throw new Error("ยังไม่ได้ใส่ OpenRouter API key (แท็บตั้งค่า)");
     if(!isGoogle(model)) messages = messages.map(textOnly); /* ค่ายอื่นรับ video_url ไม่ได้ (เช่น ตอนเขียนบทต่อจาก State 1 ที่ Gemini ดูคลิป) */
     var body = { model: model, messages: system ? [{ role:"system", content: system }].concat(messages) : messages };
     if(supportsReasoning(model)) body.reasoning = { effort: cfg.think || "medium" }; /* ส่งเฉพาะโมเดลที่รองรับ */
+    body.usage = { include: true }; /* ขอให้ OpenRouter ส่งค่าใช้จ่ายของคำขอนี้กลับมา */
     var res, j, delays = [2000, 5000];
     for(var attempt = 0; ; attempt++){
       res = await fetch(ENDPOINT, {
@@ -117,6 +130,8 @@
     }
     var c = j.choices && j.choices[0], t = c && c.message && c.message.content;
     if(typeof t !== "string" || !t.trim()) throw new Error("โมเดลไม่ตอบ" + (c && c.finish_reason ? " (finish_reason: " + c.finish_reason + ")" : ""));
+    var cost = j.usage && typeof j.usage.cost === "number" ? j.usage.cost : null;
+    if(cost !== null){ if(v) v.cost = (v.cost || 0) + cost; addSpend(cost); }
     return t.trim();
   }
   function promptText(v){
@@ -163,10 +178,10 @@
     return step(c, v, "กำลังดูคลิป...", async function(){
       var sys = promptText(v);
       var ch = [{ role:"user", content: sourceFor(c, v.eye) }];
-      v.s1 = await callAI(ch, sys, v.eye);
+      v.s1 = await callAI(ch, sys, v.eye, v);
       v.chat = ch.concat([{ role:"assistant", content: v.s1 }]); v.s1Len = v.chat.length;
       saveHist(c); v.step = "กำลังเขียนบท..."; paint(c, v);
-      v.s2 = await callAI(chatS1(v).concat([{ role:"user", content:"รัน" }]), sys, v.writer);
+      v.s2 = await callAI(chatS1(v).concat([{ role:"user", content:"รัน" }]), sys, v.writer, v);
     });
   }
 
@@ -175,7 +190,7 @@
     var vs = cfg.sel.map(function(pid){
       var p = prompt(pid), v = c.vers.find(function(x){ return x.pid === pid; });
       if(!v){ v = { pid:pid }; c.vers.push(v); }
-      return Object.assign(v, { pname:p.name, eye:cfg.eye, writer:cfg.model, chat:[], s1Len:0, s1:"", s2:"", busy:false, step:"", err:"" });
+      return Object.assign(v, { pname:p.name, eye:cfg.eye, writer:cfg.model, chat:[], s1Len:0, s1:"", s2:"", prev:"", cost:0, busy:false, step:"", err:"" });
     });
     c.active = c.vers.indexOf(vs[0]); renderVersion();
     await Promise.all(vs.map(function(v){ return runFull(c, v); }));
@@ -212,6 +227,7 @@
     $("vStatus").innerHTML = v.busy ? '<div class="msg">'+esc(v.step)+'</div>' : v.err ? '<div class="msg err">'+esc(v.err)+'</div>' : "";
     ["s1FbBtn","s1Run","s2FbBtn"].forEach(function(id){ $(id).disabled = v.busy || !v.s1Len; });
     $("s2Wrap").hidden = !v.s2;
+    $("s2Undo").hidden = !v.prev;
   }
   /* เนื้อหาของเวอร์ชันที่เปิดอยู่ลงช่องพิมพ์ */
   function renderVersion(){
@@ -253,7 +269,7 @@
     $("s1Fb").value = "";
     step(c, v, "กำลังปรับ State 1...", async function(){
       var next = chatS1(v).concat([{ role:"user", content: fb }]);
-      v.s1 = await callAI(next, promptText(v), v.eye);
+      v.s1 = await callAI(next, promptText(v), v.eye, v);
       v.chat = next.concat([{ role:"assistant", content: v.s1 }]); v.s1Len = v.chat.length;
     });
   });
@@ -261,15 +277,24 @@
     var c = cur, v = activeV(); if(!v || !v.s1Len) return;
     v.writer = cfg.model; /* เขียนใหม่ด้วยตัวเขียนบทที่ตั้งไว้ตอนนี้ */
     step(c, v, "กำลังเขียนบท...", async function(){
-      v.s2 = await callAI(chatS1(v).concat([{ role:"user", content:"รัน" }]), promptText(v), v.writer);
+      v.s2 = await callAI(chatS1(v).concat([{ role:"user", content:"รัน" }]), promptText(v), v.writer, v);
     }).then(function(){ finishMade(c); });
   });
-  $("s2FbBtn").addEventListener("click", function(){
-    var c = cur, v = activeV(), fb = $("s2Fb").value.trim(), txt = (v && v.s2 || "").trim(); if(!fb || !txt) return;
-    $("s2Fb").value = "";
+  /* แก้บท: อันเดิมเก็บไว้ใน v.prev ให้สลับกลับได้ */
+  var QUICK = { short:"ตัดให้สั้นลงประมาณ 20% โดยคงใจความและมุกสำคัญไว้", long:"ขยายให้ยาวขึ้นเล็กน้อย เพิ่มรายละเอียดและจังหวะให้เนื้อเรื่องเต็มขึ้น",
+                punch:"ปรับให้แรงขึ้น เปิดประโยคแรกให้ดึงดูด จังหวะกระชับ ตัดคำฟุ่มเฟือย", funny:"ปรับให้ตลกขึ้น เพิ่มมุกและจังหวะ punchline ให้ชัด" };
+  function editScript(fb){
+    var c = cur, v = activeV(), txt = (v && v.s2 || "").trim(); if(!v || v.busy || !fb || !txt) return;
     step(c, v, "กำลังแก้บท...", async function(){
-      v.s2 = await callAI([{ role:"user", content: "แก้บทพากย์ด้านล่างตามคำสั่ง แล้วตอบกลับมาเป็นฉบับแก้ไขทั้งหมด คงรูปแบบ PART 1 / PART 2 เดิม ไม่ต้องมีคำอธิบายเพิ่ม\n\nคำสั่ง: " + fb + "\n\n----\n" + txt }], "", v.writer);
+      var out = await callAI([{ role:"user", content: "แก้บทพากย์ด้านล่างตามคำสั่ง แล้วตอบกลับมาเป็นฉบับแก้ไขทั้งหมด คงรูปแบบ PART 1 / PART 2 เดิม ไม่ต้องมีคำอธิบายเพิ่ม\n\nคำสั่ง: " + fb + "\n\n----\n" + txt }], "", v.writer, v);
+      v.prev = v.s2; v.s2 = out;
     });
+  }
+  $("s2FbBtn").addEventListener("click", function(){ var fb = $("s2Fb").value.trim(); if(!fb) return; $("s2Fb").value = ""; editScript(fb); });
+  $("quickFb").addEventListener("click", function(e){ var b = e.target.closest("button[data-q]"); if(b) editScript(QUICK[b.dataset.q]); });
+  $("s2Undo").addEventListener("click", function(){
+    var v = activeV(); if(!v || v.busy || !v.prev) return;
+    var t = v.s2; v.s2 = v.prev; v.prev = t; saveHist(cur); renderVersion(); /* กดอีกครั้งจะสลับกลับมา */
   });
 
   /* ---------- แยกชื่อคลิป (PART 1) กับบท (PART 2) ---------- */
@@ -281,7 +306,8 @@
   }
   function renderCount(){
     var s = parts($("s2Out").value).script, n = s.replace(/\s/g, "").length;
-    $("s2Count").textContent = n ? "บท " + n.toLocaleString() + " ตัวอักษร · พากย์ประมาณ " + Math.round(n / CHARS_PER_SEC) + " วิ" : "";
+    var v = activeV();
+    $("s2Count").textContent = n ? "บท " + n.toLocaleString() + " ตัวอักษร · พากย์ประมาณ " + Math.round(n / CHARS_PER_SEC) + " วิ" + (v && v.cost ? " · ค่าใช้จ่ายเวอร์ชันนี้ " + money(v.cost) : "") : "";
   }
   function copy(btn, txt, idle){
     if(!txt){ MW.toast("ไม่เจอส่วนนี้ในบท (ต้องมีหัว PART 1 / PART 2)", true); return; }
@@ -387,6 +413,6 @@
   });
 
   if(!load(CFG, null) || !Array.isArray(load(CFG, {}).prompts)) saveCfg(); /* บันทึกรูปแบบใหม่ครั้งแรก */
-  renderPrompts(); renderHistCount();
+  renderPrompts(); renderHistCount(); renderSpend();
   refresh();
 })();

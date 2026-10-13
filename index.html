@@ -13,8 +13,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600&family=Mitr:wght@500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=20261013l">
-<link rel="stylesheet" href="sheet.css?v=20261013l">
+<link rel="stylesheet" href="style.css?v=20261013n">
+<link rel="stylesheet" href="sheet.css?v=20261013n">
 </head>
 <body>
 <div class="wrap">
@@ -49,8 +49,10 @@
     <div class="fchips" id="chanChips"></div>
     <div class="listbar">
       <label class="chk"><input type="checkbox" id="hideMade" checked> ซ่อนคลิปที่ทำแล้ว</label>
-      <span id="listInfo"></span>
+      <button class="btn small ghost svbtn" id="savedBtn" aria-label="ดูเฉพาะคลิปที่เก็บไว้ทำทีหลัง">★ 0</button>
+      <button class="btn small ghost vbtn" id="viewBtn" aria-label="สลับมุมมองการ์ด"></button>
     </div>
+    <div class="listinfo" id="listInfo"></div>
     <div id="status"></div>
     <div id="list"></div>
   </section>
@@ -99,10 +101,15 @@
             <button class="btn" id="copyBtn" style="flex:1">คัดลอกบท</button>
             <button class="btn ghost" id="copyTitleBtn" style="flex:1">คัดลอกชื่อคลิป</button>
           </div>
+          <label style="margin-top:14px">สั่งแก้บท <span class="lhint">แตะแล้วแก้ให้เลย</span></label>
+          <div class="fchips wrapchips" id="quickFb">
+            <button class="fchip" data-q="short">สั้นลง</button><button class="fchip" data-q="long">ยาวขึ้น</button><button class="fchip" data-q="punch">แรงขึ้น</button><button class="fchip" data-q="funny">ตลกขึ้น</button>
+          </div>
           <div class="row" style="margin-top:8px">
-            <input id="s2Fb" placeholder="สั่ง AI แก้บท เช่น ตัดให้สั้นลง" aria-label="สั่งแก้บท">
+            <input id="s2Fb" placeholder="หรือพิมพ์เอง เช่น เปลี่ยนประโยคเปิดให้ดึงดูดกว่านี้" aria-label="สั่งแก้บท">
             <button class="btn ghost" id="s2FbBtn">แก้</button>
           </div>
+          <button class="btn ghost small" id="s2Undo" style="margin-top:8px" hidden>↶ สลับกับบทก่อนแก้</button>
         </div>
       </div>
     </div>
@@ -176,6 +183,7 @@
         <option value="high" data-desc="ละเอียดสุด แต่ช้ากว่าและแพงกว่า">สูงสุด</option>
       </select>
       <p class="hint">เลือกแล้วบันทึกให้อัตโนมัติ</p>
+      <p class="hint" id="spendInfo" style="margin-top:-6px"></p>
     </div>
 
     <div class="panel">
@@ -249,8 +257,8 @@
   </div>
 </div>
 
-<script src="sync.js?v=20261013l"></script>
-<script src="app.js?v=20261013l"></script>
-<script src="ai.js?v=20261013l"></script>
+<script src="sync.js?v=20261013n"></script>
+<script src="app.js?v=20261013n"></script>
+<script src="ai.js?v=20261013n"></script>
 </body>
 </html>

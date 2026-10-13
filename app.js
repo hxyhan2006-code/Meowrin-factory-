@@ -6,6 +6,7 @@
   function load(k, d){ try{ var v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } }
   function save(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); return true; }catch(e){ return false; } }
   var data = load(DATA_STORE, { channels: [], made: {}, picked: null });
+  data.saved = data.saved || {}; data.cols = data.cols || 2; /* saved = เก็บไว้ทำทีหลัง · cols = จำนวนคอลัมน์การ์ด */
   var cache = load(CACHE_STORE, { at: 0, clips: [] });
   var clips = cache.clips || [];
 
@@ -46,7 +47,7 @@
 
   var PAGE = 40; /* แสดงทีละกี่คลิป */
   var RANGES = [{ d:30, t:"30 วัน" }, { d:90, t:"90 วัน" }, { d:365, t:"1 ปี" }, { d:0, t:"ทั้งหมด" }];
-  var ui = { range:30, q:"", shown:PAGE };
+  var ui = { range:30, saved:false, q:"", shown:PAGE }; /* saved = โชว์เฉพาะที่เก็บไว้ (ไม่สนช่วงเวลา) */
   function ageDays(c){ return (Date.now() - new Date(c.published).getTime()) / 864e5; }
   function vpd(c){ return c.views / Math.max(ageDays(c), 1); } /* วิวต่อวัน (คลิปอายุไม่ถึงวันนับเป็น 1 วัน) */
   function inRange(c, d){ return !d || ageDays(c) <= d; }
@@ -59,7 +60,7 @@
   }
   $("rangeChips").addEventListener("click", function(e){
     var b = e.target.closest("button[data-range]"); if(!b) return;
-    ui.range = +b.dataset.range; resetShown(); render();
+    ui.saved = false; ui.range = +b.dataset.range; resetShown(); render();
   });
   $("chanChips").addEventListener("click", function(e){
     var b = e.target.closest("button[data-chan]"); if(!b) return;
@@ -68,6 +69,13 @@
   $("qInput").addEventListener("input", function(){ ui.q = this.value; resetShown(); render(); });
   $("sortSel").addEventListener("change", function(){ resetShown(); render(); });
   $("hideMade").addEventListener("change", function(){ resetShown(); render(); });
+
+  var VIEW_ICON = {
+    2: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="8" height="16" rx="1.5"/><rect x="13" y="4" width="8" height="16" rx="1.5"/></svg>',
+    3: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="4" width="5.5" height="16" rx="1.2"/><rect x="9.25" y="4" width="5.5" height="16" rx="1.2"/><rect x="16" y="4" width="5.5" height="16" rx="1.2"/></svg>'
+  };
+  $("savedBtn").addEventListener("click", function(){ ui.saved = !ui.saved; resetShown(); render(); });
+  $("viewBtn").addEventListener("click", function(){ data.cols = data.cols === 3 ? 2 : 3; persist(); render(); });
 
   function metricChip(c, sort){
     if(sort === "vpd") return '<span class="chip hot">🔥 '+fmtNumTh(Math.round(vpd(c)))+'/วัน</span>';
@@ -86,13 +94,15 @@
     var byChan = fch ? base.filter(function(c){ return isChan(c, fch); }) : base;
     $("rangeChips").innerHTML = chipsHtml(RANGES.map(function(r){
       return { id:r.d, t:r.t, n: byChan.filter(function(c){ return inRange(c, r.d); }).length };
-    }), ui.range, "range");
-    var byRange = base.filter(function(c){ return inRange(c, ui.range); });
+    }), ui.saved ? null : ui.range, "range"); /* เปิดดู ★ อยู่ = ไม่ไฮไลต์ช่วงเวลา */
+    var savedN = byChan.filter(function(c){ return data.saved[c.id]; }).length;
+    $("savedBtn").innerHTML = "★ " + savedN; $("savedBtn").classList.toggle("on", ui.saved);
+    var byRange = base.filter(function(c){ return ui.saved ? data.saved[c.id] : inRange(c, ui.range); });
     $("chanChips").innerHTML = act.length < 2 ? "" : chipsHtml([{ id:"", t:"ทุกช่อง", n:byRange.length }].concat(act.map(function(ch){
       return { id:ch.id, t:ch.title, n: byRange.filter(function(c){ return isChan(c, ch); }).length };
     })), chanFilter, "chan");
 
-    var list = byChan.filter(function(c){ return inRange(c, ui.range); });
+    var list = byChan.filter(function(c){ return ui.saved ? data.saved[c.id] : inRange(c, ui.range); });
     var matched = list.length;
     if($("hideMade").checked) list = list.filter(function(c){ return !data.made[c.id]; });
     var s = $("sortSel").value;
@@ -102,6 +112,8 @@
       if(s==="score") return b.score - a.score;
       return vpd(b) - vpd(a);
     });
+    $("list").classList.toggle("cols3", data.cols === 3);
+    $("viewBtn").innerHTML = VIEW_ICON[data.cols === 3 ? 2 : 3]; /* โชว์ไอคอนของมุมมองที่จะสลับไป */
     var shown = list.slice(0, ui.shown);
     $("listInfo").textContent = clips.length ? "แสดง "+shown.length+" จาก "+list.length+" คลิป"+(matched > list.length ? " (ซ่อนทำแล้ว "+(matched-list.length)+")" : "")+(cache.at ? " · อัปเดต "+ago(new Date(cache.at).toISOString()) : "") : "";
     if(!list.length){
@@ -110,17 +122,19 @@
         : !clips.length ? "ยังไม่ได้ดึงคลิป กดปุ่ม ดึงคลิป ด้านบน"
         : q ? "ไม่เจอคลิปที่ชื่อมีคำว่า \""+ui.q.trim()+"\""
         : matched ? "ไม่มีคลิปที่ยังไม่ได้ทำในช่วงนี้"
+        : ui.saved ? "ยังไม่ได้เก็บคลิปไว้ กดดาว ☆ มุมล่างขวาของรูปคลิป"
         : "ไม่มีคลิปในช่วงเวลานี้ ลองกดช่วงที่ยาวขึ้น";
       $("list").innerHTML = '<div class="empty"><div class="empty-ico">🎬</div>'+esc(why)+'</div>';
       return;
     }
     $("list").innerHTML = shown.map(function(c){
-      var made = !!data.made[c.id];
+      var made = !!data.made[c.id], sv = !!data.saved[c.id];
       return '<article class="card'+(made?' made':'')+'">'
         + '<div class="tbox"><button class="tplay" data-play="'+c.id+'" aria-label="ดูตัวอย่างคลิป"><img class="thumb" loading="lazy" decoding="async" src="'+thumbUrl(c.id)+'" alt=""><span class="pbtn">▶</span></button>'
         + metricChip(c, s)
         + (made ? '<span class="chip done">✓ ทำแล้ว</span>' : '')
-        + '<span class="chip views">'+fmtNumTh(c.views)+' วิว</span></div>'
+        + '<span class="chip views">'+fmtNumTh(c.views)+' วิว</span>'
+        + '<button class="bm'+(sv?' on':'')+'" data-save="'+c.id+'" aria-label="'+(sv?'เลิกเก็บไว้':'เก็บไว้ทำทีหลัง')+'">'+(sv?'★':'☆')+'</button></div>'
         + '<div class="cbody">'
         + '<div class="ctitle">'+esc(c.title)+'</div>'
         + '<div class="meta"><span>'+esc(c.channel)+'</span><span>'+ago(c.published)+'</span></div>'
@@ -134,6 +148,7 @@
   $("list").addEventListener("click", function(e){
     var b = e.target.closest("button"); if(!b) return;
     if(b.id === "moreBtn"){ ui.shown += PAGE; render(); return; }
+    if(b.dataset.save){ if(data.saved[b.dataset.save]) delete data.saved[b.dataset.save]; else data.saved[b.dataset.save] = true; persist(); render(); }
     if(b.dataset.made){ data.made[b.dataset.made] = !data.made[b.dataset.made]; if(!data.made[b.dataset.made]) delete data.made[b.dataset.made]; persist(); render(); }
     if(b.dataset.pick){ var c = clips.find(function(x){ return x.id === b.dataset.pick; }); if(c) setPick(c); }
     if(b.dataset.play){ var p = clips.find(function(x){ return x.id === b.dataset.play; }); if(p) openPlayer(p); }
@@ -379,7 +394,7 @@
     confirmTap(b, "ลบ", function(){ el.value = ""; fireChange(el); toast("ลบแล้ว"); });
   });
   $("exportBtn").addEventListener("click", function(){
-    var blob = new Blob([JSON.stringify({ v:2, channels:data.channels, made:data.made, history: MW.history ? MW.history.all() : [] }, null, 2)], { type:"application/json" });
+    var blob = new Blob([JSON.stringify({ v:2, channels:data.channels, made:data.made, saved:data.saved, history: MW.history ? MW.history.all() : [] }, null, 2)], { type:"application/json" });
     var a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "meowrin-factory-backup.json"; a.click();
     setTimeout(function(){ URL.revokeObjectURL(a.href); }, 1000);
   });
@@ -392,7 +407,7 @@
         var j = JSON.parse(r.result);
         if(!Array.isArray(j.channels) || typeof j.made !== "object") throw 0;
         data.channels = j.channels.map(function(ch){ ch.full = false; return ch; }); /* คลิปไม่อยู่ในไฟล์สำรอง → ให้ดึงย้อนหลังใหม่ */
-        data.made = j.made; persist();
+        data.made = j.made; if(j.saved && typeof j.saved === "object") data.saved = j.saved; persist();
         if(Array.isArray(j.history) && MW.history) MW.history.merge(j.history);
         renderChannels(); render(); msg("setMsg","นำเข้าแล้ว กด ดึงคลิป เพื่อโหลดคลิปของช่องกลับมา");
       }catch(e){ msg("setMsg","ไฟล์ไม่ถูกต้อง",true); }
