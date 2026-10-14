@@ -391,12 +391,18 @@
 
   /* ---------- ลบคลิปซ้ำ: ชื่อไฟล์+ขนาดเดียวกัน เก็บตัวที่ทำล่าสุด ---------- */
   $("dupBtn").addEventListener("click", function(){
-    var g = {}, del = [];
+    var g = {}, del = [], fix = [];
     lib.forEach(function(c){ var k = c.name + "|" + c.size; (g[k] = g[k] || []).push(c); });
-    Object.keys(g).forEach(function(k){ var a = g[k]; if(a.length < 2) return; a.sort(function(x, y){ return (y.at || 0) - (x.at || 0); }); a.slice(1).forEach(function(c){ del.push(c.id); }); });
+    Object.keys(g).forEach(function(k){
+      var a = g[k]; if(a.length < 2) return;
+      a.sort(function(x, y){ return (y.at || 0) - (x.at || 0); }); /* ตัวแรก = ทำล่าสุด (ผล AI ใหม่สุด) เก็บไว้ */
+      var real = a.find(function(c){ return c.album && c.album !== "ไม่ระบุ"; }); /* อัลบั้มจริงของตัวไหนก็ได้ ดีกว่า "ไม่ระบุ" */
+      if(real && a[0].album !== real.album){ a[0].album = real.album; fix.push(a[0]); }
+      a.slice(1).forEach(function(c){ del.push(c.id); });
+    });
     if(!del.length){ msg("dupMsg", "ไม่เจอคลิปซ้ำ (" + lib.length + " คลิป ชื่อไฟล์+ขนาดไม่ซ้ำกันเลย)", "ok"); return; }
     if(!window.confirm("เจอคลิปซ้ำ " + del.length + " รายการ จะลบตัวที่ซ้ำและเก็บตัวที่ทำล่าสุดไว้ ตกลงไหม?")) return;
-    FT.store.del(del).then(refreshLib).then(function(){ msg("dupMsg", "ลบคลิปซ้ำแล้ว " + del.length + " รายการ เหลือ " + lib.length + " คลิป", "ok"); })
+    FT.store.putMany(fix).then(function(){ return FT.store.del(del); }).then(refreshLib).then(function(){ msg("dupMsg", "ลบคลิปซ้ำแล้ว " + del.length + " รายการ เหลือ " + lib.length + " คลิป", "ok"); })
       .catch(function(err){ msg("dupMsg", "ลบไม่ได้: " + err.message, "err"); });
   });
 
