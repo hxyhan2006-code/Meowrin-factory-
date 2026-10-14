@@ -114,18 +114,28 @@
     });
     return out;
   }
+  var lastPick = "";
   function renderShare(){
-    var list = picked(), miss = list.filter(function(x){ return !U.fileFor(x.c); });
+    var list = picked(), miss = list.filter(function(x){ return !U.fileFor(x.c); }), alb = {};
+    miss.forEach(function(x){ alb[x.c.album] = (alb[x.c.album] || 0) + 1; });
     $("plShare").textContent = "แชร์ " + list.length + " คลิปไป CapCut";
-    $("plShare").disabled = !list.length;
-    U.msg("plShareMsg", !list.length ? "" : miss.length
-      ? "ต้องเปิดไฟล์ก่อนแชร์ (" + miss.length + "/" + list.length + " คลิปยังไม่ได้เปิด) อัลบั้ม: " + miss.map(function(x){ return x.c.album; }).filter(function(a, i, s){ return s.indexOf(a) === i; }).join(", ")
+    $("plShare").disabled = !list.length || miss.length > 0;
+    $("plNeed").hidden = !miss.length;
+    $("plNeedTxt").innerHTML = "ยังไม่ได้เปิดไฟล์ " + miss.length + "/" + list.length + " คลิป จากอัลบั้ม: <b>" + Object.keys(alb).map(function(a){ return U.esc(a) + " (" + alb[a] + ")"; }).join(", ") + "</b>"
+      + "<br>วิธีเร็ว: กดปุ่มด้านล่าง → เข้าโฟลเดอร์ชื่ออัลบั้ม (มักอยู่ใน Movies หรือ DCIM) → กดค้างคลิปแรก → ⋮ → เลือกทั้งหมด → เลือก · แอพคัดเอาเฉพาะคลิปที่ใช้ให้เอง ทำทีละอัลบั้มได้";
+    U.msg("plShareMsg", !list.length ? "" : miss.length ? lastPick
       : "พร้อมแชร์ " + list.length + " ไฟล์ เรียงตามบท (ตัดช่วงฉากเองใน CapCut ตามเวลาที่บอกในรายการ)", miss.length ? "" : "ok");
   }
-  FT.onFiles = function(){ if(plan) renderShare(); };
+  FT.onFiles = function(n){
+    if(!plan) return;
+    var list = picked(), got = list.filter(function(x){ return U.fileFor(x.c); }).length;
+    lastPick = "เลือกมา " + n + " ไฟล์ → ตรงกับแผน " + got + "/" + list.length + " คลิป" + (got < list.length ? " · เปิดอัลบั้มที่เหลือต่อได้เลย (ของเดิมไม่หาย)" : "");
+    renderShare();
+  };
+  $("plDocs").addEventListener("click", function(){ U.openFiles(true); });
+  $("plGal").addEventListener("click", function(){ U.openFiles(false); });
   $("plShare").addEventListener("click", async function(){
-    var list = picked(), miss = list.filter(function(x){ return !U.fileFor(x.c); });
-    if(miss.length){ U.openFiles(); return; } /* ยังขาดไฟล์ → เปิดตัวเลือกไฟล์ (เลือกหลายไฟล์/ทั้งอัลบั้มได้) */
+    var list = picked();
     var files = list.map(function(x){ return U.fileFor(x.c); });
     if(!navigator.canShare || !navigator.canShare({ files:files })){ U.msg("plShareMsg", "เบราว์เซอร์นี้แชร์หลายไฟล์ไม่ได้ ใช้ปุ่ม คัดลอกรายการ แล้วหยิบคลิปใน CapCut เอง", "err"); return; }
     try{ await navigator.share({ files:files, title:"ฟุตเทจตามบท" }); }

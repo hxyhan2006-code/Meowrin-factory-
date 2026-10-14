@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600&family=Mitr:wght@500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="footage.css?v=20261014r">
+<link rel="stylesheet" href="footage.css?v=20261014s">
 </head>
 <body>
 <header>
@@ -88,6 +88,11 @@
         <button class="btn ghost" id="plCopy">คัดลอกรายการ</button>
       </div>
       <div id="plShareMsg"></div>
+      <div id="plNeed" hidden>
+        <p class="hint" id="plNeedTxt"></p>
+        <button class="btn" id="plDocs" style="width:100%;margin-top:10px">📁 เลือกจากแอพไฟล์ (ทั้งโฟลเดอร์)</button>
+        <button class="btn ghost small" id="plGal" style="width:100%;margin-top:8px">🖼 เลือกจากแกลเลอรีแทน</button>
+      </div>
     </div>
     <div id="plRows"></div>
   </section>
@@ -160,10 +165,11 @@
   <p class="bigmsg" id="playMsg"></p>
 </div>
 <input id="playFiles" type="file" accept="video/*" multiple hidden>
+<input id="pickDocs" type="file" multiple hidden><!-- ไม่ใส่ accept → Android เปิดแอพไฟล์ (เข้าโฟลเดอร์ + เลือกทั้งหมดได้) แทนตัวเลือกรูป -->
 <video id="vid" muted playsinline preload="auto" style="position:fixed;left:-9999px;width:2px;height:2px"></video>
 
-<script src="footage-core.js?v=20261014r"></script>
-<script src="footage.js?v=20261014r"></script>
-<script src="footage-plan.js?v=20261014r"></script>
+<script src="footage-core.js?v=20261014s"></script>
+<script src="footage.js?v=20261014s"></script>
+<script src="footage-plan.js?v=20261014s"></script>
 </body>
 </html>
