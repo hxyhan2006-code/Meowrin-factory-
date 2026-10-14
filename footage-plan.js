@@ -117,65 +117,80 @@
   }
   function sig(list){ return list.map(function(x){ return x.c.id + "#" + x.si; }).join(","); }
 
-  /* ---------- ตัดฉากเป็นไฟล์สั้นในเครื่อง ----------
-     Brave/Chrome Android แชร์ได้ครั้งละ ≤10 ไฟล์ รวม ≤50 MB → คลิปเต็มส่งไม่ได้
-     เลยเล่นเฉพาะช่วงฉากแล้วอัดด้วย MediaRecorder (เวลาจริง ต้องเปิดหน้าค้างไว้) แล้วแบ่งแชร์เป็นชุด */
-  var MAX_FILES = 10, MAX_BYTES = 45 * 1024 * 1024, BITRATE = 8e6;
-  var cuts = null, cutting = false; /* cuts = { sig, files:[File] } หายเมื่อปิดหน้า */
+  /* ---------- ต่อฉากทั้งหมดเป็นวิดีโอไฟล์เดียวในเครื่อง ----------
+     แชร์หลายไฟล์ไม่เวิร์ก: Brave/Chrome Android จำกัด ≤10 ไฟล์ ≤50 MB ต่อครั้ง และ CapCut รับแชร์เข้าโปรเจกต์เดิมซ้ำไม่ได้ ลำดับไฟล์ก็ไม่แน่นอน
+     เลยเล่นทีละฉาก (เฉพาะช่วง) วาดลง canvas + ส่งเสียงผ่าน WebAudio แล้วอัดต่อกันด้วย MediaRecorder ตัวเดียว (pause ระหว่างเปลี่ยนฉาก)
+     ได้ 1 ไฟล์เรียงตามบท + ตารางเวลาว่าแต่ละบรรทัดเริ่มวินาทีไหน · อัดเวลาจริง ต้องเปิดหน้าค้างไว้ */
+  var MAX_BYTES = 45 * 1024 * 1024, MAX_RATE = 8e6, MIN_RATE = 2e6;
+  var cuts = null, cutting = false; /* cuts = { sig, file, url, marks:[{lines, at, len}] } หายเมื่อปิดหน้า */
   function recMime(){
     var c = ["video/mp4;codecs=avc1.640028,mp4a.40.2", "video/mp4;codecs=avc1,mp4a.40.2", "video/mp4;codecs=avc1", "video/mp4", "video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm"];
     return window.MediaRecorder ? c.find(function(m){ return MediaRecorder.isTypeSupported(m); }) || "" : null;
   }
   function once(el, ev){ return new Promise(function(ok, no){ el.addEventListener(ev, ok, { once:true }); el.addEventListener("error", function(){ no(new Error("เปิดไฟล์วิดีโอไม่ได้")); }, { once:true }); }); }
-  async function cutOne(file, s, e, mime){
-    var v = document.createElement("video"), url = URL.createObjectURL(file);
-    v.muted = true; v.playsInline = true; v.preload = "auto";
+  async function openVid(file){
+    var v = document.createElement("video"); v.playsInline = true; v.preload = "auto";
     v.style.cssText = "position:fixed;left:-9999px;width:2px;height:2px"; document.body.appendChild(v);
-    try{
-      v.src = url; await once(v, "loadedmetadata");
-      e = Math.min(e, v.duration); v.currentTime = s; await once(v, "seeked");
-      var stream = v.captureStream ? v.captureStream() : v.mozCaptureStream();
-      var rec = new MediaRecorder(stream, { mimeType:mime, videoBitsPerSecond:BITRATE }), parts = [];
-      rec.ondataavailable = function(ev){ if(ev.data && ev.data.size) parts.push(ev.data); };
-      var stopped = new Promise(function(ok){ rec.onstop = ok; });
-      await v.play(); rec.start();
-      await new Promise(function(ok){ /* หยุดตรงท้ายฉาก (requestVideoFrameCallback แม่นกว่า timeupdate) */
-        function chk(){ if(v.currentTime >= e - 0.03 || v.ended){ ok(); return true; } }
-        if(v.requestVideoFrameCallback){ (function f(){ if(!chk()) v.requestVideoFrameCallback(f); })(); }
-        else v.ontimeupdate = chk;
-        v.onended = ok;
-      });
-      rec.stop(); v.pause(); await stopped;
-      stream.getTracks().forEach(function(t){ t.stop(); });
-      return new Blob(parts, { type:mime.split(";")[0] });
-    }finally{ v.pause(); v.removeAttribute("src"); v.load(); v.remove(); URL.revokeObjectURL(url); }
+    v.src = URL.createObjectURL(file); await once(v, "loadedmetadata"); return v;
   }
-  function batches(files){ /* แบ่งชุดตามเพดานแชร์ ลำดับเดิม */
-    var out = [], cur = [], bytes = 0;
-    files.forEach(function(f){ if(cur.length && (cur.length >= MAX_FILES || bytes + f.size > MAX_BYTES)){ out.push(cur); cur = []; bytes = 0; } cur.push(f); bytes += f.size; });
-    if(cur.length) out.push(cur); return out;
+  function closeVid(v){ v.pause(); URL.revokeObjectURL(v.src); v.removeAttribute("src"); v.load(); v.remove(); }
+  async function record(list, mime, ac, onStep){
+    var secs = list.reduce(function(t, x){ return t + (x.sc.e - x.sc.s); }, 0);
+    var rate = Math.max(MIN_RATE, Math.min(MAX_RATE, MAX_BYTES * 8 / Math.max(secs, 1) * 0.85)); /* ให้ไฟล์รวมไม่เกินเพดานแชร์ */
+    var first = await openVid(U.fileFor(list[0].c)), W = first.videoWidth || 1080, H = first.videoHeight || 1080; closeVid(first);
+    var cv = document.createElement("canvas"); cv.width = W; cv.height = H; var g = cv.getContext("2d");
+    var dest = ac.createMediaStreamDestination();
+    var stream = new MediaStream(cv.captureStream(30).getVideoTracks().concat(dest.stream.getAudioTracks()));
+    var rec = new MediaRecorder(stream, { mimeType:mime, videoBitsPerSecond:rate, audioBitsPerSecond:128000 }), parts = [], marks = [], at = 0;
+    rec.ondataavailable = function(ev){ if(ev.data && ev.data.size) parts.push(ev.data); };
+    var stopped = new Promise(function(ok){ rec.onstop = ok; });
+    try{
+      for(var i = 0; i < list.length; i++){
+        var x = list[i], v = await openVid(U.fileFor(x.c)), src = null;
+        try{
+          var s = x.sc.s, e = Math.min(x.sc.e, v.duration);
+          v.currentTime = s; await once(v, "seeked");
+          try{ src = ac.createMediaElementSource(v); src.connect(dest); }catch(err){ v.muted = true; } /* เสียงไปเข้าไฟล์อย่างเดียว ไม่ออกลำโพง */
+          var draw = function(){ var r = Math.min(W / v.videoWidth, H / v.videoHeight), w = v.videoWidth * r, h = v.videoHeight * r;
+            g.fillStyle = "#000"; g.fillRect(0, 0, W, H); g.drawImage(v, (W - w) / 2, (H - h) / 2, w, h); };
+          draw();
+          onStep(i, x);
+          if(rec.state === "inactive") rec.start(); else rec.resume();
+          try{ await v.play(); }catch(err){ v.muted = true; await v.play(); } /* เล่นมีเสียงไม่ได้ → อัดภาพอย่างเดียวฉากนี้ */
+          var t0 = performance.now();
+          await new Promise(function(ok){
+            function tick(){ draw(); if(v.currentTime >= e - 0.03 || v.ended){ ok(); return; } if(v.requestVideoFrameCallback) v.requestVideoFrameCallback(tick); else requestAnimationFrame(tick); }
+            tick(); v.onended = ok;
+          });
+          rec.pause(); v.pause();
+          var len = (performance.now() - t0) / 1000;
+          marks.push({ lines:x.lines, at:at, len:len, c:x.c, sc:x.sc }); at += len;
+        }finally{ if(src) src.disconnect(); closeVid(v); }
+      }
+      rec.stop(); await stopped;
+    }finally{ stream.getTracks().forEach(function(t){ t.stop(); }); if(rec.state !== "inactive") rec.stop(); }
+    return { blob:new Blob(parts, { type:mime.split(";")[0] }), marks:marks, rate:rate };
   }
   function renderBatches(){
     var list = picked(), ok = cuts && cuts.sig === sig(list);
     if(!ok){ $("plBatches").innerHTML = ""; return; }
-    var n = 0;
-    $("plBatches").innerHTML = batches(cuts.files).map(function(b, i){
-      var from = n + 1; n += b.length; var mb = b.reduce(function(t, f){ return t + f.size; }, 0) / 1048576;
-      return '<button class="btn" data-batch="' + i + '" style="width:100%;margin-top:10px">แชร์ชุด ' + (i + 1) + " · ฉาก " + from + "–" + n + " (" + mb.toFixed(1) + " MB)</button>";
-    }).join("") + '<p class="hint">แชร์ทีละชุดตามลำดับ ใน CapCut เลือกวิดีโอเรียงตามที่ส่งมา · ไฟล์ตั้งชื่อนำหน้าเลขบรรทัด</p>';
+    $("plBatches").innerHTML = '<video class="plvid" src="' + cuts.url + '" controls playsinline></video>'
+      + '<button class="btn" id="plSend" style="width:100%;margin-top:10px">แชร์ไป CapCut (1 ไฟล์ · ' + (cuts.file.size / 1048576).toFixed(1) + " MB)</button>"
+      + '<p class="hint">จุดเริ่มของแต่ละบรรทัดในไฟล์ (แยกคลิปใน CapCut ตรงเวลาเหล่านี้):</p><ol class="marks">'
+      + cuts.marks.map(function(m){ return "<li><b>" + m.at.toFixed(1) + " วิ</b> · บรรทัด " + m.lines.join(",") + " · " + U.esc(m.c.album) + " " + U.tm(m.sc.s) + " (" + m.len.toFixed(1) + " วิ)</li>"; }).join("") + "</ol>";
   }
   function renderShare(){
     var list = picked(), miss = list.filter(function(x){ return !U.fileFor(x.c); }), alb = {};
     miss.forEach(function(x){ alb[x.c.album] = (alb[x.c.album] || 0) + 1; });
     var done = cuts && cuts.sig === sig(list);
-    $("plShare").textContent = done ? "✂ ตัดใหม่อีกรอบ" : "✂ ตัด " + list.length + " ฉากไว้แชร์";
+    $("plShare").textContent = done ? "✂ ทำใหม่อีกรอบ" : "✂ ต่อ " + list.length + " ฉากเป็นวิดีโอเดียว";
     $("plShare").disabled = cutting || !list.length || miss.length > 0;
     $("plNeed").hidden = !miss.length;
     $("plNeedTxt").innerHTML = "ยังไม่ได้เปิดไฟล์ " + miss.length + "/" + list.length + " ฉาก จากอัลบั้ม: <b>" + Object.keys(alb).map(function(a){ return U.esc(a) + " (" + alb[a] + ")"; }).join(", ") + "</b>"
       + "<br>วิธีเร็ว: กดปุ่มด้านล่าง → เข้าโฟลเดอร์ชื่ออัลบั้ม (มักอยู่ใน Movies หรือ DCIM) → กดค้างคลิปแรก → ⋮ → เลือกทั้งหมด → เลือก · แอพคัดเอาเฉพาะคลิปที่ใช้ให้เอง ทำทีละอัลบั้มได้";
     if(!cutting) U.msg("plShareMsg", !list.length ? "" : miss.length ? lastPick
-      : done ? "ตัดไว้แล้ว " + cuts.files.length + " ฉาก เรียงตามบท กดแชร์ทีละชุดด้านล่าง"
-      : "ไฟล์ครบแล้ว กด ✂ ตัดฉาก แอพจะเล่นเฉพาะช่วงฉากแล้วอัดเป็นไฟล์สั้น (ใช้เวลาเท่าความยาวฉากรวม ≈ " + Math.round(list.reduce(function(t, x){ return t + (x.sc.e - x.sc.s); }, 0)) + " วิ · เปิดหน้าค้างไว้)", done && !miss.length ? "ok" : "");
+      : done ? "ต่อไว้แล้ว " + cuts.marks.length + " ฉาก ยาว " + cuts.marks.reduce(function(t, m){ return t + m.len; }, 0).toFixed(1) + " วิ · ดูตัวอย่างด้านล่างก่อนแชร์ได้"
+      : "ไฟล์ครบแล้ว กด ✂ แอพจะเล่นเฉพาะช่วงฉากเรียงตามบทแล้วอัดต่อกันเป็นวิดีโอเดียว (ใช้เวลา ≈ " + Math.round(list.reduce(function(t, x){ return t + (x.sc.e - x.sc.s); }, 0)) + " วิ · เปิดหน้าค้างไว้)", done && !miss.length ? "ok" : "");
     renderBatches();
   }
   var lastPick = "";
@@ -188,32 +203,31 @@
   $("plDocs").addEventListener("click", function(){ U.openFiles(true); });
   $("plGal").addEventListener("click", function(){ U.openFiles(false); });
   $("plShare").addEventListener("click", async function(){
-    var list = picked(), mime = recMime();
-    if(mime === null || !mime){ U.msg("plShareMsg", "เบราว์เซอร์นี้อัดวิดีโอไม่ได้ (ไม่มี MediaRecorder) ใช้ปุ่ม คัดลอกรายการ แทน", "err"); return; }
+    var list = picked(), mime = recMime(), AC = window.AudioContext || window.webkitAudioContext;
+    if(!mime || !AC || !HTMLCanvasElement.prototype.captureStream){ U.msg("plShareMsg", "เบราว์เซอร์นี้อัดวิดีโอไม่ได้ ใช้ปุ่ม คัดลอกรายการ แทน", "err"); return; }
+    var ac = new AC(); ac.resume(); /* สร้างตอนกดปุ่ม (ต้องมีการแตะก่อนถึงจะเปิดเสียงได้) */
+    if(cuts){ URL.revokeObjectURL(cuts.url); cuts = null; }
     cutting = true; renderShare(); $("plProg").hidden = false; $("plBar").style.width = "0"; await U.wake(true);
-    var files = [], ext = mime.indexOf("mp4") >= 0 ? "mp4" : "webm", total = 0;
     try{
-      for(var i = 0; i < list.length; i++){
-        var x = list[i];
-        U.msg("plShareMsg", "กำลังตัดฉาก " + (i + 1) + "/" + list.length + " (" + x.c.album + " " + U.tm(x.sc.s) + "–" + U.tm(x.sc.e) + ") · อย่าสลับแอพ");
-        var blob = await cutOne(U.fileFor(x.c), x.sc.s, x.sc.e, mime);
-        if(!blob.size) throw new Error("ฉาก " + (i + 1) + " อัดได้ไฟล์ว่าง");
-        total += blob.size;
-        files.push(new File([blob], String(x.lines[0]).padStart(2, "0") + "_" + x.c.album.replace(/[^\w\u0E00-\u0E7F-]+/g, "") + "_" + U.tm(x.sc.s).replace(":", "m") + "." + ext, { type:blob.type, lastModified:Date.now() + i }));
-        $("plBar").style.width = ((i + 1) / list.length * 100) + "%";
-      }
-      cuts = { sig:sig(list), files:files };
+      var r = await record(list, mime, ac, function(i, x){
+        U.msg("plShareMsg", "กำลังอัดฉาก " + (i + 1) + "/" + list.length + " (" + x.c.album + " " + U.tm(x.sc.s) + "–" + U.tm(x.sc.e) + ") · อย่าสลับแอพ");
+        $("plBar").style.width = (i / list.length * 100) + "%";
+      });
+      if(!r.blob.size) throw new Error("อัดได้ไฟล์ว่าง");
+      var d = new Date(), ext = mime.indexOf("mp4") >= 0 ? "mp4" : "webm";
+      var file = new File([r.blob], "meowrin_" + String(d.getHours()).padStart(2, "0") + String(d.getMinutes()).padStart(2, "0") + "." + ext, { type:r.blob.type });
+      cuts = { sig:sig(list), file:file, url:URL.createObjectURL(file), marks:r.marks };
       cutting = false; renderShare();
-      U.msg("plShareMsg", "ตัดเสร็จ " + files.length + " ฉาก รวม " + (total / 1048576).toFixed(1) + " MB (" + mime + ")" + (mime.indexOf("avc1") < 0 ? " · ไม่ใช่ H.264 ถ้า CapCut ไม่รับ บอกได้เลย" : "") + " · กดแชร์ทีละชุดด้านล่าง", "ok");
-    }catch(err){ cutting = false; renderShare(); U.msg("plShareMsg", "ตัดฉากไม่ได้: " + err.message + (document.hidden ? " (สลับแอพระหว่างตัด?)" : ""), "err"); }
-    $("plProg").hidden = true; await U.wake(false);
+      U.msg("plShareMsg", "เสร็จแล้ว " + r.marks.length + " ฉาก · " + (file.size / 1048576).toFixed(1) + " MB · " + (r.rate / 1e6).toFixed(1) + " Mbps (" + mime + ")" + (mime.indexOf("avc1") < 0 ? " · ไม่ใช่ H.264 ถ้า CapCut ไม่รับ บอกได้เลย" : "") + " · ดูตัวอย่างด้านล่างก่อนแชร์", "ok");
+    }catch(err){ cutting = false; renderShare(); U.msg("plShareMsg", "อัดไม่ได้: " + err.message + (document.hidden ? " (สลับแอพระหว่างอัด?)" : ""), "err"); }
+    ac.close(); $("plProg").hidden = true; await U.wake(false);
   });
   $("plBatches").addEventListener("click", async function(e){
-    var b = e.target.closest("[data-batch]"); if(!b || !cuts) return;
-    var files = batches(cuts.files)[+b.dataset.batch];
-    if(!navigator.canShare || !navigator.canShare({ files:files })){ U.msg("plShareMsg", "เบราว์เซอร์นี้แชร์ไฟล์ชุดนี้ไม่ได้ ใช้ปุ่ม คัดลอกรายการ แล้วหยิบคลิปใน CapCut เอง", "err"); return; }
-    try{ await navigator.share({ files:files, title:"ฟุตเทจตามบท" }); b.textContent = "✓ " + b.textContent.replace(/^✓ /, ""); }
-    catch(err){ if(err && err.name !== "AbortError") U.msg("plShareMsg", "แชร์ไม่ได้: " + err.message, "err"); }
+    if(!e.target.closest("#plSend") || !cuts) return;
+    var files = [cuts.file];
+    if(!navigator.canShare || !navigator.canShare({ files:files })){ U.msg("plShareMsg", "เบราว์เซอร์นี้แชร์ไฟล์นี้ไม่ได้ ใช้ปุ่ม คัดลอกรายการ แทน", "err"); return; }
+    try{ await navigator.share({ files:files, title:"ฟุตเทจตามบท" }); }
+    catch(err){ if(err && err.name !== "AbortError") U.msg("plShareMsg", "แชร์ไม่ได้: " + err.message + (cuts.file.size > 50 * 1048576 ? " (ไฟล์เกิน 50 MB ลองติ๊กไม่ใช้บางบรรทัด)" : ""), "err"); }
   });
   $("plCopy").addEventListener("click", function(){
     var txt = plan.rows.map(function(r, k){ var ch = r.use && chosen(r), sc = ch && ch.c.scenes[ch.pk.si];
