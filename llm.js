@@ -1,0 +1,153 @@
+/* llm.js — ชั้นเรียก AI (ไม่มีหน้าจอของตัวเอง ยกเว้นบรรทัดค่าใช้จ่าย #spendInfo)
+   โมเดล Google + มี Gemini key → เรียก Gemini API ตรงก่อน (ฟรี) · โควตาเต็ม/key ใช้ไม่ได้/ล่ม → ถอยไป OpenRouter ให้เอง
+   ไม่มี Gemini key หรือโมเดลค่ายอื่น → OpenRouter เหมือนเดิม
+   ต้องโหลดหลัง app.js และก่อน ai.js · ส่งออก MW.llm */
+(function(){
+  "use strict";
+  var MW = window.MW; if(!MW) return;
+  var $ = function(id){ return document.getElementById(id); };
+  var OR_KEY = "mw_openrouter_key_v1", GM_KEY = "mw_gemini_key_v1";
+  var OR_URL = "https://openrouter.ai/api/v1/chat/completions";
+  var GM_URL = "https://generativelanguage.googleapis.com/v1beta/models/";
+  function load(k, d){ try{ var v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } }
+  function save(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); return true; }catch(e){ return false; } }
+  function sleep(ms){ return new Promise(function(r){ setTimeout(r, ms); }); }
+
+  /* ---------- ค่าใช้จ่ายรายเดือน (mw_cost_v1) · g = จำนวนคำขอที่ใช้ Gemini ฟรี ---------- */
+  var COST = "mw_cost_v1";
+  function monthKey(){ var d = new Date(); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0"); }
+  var spend = load(COST, {});
+  function fresh(){ if(spend.m !== monthKey()) spend = { m:monthKey(), usd:0, n:0, g:0 }; spend.g = spend.g || 0; }
+  function money(x){ return "$" + (x < 0.1 ? x.toFixed(3) : x.toFixed(2)); }
+  function renderSpend(){
+    fresh();
+    var t = [];
+    if(spend.n) t.push("เดือนนี้ใช้ไป " + money(spend.usd) + " (" + spend.n + " คำขอผ่าน OpenRouter)");
+    if(spend.g) t.push("ฟรีผ่าน Gemini " + spend.g + " คำขอ");
+    $("spendInfo").textContent = t.length ? t.join(" · ") : "ยังไม่มีข้อมูลค่าใช้จ่ายเดือนนี้ (จะแสดงหลังทำบทครั้งถัดไป)";
+  }
+  function addSpend(usd, free){ fresh(); if(free) spend.g++; else { spend.usd += usd; spend.n++; } save(COST, spend); renderSpend(); }
+
+  function isGoogle(m){ return /^google\//.test(m || ""); }
+  function short(m){ return String(m || "").replace(/^[^/]+\//, ""); }
+
+  /* ---------- OpenRouter ---------- */
+  function supportsReasoning(m){
+    return /^google\/gemini-(2\.5|[3-9])/.test(m)          /* Gemini 2.5 ขึ้นไป */
+        || /^anthropic\/claude-/.test(m)                     /* Claude ชุดที่ใช้ในรายการ รองรับ reasoning */
+        || /^openai\/(o\d|gpt-([5-9]|\d{2,}))/.test(m);      /* o-series / GPT-5+ */
+  }
+  function textOnly(msg){
+    if(!Array.isArray(msg.content)) return msg;
+    return { role: msg.role, content: msg.content.map(function(p){
+      return p.type === "video_url" ? "ลิงก์วิดีโอ YouTube: " + p.video_url.url + " (เนื้อหาคลิปดูจาก State 1 ด้านล่าง)" : (p.text || "");
+    }).filter(Boolean).join("\n") };
+  }
+  async function viaOpenRouter(messages, system, model, think, v){
+    var key = load(OR_KEY, "");
+    if(!key) throw new Error("ยังไม่ได้ใส่ OpenRouter API key (แท็บตั้งค่า)");
+    if(!isGoogle(model)) messages = messages.map(textOnly); /* ค่ายอื่นรับ video_url ไม่ได้ (เช่น ตอนเขียนบทต่อจาก State 1 ที่ Gemini ดูคลิป) */
+    var body = { model: model, messages: system ? [{ role:"system", content: system }].concat(messages) : messages };
+    if(supportsReasoning(model)) body.reasoning = { effort: think || "medium" }; /* ส่งเฉพาะโมเดลที่รองรับ */
+    body.usage = { include: true }; /* ขอให้ OpenRouter ส่งค่าใช้จ่ายของคำขอนี้กลับมา */
+    var res, j, delays = [2000, 5000];
+    for(var attempt = 0; ; attempt++){
+      res = await fetch(OR_URL, {
+        method: "POST", headers: { "Content-Type": "application/json", "Authorization": "Bearer " + key }, body: JSON.stringify(body)
+      });
+      j = await res.json().catch(function(){ return {}; });
+      if((res.status === 502 || res.status === 503) && attempt < delays.length){ await sleep(delays[attempt]); continue; } /* ผู้ให้บริการล่ม/คนใช้เยอะชั่วคราว ลองซ้ำ */
+      break;
+    }
+    var er = j.error || (j.choices && j.choices[0] && j.choices[0].error); /* OpenRouter อาจส่ง error มาใน body ทั้งที่ status 200 */
+    if(!res.ok || er){
+      var st = (er && typeof er.code === "number") ? er.code : res.status;
+      var m = (er && er.message) || "", md = (er && er.metadata) || {};
+      if(Array.isArray(md.reasons) && md.reasons.length) m += " (เหตุผล: " + md.reasons.join(", ") + ")";
+      if(typeof md.raw === "string" && md.raw) m += " — " + (md.provider_name ? md.provider_name + ": " : "") + md.raw.slice(0, 200);
+      if(st === 401) throw new Error("OpenRouter key ใช้ไม่ได้ เช็ก key ในตั้งค่า: " + m);
+      if(st === 402) throw new Error("เครดิต OpenRouter ไม่พอ เติมเครดิตแล้วลองใหม่: " + m);
+      if(st === 403) throw new Error("OpenRouter บล็อกคำขอนี้ (moderation): " + m);
+      if(st === 408) throw new Error("โมเดล " + model + " ตอบช้าเกินเวลา ลองใหม่อีกครั้ง");
+      if(st === 429) throw new Error("ชนลิมิต/โควต้า OpenRouter ลองใหม่อีกสักพัก" + (m ? ": " + m : ""));
+      if(st === 502 || st === 503) throw new Error("โมเดล " + model + " ใช้ไม่ได้ชั่วคราว (ผู้ให้บริการล่ม/คนใช้เยอะ) ลองใหม่อีกครั้ง หรือเปลี่ยนโมเดลในตั้งค่า" + (m ? ": " + m : ""));
+      if(st === 404 || (st === 400 && /valid model|model id/i.test(m))) throw new Error("ไม่พบโมเดล/ผู้ให้บริการที่รองรับ \"" + model + "\" เช็กชื่อโมเดลในตั้งค่า" + (m ? ": " + m : ""));
+      if(st === 400 && /reasoning|thinking/i.test(m)) throw new Error("โมเดลนี้ไม่รับระดับการคิดที่ตั้งไว้ ลองเปลี่ยนระดับในตั้งค่า: " + m);
+      var e = new Error("OpenRouter error " + st + (m ? ": " + m : "")); e.status = st; throw e;
+    }
+    var c = j.choices && j.choices[0], t = c && c.message && c.message.content;
+    if(typeof t !== "string" || !t.trim()) throw new Error("โมเดลไม่ตอบ" + (c && c.finish_reason ? " (finish_reason: " + c.finish_reason + ")" : ""));
+    var cost = j.usage && typeof j.usage.cost === "number" ? j.usage.cost : null;
+    if(cost !== null){ if(v) v.cost = (v.cost || 0) + cost; addSpend(cost, false); }
+    return t.trim();
+  }
+
+  /* ---------- Gemini API ตรง (generateContent) ----------
+     ข้อความแบบ OpenRouter → contents ของ Gemini · video_url (YouTube) → fileData.fileUri */
+  function toGemini(messages){
+    return messages.map(function(msg){
+      var parts = Array.isArray(msg.content) ? msg.content.map(function(p){
+        return p.type === "video_url" ? { fileData:{ fileUri: p.video_url.url } } : { text: p.text || "" };
+      }) : [{ text: String(msg.content || "") }];
+      return { role: msg.role === "assistant" ? "model" : "user", parts: parts };
+    });
+  }
+  var skip = {}, noThink = {}; /* skip.all = งดเรียก Gemini ตรงถึงเวลานี้ (โควตาเต็ม/key ผิด) · skip[model] = ไม่รู้จักโมเดลนี้ · noThink[model] = ไม่รับระดับการคิด */
+  function gemFail(why, fallback){ var e = new Error(why); e.fallback = fallback; return e; }
+  async function viaGemini(messages, system, model, think, key){
+    var body = { contents: toGemini(messages) };
+    if(system) body.systemInstruction = { parts:[{ text: system }] };
+    if(think && !noThink[model]) body.generationConfig = { thinkingConfig:{ thinkingLevel: think } };
+    var res, j;
+    for(var attempt = 0; attempt < 2; attempt++){
+      try{
+        res = await fetch(GM_URL + encodeURIComponent(short(model)) + ":generateContent", {
+          method:"POST", headers:{ "Content-Type":"application/json", "x-goog-api-key": key }, body: JSON.stringify(body)
+        });
+      }catch(err){ throw gemFail("ต่อ Gemini ไม่ได้", true); } /* เน็ต/CORS */
+      j = await res.json().catch(function(){ return {}; });
+      var m = (j.error && j.error.message) || "";
+      /* โมเดลไม่รับระดับการคิดที่ตั้งไว้ → ลองใหม่ครั้งเดียวด้วยค่าเริ่มต้นของโมเดล */
+      if(res.status === 400 && body.generationConfig && /thinking/i.test(m)){ delete body.generationConfig; noThink[model] = true; continue; }
+      break;
+    }
+    if(!res.ok){
+      var st = res.status, why = (j.error && j.error.message) || ("HTTP " + st);
+      if(st === 429){ skip.all = Date.now() + 10 * 60e3; throw gemFail("โควตา Gemini ฟรีเต็ม", true); }
+      if(st === 404){ skip[model] = true; throw gemFail("Gemini ไม่รู้จักโมเดล " + short(model), true); }
+      if(st === 401 || st === 403 || /API key/i.test(why)){ skip.all = Date.now() + 60 * 60e3; throw gemFail("Gemini key ใช้ไม่ได้", true); }
+      if(st >= 500) throw gemFail("Gemini ล่มชั่วคราว", true);
+      throw gemFail("Gemini error " + st + " (" + why.slice(0, 120) + ")", true); /* คำขอที่ Gemini ตรงไม่รับ OpenRouter อาจยังทำได้ (เคยใช้ได้จริง) */
+    }
+    var cand = j.candidates && j.candidates[0];
+    var t = cand && cand.content && Array.isArray(cand.content.parts)
+      ? cand.content.parts.filter(function(p){ return !p.thought && typeof p.text === "string"; }).map(function(p){ return p.text; }).join("") : "";
+    if(!t.trim()){
+      var block = j.promptFeedback && j.promptFeedback.blockReason;
+      throw gemFail("Gemini ไม่ตอบ" + (block ? " (บล็อก: " + block + ")" : cand && cand.finishReason ? " (finishReason: " + cand.finishReason + ")" : ""), false);
+    }
+    return t.trim();
+  }
+
+  /* ---------- ทางเข้าเดียวของทั้งแอพ ---------- */
+  async function call(messages, system, model, opt){
+    opt = opt || {};
+    var gk = load(GM_KEY, "");
+    if(gk && isGoogle(model) && !skip[model] && !(skip.all > Date.now())){
+      try{
+        var t = await viaGemini(messages, system, model, opt.think, gk);
+        if(opt.v) opt.v.free = (opt.v.free || 0) + 1;
+        addSpend(0, true);
+        return t;
+      }catch(err){
+        if(!err.fallback) throw err;
+        if(!load(OR_KEY, "")) throw new Error(err.message + " และยังไม่ได้ใส่ OpenRouter key ให้ใช้แทน");
+        MW.toast(err.message + " → ใช้ OpenRouter แทน");
+      }
+    }
+    return viaOpenRouter(messages, system, model, opt.think, opt.v);
+  }
+
+  MW.llm = { call: call, isGoogle: isGoogle, short: short, money: money, OR_KEY: OR_KEY, GM_KEY: GM_KEY };
+  renderSpend();
+})();

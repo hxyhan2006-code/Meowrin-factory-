@@ -1,31 +1,18 @@
-/* ai.js — ทำบทด้วย OpenRouter
+/* ai.js — ทำบท (เรียก AI ผ่าน MW.llm ใน llm.js: Gemini ตรงก่อน แล้วถอยไป OpenRouter)
    ปุ่มเดียว "ทำบทเลย": ตัวดูคลิป (Google, State 1) → ตัวเขียนบท (โมเดลอะไรก็ได้, State 2)
    เลือกได้หลาย prompt = ได้หลายเวอร์ชันพร้อมกัน · ประวัติเก็บต่อคลิป
-   ต้องโหลดหลัง app.js (ใช้ window.MW) */
+   ต้องโหลดหลัง app.js และ llm.js (ใช้ window.MW, MW.llm) */
 (function(){
   "use strict";
-  var MW = window.MW; if(!MW) return;
+  var MW = window.MW; if(!MW || !MW.llm) return;
   var $ = function(id){ return document.getElementById(id); };
   var esc = MW.esc;
-  var CFG = "mw_ai_cfg_v1", OR_KEY = "mw_openrouter_key_v1"; /* ใช้ชื่อ storage ใหม่ จะได้ไม่เอา Google key เก่าไปส่งให้ OpenRouter */
-  var ENDPOINT = "https://openrouter.ai/api/v1/chat/completions";
+  var CFG = "mw_ai_cfg_v1", L = MW.llm, OR_KEY = L.OR_KEY, GM_KEY = L.GM_KEY;
+  var isGoogle = L.isGoogle, short = L.short, money = L.money;
   var DEFAULT_MODEL = "google/gemini-3.8-flash";
   var CHARS_PER_SEC = 14; /* ความเร็วพากย์ไทยโดยประมาณ ใช้กะความยาวบท */
   function load(k, d){ try{ var v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } }
   function save(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); return true; }catch(e){ return false; } }
-  var COST = "mw_cost_v1"; /* ยอดค่าใช้จ่าย OpenRouter รายเดือน (นับเฉพาะคำขอที่ทำในแอพนี้) */
-  function monthKey(){ var d = new Date(); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0"); }
-  var spend = load(COST, { m:monthKey(), usd:0, n:0 });
-  function money(x){ return "$" + (x < 0.1 ? x.toFixed(3) : x.toFixed(2)); }
-  function renderSpend(){
-    if(spend.m !== monthKey()) spend = { m:monthKey(), usd:0, n:0 };
-    $("spendInfo").textContent = spend.n ? "เดือนนี้ใช้ไป " + money(spend.usd) + " (" + spend.n + " คำขอที่ทำในแอพนี้)" : "ยังไม่มีข้อมูลค่าใช้จ่ายเดือนนี้ (จะแสดงหลังทำบทครั้งถัดไป)";
-  }
-  function addSpend(c){
-    if(spend.m !== monthKey()) spend = { m:monthKey(), usd:0, n:0 };
-    spend.usd += c; spend.n++; save(COST, spend); renderSpend();
-  }
-  function short(m){ return String(m || "").replace(/^[^/]+\//, ""); }
 
   /* ---------- ตั้งค่า (mw_ai_cfg_v1) ----------
      model = ตัวเขียนบท (State 2) · eye = ตัวดูคลิป (State 1) · prompts = [{id,name,text}] · sel = prompt ที่เลือกไว้
@@ -64,7 +51,7 @@
     var vs = c.vers.filter(function(v){ return v.s1Len; });
     if(!vs.length) return;
     var e = { id:c.clip.id, clip:c.clip, at:Date.now(), trans:c.trans, active:Math.max(0, vs.indexOf(c.vers[c.active])),
-              vers: vs.map(function(v){ return { pid:v.pid, pname:v.pname, eye:v.eye, writer:v.writer, chat:v.chat, s1Len:v.s1Len, s1:v.s1, s2:v.s2, prev:v.prev || "", cost:v.cost || 0, at:v.at }; }) };
+              vers: vs.map(function(v){ return { pid:v.pid, pname:v.pname, eye:v.eye, writer:v.writer, chat:v.chat, s1Len:v.s1Len, s1:v.s1, s2:v.s2, prev:v.prev || "", cost:v.cost || 0, free:v.free || 0, at:v.at }; }) };
     hist = [e].concat(hist.filter(function(h){ return h.id !== e.id; })).slice(0, HIST_MAX);
     if(!save(HIST, hist)) MW.toast("พื้นที่เก็บเต็ม บันทึกประวัติไม่ได้", true);
     renderHistCount();
@@ -82,58 +69,7 @@
 
   function note(el, text, err){ $(el).innerHTML = text ? '<div class="msg'+(err?' err':'')+'">'+esc(text)+'</div>' : ""; }
 
-  /* ---------- OpenRouter ---------- */
-  function sleep(ms){ return new Promise(function(r){ setTimeout(r, ms); }); }
-  function isGoogle(m){ return /^google\//.test(m || ""); }
-  function supportsReasoning(m){
-    return /^google\/gemini-(2\.5|[3-9])/.test(m)          /* Gemini 2.5 ขึ้นไป */
-        || /^anthropic\/claude-/.test(m)                     /* Claude ชุดที่ใช้ในรายการ รองรับ reasoning */
-        || /^openai\/(o\d|gpt-([5-9]|\d{2,}))/.test(m);      /* o-series / GPT-5+ */
-  }
-  function textOnly(msg){
-    if(!Array.isArray(msg.content)) return msg;
-    return { role: msg.role, content: msg.content.map(function(p){
-      return p.type === "video_url" ? "ลิงก์วิดีโอ YouTube: " + p.video_url.url + " (เนื้อหาคลิปดูจาก State 1 ด้านล่าง)" : (p.text || "");
-    }).filter(Boolean).join("\n") };
-  }
-  async function callAI(messages, system, model, v){
-    var key = load(OR_KEY, "");
-    if(!key) throw new Error("ยังไม่ได้ใส่ OpenRouter API key (แท็บตั้งค่า)");
-    if(!isGoogle(model)) messages = messages.map(textOnly); /* ค่ายอื่นรับ video_url ไม่ได้ (เช่น ตอนเขียนบทต่อจาก State 1 ที่ Gemini ดูคลิป) */
-    var body = { model: model, messages: system ? [{ role:"system", content: system }].concat(messages) : messages };
-    if(supportsReasoning(model)) body.reasoning = { effort: cfg.think || "medium" }; /* ส่งเฉพาะโมเดลที่รองรับ */
-    body.usage = { include: true }; /* ขอให้ OpenRouter ส่งค่าใช้จ่ายของคำขอนี้กลับมา */
-    var res, j, delays = [2000, 5000];
-    for(var attempt = 0; ; attempt++){
-      res = await fetch(ENDPOINT, {
-        method: "POST", headers: { "Content-Type": "application/json", "Authorization": "Bearer " + key }, body: JSON.stringify(body)
-      });
-      j = await res.json().catch(function(){ return {}; });
-      if((res.status === 502 || res.status === 503) && attempt < delays.length){ await sleep(delays[attempt]); continue; } /* ผู้ให้บริการล่ม/คนใช้เยอะชั่วคราว ลองซ้ำ */
-      break;
-    }
-    var er = j.error || (j.choices && j.choices[0] && j.choices[0].error); /* OpenRouter อาจส่ง error มาใน body ทั้งที่ status 200 */
-    if(!res.ok || er){
-      var st = (er && typeof er.code === "number") ? er.code : res.status;
-      var m = (er && er.message) || "", md = (er && er.metadata) || {};
-      if(Array.isArray(md.reasons) && md.reasons.length) m += " (เหตุผล: " + md.reasons.join(", ") + ")";
-      if(typeof md.raw === "string" && md.raw) m += " — " + (md.provider_name ? md.provider_name + ": " : "") + md.raw.slice(0, 200);
-      if(st === 401) throw new Error("OpenRouter key ใช้ไม่ได้ เช็ก key ในตั้งค่า: " + m);
-      if(st === 402) throw new Error("เครดิต OpenRouter ไม่พอ เติมเครดิตแล้วลองใหม่: " + m);
-      if(st === 403) throw new Error("OpenRouter บล็อกคำขอนี้ (moderation): " + m);
-      if(st === 408) throw new Error("โมเดล " + model + " ตอบช้าเกินเวลา ลองใหม่อีกครั้ง");
-      if(st === 429) throw new Error("ชนลิมิต/โควต้า OpenRouter ลองใหม่อีกสักพัก" + (m ? ": " + m : ""));
-      if(st === 502 || st === 503) throw new Error("โมเดล " + model + " ใช้ไม่ได้ชั่วคราว (ผู้ให้บริการล่ม/คนใช้เยอะ) ลองใหม่อีกครั้ง หรือเปลี่ยนโมเดลในตั้งค่า" + (m ? ": " + m : ""));
-      if(st === 404 || (st === 400 && /valid model|model id/i.test(m))) throw new Error("ไม่พบโมเดล/ผู้ให้บริการที่รองรับ \"" + model + "\" เช็กชื่อโมเดลในตั้งค่า" + (m ? ": " + m : ""));
-      if(st === 400 && /reasoning|thinking/i.test(m)) throw new Error("โมเดลนี้ไม่รับระดับการคิดที่ตั้งไว้ ลองเปลี่ยนระดับในตั้งค่า: " + m);
-      var e = new Error("OpenRouter error " + st + (m ? ": " + m : "")); e.status = st; throw e;
-    }
-    var c = j.choices && j.choices[0], t = c && c.message && c.message.content;
-    if(typeof t !== "string" || !t.trim()) throw new Error("โมเดลไม่ตอบ" + (c && c.finish_reason ? " (finish_reason: " + c.finish_reason + ")" : ""));
-    var cost = j.usage && typeof j.usage.cost === "number" ? j.usage.cost : null;
-    if(cost !== null){ if(v) v.cost = (v.cost || 0) + cost; addSpend(cost); }
-    return t.trim();
-  }
+  function callAI(messages, system, model, v){ return L.call(messages, system, model, { think: cfg.think, v: v }); }
   function promptText(v){
     var p = prompt(v.pid);
     if(!p || !p.text.trim()) throw new Error("prompt \"" + v.pname + "\" ว่างอยู่ (แท็บตั้งค่า)");
@@ -190,7 +126,7 @@
     var vs = cfg.sel.map(function(pid){
       var p = prompt(pid), v = c.vers.find(function(x){ return x.pid === pid; });
       if(!v){ v = { pid:pid }; c.vers.push(v); }
-      return Object.assign(v, { pname:p.name, eye:cfg.eye, writer:cfg.model, chat:[], s1Len:0, s1:"", s2:"", prev:"", cost:0, busy:false, step:"", err:"" });
+      return Object.assign(v, { pname:p.name, eye:cfg.eye, writer:cfg.model, chat:[], s1Len:0, s1:"", s2:"", prev:"", cost:0, free:0, busy:false, step:"", err:"" });
     });
     c.active = c.vers.indexOf(vs[0]); renderVersion();
     await Promise.all(vs.map(function(v){ return runFull(c, v); }));
@@ -402,7 +338,7 @@
   $("toVoice").addEventListener("click", function(){ MW.showTab("voice"); });
   function renderCount(){
     var v = activeV(), s = v ? parts(v.s2 || "").script : "", n = s.replace(/\s/g, "").length;
-    $("s2Count").textContent = n ? "บท " + n.toLocaleString() + " ตัวอักษร · พากย์ประมาณ " + Math.round(n / CHARS_PER_SEC) + " วิ" + (v && v.cost ? " · ค่าใช้จ่ายเวอร์ชันนี้ " + money(v.cost) : "") : "";
+    $("s2Count").textContent = n ? "บท " + n.toLocaleString() + " ตัวอักษร · พากย์ประมาณ " + Math.round(n / CHARS_PER_SEC) + " วิ" + (v && v.cost ? " · ค่าใช้จ่ายเวอร์ชันนี้ " + money(v.cost) : v && v.free ? " · ฟรี (Gemini)" : "") : "";
     document.dispatchEvent(new CustomEvent("mw:script")); /* บทในหน้าเสียงเปลี่ยน → tts.js อัปเดตปุ่มสร้างเสียง */
   }
   function copy(btn, txt, idle){
@@ -414,21 +350,25 @@
 
   /* ---------- ตั้งค่า AI ---------- */
   function pickModel(selId, val, fallback){ $(selId).value = val; if($(selId).value !== val){ $(selId).value = fallback; return fallback; } return val; } /* โมเดลที่เซฟไว้แต่ไม่อยู่ในรายการ → ค่าเริ่มต้น */
-  $("gKey").value = load(OR_KEY, "");
+  $("gKey").value = load(OR_KEY, ""); $("gmKey").value = load(GM_KEY, "");
   cfg.model = pickModel("gModel", cfg.model, DEFAULT_MODEL);
   cfg.eye = pickModel("gEye", cfg.eye, DEFAULT_MODEL);
   $("gThink").value = cfg.think;
   var THINK_TH = { low:"ต่ำสุด", medium:"ปานกลาง", high:"สูงสุด" };
   function updateModelLine(){ $("sModel").textContent = "ดูคลิป: " + short(cfg.eye) + " · เขียนบท: " + short(cfg.model) + " · คิด" + (THINK_TH[cfg.think] || cfg.think); }
-  function orState(){ var on = !!$("gKey").value.trim(); $("gState").textContent = on ? "✓ ตั้งแล้ว" : "ยังไม่ได้ตั้ง"; $("gState").classList.toggle("ok", on); }
+  function orState(){
+    [["gKey","gState"],["gmKey","gmState"]].forEach(function(x){
+      var on = !!$(x[0]).value.trim(); $(x[1]).textContent = on ? "✓ ตั้งแล้ว" : "ยังไม่ได้ตั้ง"; $(x[1]).classList.toggle("ok", on);
+    });
+  }
   orState();
   function saveAi(){
     cfg.model = $("gModel").value || DEFAULT_MODEL; cfg.eye = $("gEye").value || DEFAULT_MODEL; cfg.think = $("gThink").value;
-    var ok = saveCfg() && save(OR_KEY, $("gKey").value.trim());
+    var ok = saveCfg() && save(OR_KEY, $("gKey").value.trim()) && save(GM_KEY, $("gmKey").value.trim());
     MW.toast(ok ? "บันทึกแล้ว" : "บันทึกไม่ได้", !ok);
     updateModelLine(); orState();
   }
-  ["gKey","gModel","gEye","gThink"].forEach(function(id){ $(id).addEventListener("change", saveAi); }); /* บันทึกอัตโนมัติทุกครั้งที่แก้ */
+  ["gKey","gmKey","gModel","gEye","gThink"].forEach(function(id){ $(id).addEventListener("change", saveAi); }); /* บันทึกอัตโนมัติทุกครั้งที่แก้ */
   $("saveAi").addEventListener("click", saveAi);
 
   /* ---------- สำรอง/นำเข้า (ให้ app.js เรียก) ไม่รวม key ---------- */
@@ -535,6 +475,6 @@
   });
 
   if(!load(CFG, null) || !Array.isArray(load(CFG, {}).prompts)) saveCfg(); /* บันทึกรูปแบบใหม่ครั้งแรก */
-  renderPrompts(); renderHistCount(); renderSpend();
+  renderPrompts(); renderHistCount();
   refresh();
 })();
