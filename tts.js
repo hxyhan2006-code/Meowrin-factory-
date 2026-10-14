@@ -11,6 +11,7 @@
   var API = "https://api.elevenlabs.io/v1/text-to-speech/";
   var MAX_CHARS = 5000; /* เพดานต่อคำขอของ ElevenLabs */
   var WARM_MIN = 40;    /* hook ที่ใช้วอร์มยาวอย่างน้อยกี่ตัวอักษร (ราว 3 วิ) */
+  var ONSET_TH = 0.012, ONSET_SPAN = 2.5, ONSET_LEAD = 0.08; /* หาเสียงพูดเริ่มจริง: ระดับเสียงขั้นต่ำ (~-38 dB) · มองหาไม่เกินกี่วินาทีหลังจุดตัด · เหลือเงียบนำหน้ากี่วินาที */
   function load(k, d){ try{ var v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } }
   function save(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); return true; }catch(e){ return false; } }
   function monthKey(){ var d = new Date(); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0"); }
@@ -87,6 +88,22 @@
     if(!(tB > 0.3)) return null;
     return Math.max(tA, tB - 0.12); /* ตัดในช่วงเงียบก่อนบทจริงเริ่มนิดเดียว */
   }
+  /* หาวินาทีที่เสียงพูดเริ่มจริงหลัง from (ถอดรหัส mp3 ด้วย Web Audio ของเบราว์เซอร์ ไม่ใช้ไลบรารี)
+     เวลาตัวอักษรจาก ElevenLabs เร็วกว่าเสียงจริงเล็กน้อย → ตัดตามนั้นเฉยๆ จะเหลือเงียบต้นไฟล์ ~0.5 วิ · คืน null ถ้าถอดรหัสไม่ได้/ไม่เจอ */
+  async function onsetTime(blob, from){
+    var AC = window.AudioContext || window.webkitAudioContext; if(!AC) return null;
+    var ctx = new AC();
+    try{
+      var buf = await ctx.decodeAudioData(await blob.arrayBuffer());
+      var d = buf.getChannelData(0), sr = buf.sampleRate, win = Math.round(sr * 0.01), run = 0, end = Math.min(d.length, (from + ONSET_SPAN) * sr);
+      for(var i = Math.floor(from * sr); i + win <= end; i += win){
+        var e = 0; for(var k = 0; k < win; k++) e += d[i + k] * d[i + k];
+        if(Math.sqrt(e / win) > ONSET_TH){ if(++run === 2) return (i - win) / sr; } else run = 0; /* ดังต่อเนื่อง 2 หน้าต่าง (20 มิลลิวินาที) = เริ่มพูดแล้ว */
+      }
+      return null;
+    }catch(err){ return null; }
+    finally{ if(ctx.close) ctx.close(); }
+  }
   /* ตัด mp3 (MPEG-1 Layer III) ทิ้งทุกเฟรมก่อน sec วินาที — คืน null ถ้าอ่านไฟล์ไม่ได้ */
   function mp3Cut(u, sec){
     var BR = [0,32,40,48,56,64,80,96,112,128,160,192,224,256,320], SR = [44100,48000,32000];
@@ -126,7 +143,9 @@
 
     var take = { raw:full, blob:full, cut:null, warm:!!warm };
     if(warm && cfg.trim && al){
-      var c = cutTime(al, sent, body), bytes = c === null ? null : mp3Cut(new Uint8Array(await full.arrayBuffer()), c);
+      var c = cutTime(al, sent, body), on = c === null ? null : await onsetTime(full, c);
+      if(on !== null) c = Math.max(c, on - ONSET_LEAD); /* ตัดชิดเสียงพูดจริง เหลือเงียบนำหน้าแค่นิดเดียว */
+      var bytes = c === null ? null : mp3Cut(new Uint8Array(await full.arrayBuffer()), c);
       if(bytes && bytes.length){ take.blob = new Blob([bytes], { type:"audio/mpeg" }); take.cut = c; }
     }
     return take;
