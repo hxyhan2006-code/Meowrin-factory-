@@ -49,3 +49,4 @@
 ## การส่งงาน (Git)
 - แก้เสร็จทุกครั้ง ให้ commit แล้ว push เข้า `main` ตรงๆ เลย ไม่ต้องสร้าง branch หรือ PR เพราะ Han ต้องเช็กบนเว็บจริง (GitHub Pages)
 - ถ้า Han บอกว่า "ย้อน" ให้ `git revert` commit ล่าสุดแล้ว push เข้า `main` (ห้าม force push / reset)
+- `mp4fix.js` (`MP4Fix.remux`) แปลง fragmented MP4 จาก MediaRecorder เป็น MP4 ปกติ (ไม่เข้ารหัสใหม่) เพราะ CapCut ขึ้น "ไม่รองรับไฟล์" กับ fMP4 · `footage-plan.js` เรียกหลังอัดเสร็จ (เฉพาะ mp4)

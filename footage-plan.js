@@ -214,8 +214,9 @@
         $("plBar").style.width = (i / list.length * 100) + "%";
       });
       if(!r.blob.size) throw new Error("อัดได้ไฟล์ว่าง");
-      var d = new Date(), ext = mime.indexOf("mp4") >= 0 ? "mp4" : "webm";
-      var file = new File([r.blob], "meowrin_" + String(d.getHours()).padStart(2, "0") + String(d.getMinutes()).padStart(2, "0") + "." + ext, { type:r.blob.type });
+      var d = new Date(), ext = mime.indexOf("mp4") >= 0 ? "mp4" : "webm", out = r.blob;
+      if(ext === "mp4" && window.MP4Fix){ U.msg("plShareMsg", "กำลังจัดไฟล์ให้ CapCut อ่านได้..."); out = await MP4Fix.remux(r.blob); } /* MediaRecorder ให้ fragmented MP4 ซึ่ง CapCut ไม่รับ */
+      var file = new File([out], "meowrin_" + String(d.getHours()).padStart(2, "0") + String(d.getMinutes()).padStart(2, "0") + "." + ext, { type:out.type || r.blob.type });
       cuts = { sig:sig(list), file:file, url:URL.createObjectURL(file), marks:r.marks };
       cutting = false; renderShare();
       U.msg("plShareMsg", "เสร็จแล้ว " + r.marks.length + " ฉาก · " + (file.size / 1048576).toFixed(1) + " MB · " + (r.rate / 1e6).toFixed(1) + " Mbps (" + mime + ")" + (mime.indexOf("avc1") < 0 ? " · ไม่ใช่ H.264 ถ้า CapCut ไม่รับ บอกได้เลย" : "") + " · ดูตัวอย่างด้านล่างก่อนแชร์", "ok");
