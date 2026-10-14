@@ -1,6 +1,6 @@
 /* llm.js — ชั้นเรียก AI (ไม่มีหน้าจอของตัวเอง ยกเว้นบรรทัดค่าใช้จ่าย #spendInfo)
-   โมเดล Google + มี Gemini key → เรียก Gemini API ตรงก่อน (ฟรี) · โควตาเต็ม/key ใช้ไม่ได้/ล่ม → ถอยไป OpenRouter ให้เอง
-   ไม่มี Gemini key หรือโมเดลค่ายอื่น → OpenRouter เหมือนเดิม
+   คำขอที่ผู้เรียกใส่ opt.free (งานเล็ก/ข้อความล้วน เช่น แก้บท) + โมเดล Google + มี Gemini key → Gemini API ตรงก่อน (ฟรี)
+   โควตาเต็ม/key ใช้ไม่ได้/ล่ม/ช้า → ถอยไป OpenRouter ให้เอง · งานดูวิดีโอ/เขียนบทหลักไม่ใส่ opt.free = OpenRouter ตรงๆ (Gemini ฟรีช้า/ล่มบ่อยกับวิดีโอ)
    ต้องโหลดหลัง app.js และก่อน ai.js · ส่งออก MW.llm */
 (function(){
   "use strict";
@@ -139,7 +139,7 @@
   async function call(messages, system, model, opt){
     opt = opt || {};
     var gk = load(GM_KEY, "");
-    if(on && gk && isGoogle(model) && !skip[model] && !(skip.all > Date.now())){
+    if(opt.free && on && gk && isGoogle(model) && !skip[model] && !(skip.all > Date.now())){
       try{
         var t = await viaGemini(messages, system, model, opt.think, gk);
         if(opt.v) opt.v.free = (opt.v.free || 0) + 1;

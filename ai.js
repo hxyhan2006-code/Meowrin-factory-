@@ -69,7 +69,7 @@
 
   function note(el, text, err){ $(el).innerHTML = text ? '<div class="msg'+(err?' err':'')+'">'+esc(text)+'</div>' : ""; }
 
-  function callAI(messages, system, model, v){ return L.call(messages, system, model, { think: cfg.think, v: v }); }
+  function callAI(messages, system, model, v, free){ return L.call(messages, system, model, { think: cfg.think, v: v, free: !!free }); } /* free = งานเล็กข้อความล้วน ลอง Gemini ฟรีก่อน */
   function promptText(v){
     var p = prompt(v.pid);
     if(!p || !p.text.trim()) throw new Error("prompt \"" + v.pname + "\" ว่างอยู่ (แท็บตั้งค่า)");
@@ -237,7 +237,7 @@
   function editScript(fb){
     var c = cur, v = activeV(), txt = v ? parts(v.s2 || "").script : ""; if(!v || v.busy || !fb || !txt) return;
     step(c, v, "กำลังแก้บท...", async function(){
-      var out = await callAI([{ role:"user", content: "แก้บทพากย์ด้านล่างตามคำสั่ง แล้วตอบกลับมาเฉพาะบทพากย์ฉบับแก้ทั้งหมด ไม่ต้องมีหัวข้อ ชื่อคลิป หรือคำอธิบายเพิ่ม\nคงรูปแบบการขึ้นบรรทัดแบบเดิม: หนึ่งประโยคหรือหนึ่งช่วงหายใจต่อหนึ่งบรรทัด ไม่เว้นบรรทัดว่าง ห้ามรวมเป็นย่อหน้ายาว\n\nคำสั่ง: " + fb + "\n\n----\n" + txt }], "", v.writer, v);
+      var out = await callAI([{ role:"user", content: "แก้บทพากย์ด้านล่างตามคำสั่ง แล้วตอบกลับมาเฉพาะบทพากย์ฉบับแก้ทั้งหมด ไม่ต้องมีหัวข้อ ชื่อคลิป หรือคำอธิบายเพิ่ม\nคงรูปแบบการขึ้นบรรทัดแบบเดิม: หนึ่งประโยคหรือหนึ่งช่วงหายใจต่อหนึ่งบรรทัด ไม่เว้นบรรทัดว่าง ห้ามรวมเป็นย่อหน้ายาว\n\nคำสั่ง: " + fb + "\n\n----\n" + txt }], "", v.writer, v, true);
       v.prev = v.s2; setScript(v, reflow(parts(out).script));
     });
   }
