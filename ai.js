@@ -370,6 +370,12 @@
   }
   ["gKey","gmKey","gModel","gEye","gThink"].forEach(function(id){ $(id).addEventListener("change", saveAi); }); /* บันทึกอัตโนมัติทุกครั้งที่แก้ */
   $("saveAi").addEventListener("click", saveAi);
+  $("gmTest").addEventListener("click", async function(){
+    var b = this; b.disabled = true; b.textContent = "กำลังทดสอบ...";
+    var models = cfg.eye === cfg.model ? [cfg.eye] : [cfg.eye, cfg.model].filter(isGoogle);
+    var lines = await L.test(models, cfg.think);
+    $("gmTestOut").textContent = lines.join("\n"); b.disabled = false; b.textContent = "ทดสอบ Gemini";
+  });
 
   /* ---------- สำรอง/นำเข้า (ให้ app.js เรียก) ไม่รวม key ---------- */
   function aiBackup(){ return { model:cfg.model, eye:cfg.eye, think:cfg.think, prompts:cfg.prompts, sel:cfg.sel }; }

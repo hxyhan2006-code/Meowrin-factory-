@@ -148,6 +148,25 @@
     return viaOpenRouter(messages, system, model, opt.think, opt.v);
   }
 
-  MW.llm = { call: call, isGoogle: isGoogle, short: short, money: money, OR_KEY: OR_KEY, GM_KEY: GM_KEY };
+  /* ปุ่ม "ทดสอบ Gemini" ในตั้งค่า: ยิงคำขอสั้นๆ ต่อโมเดล แล้วคืนผลดิบ (สถานะ + ข้อความจาก Google) ไว้ดูสาเหตุที่ถอยไป OpenRouter */
+  async function testGemini(models, think){
+    var key = load(GM_KEY, ""); if(!key) return ["ยังไม่ได้ใส่ Gemini key"];
+    var out = [];
+    for(var i = 0; i < models.length; i++){
+      var m = models[i], line = short(m) + " : ";
+      try{
+        var res = await fetch(GM_URL + encodeURIComponent(short(m)) + ":generateContent", {
+          method:"POST", headers:{ "Content-Type":"application/json", "x-goog-api-key": key },
+          body: JSON.stringify({ contents:[{ role:"user", parts:[{ text:"ตอบคำเดียวว่า ok" }] }], generationConfig: think ? { thinkingConfig:{ thinkingLevel: think } } : undefined })
+        });
+        var j = await res.json().catch(function(){ return {}; });
+        line += res.ok ? "✓ ใช้ได้ (HTTP " + res.status + ")" : "✗ HTTP " + res.status + " " + ((j.error && j.error.message) || "").slice(0, 200);
+      }catch(err){ line += "✗ ต่อไม่ได้ (" + err.message + ")"; }
+      out.push(line);
+    }
+    return out;
+  }
+
+  MW.llm = { test: testGemini, call: call, isGoogle: isGoogle, short: short, money: money, OR_KEY: OR_KEY, GM_KEY: GM_KEY };
   renderSpend();
 })();
