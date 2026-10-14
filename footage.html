@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600&family=Mitr:wght@500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="footage.css?v=20261014e">
+<link rel="stylesheet" href="footage.css?v=20261014f">
 </head>
 <body>
 <header>
@@ -21,12 +21,12 @@
   <section class="page on" id="p-idx">
     <div class="panel">
       <h2>เลือกคลิป</h2>
-      <label for="album">ชื่ออัลบั้ม (ไม่บังคับ ใช้กับคลิปชุดนี้ทั้งหมด)</label>
+      <label for="album">ชื่ออัลบั้มในแกลเลอรี/CapCut ของคลิปชุดนี้ (ไม่บังคับ) เช่น luffy, zoro, strawhat gang</label>
       <input id="album" type="text" list="albumList" placeholder="เช่น luffy" autocomplete="off">
       <datalist id="albumList"></datalist>
       <label for="files">ไฟล์วิดีโอ (เลือกได้หลายไฟล์)</label>
       <input id="files" type="file" accept="video/*" multiple>
-      <p class="hint">วิดีโอไม่ถูกอัปโหลด ส่งไปให้ AI แค่รูปเฟรมเล็กๆ · คลิปที่เคยทำแล้วจะข้ามให้เอง</p>
+      <p class="hint">เลือกทีละอัลบั้ม แล้วพิมพ์ชื่ออัลบั้มนั้น (ไม่ใช่คำอธิบายฉาก AI ดูเนื้อหาเองอยู่แล้ว) · เลือกคลิปที่เคยทำไว้ซ้ำพร้อมพิมพ์ชื่อใหม่ = แก้ชื่ออัลบั้มให้ ไม่เสียค่า AI · วิดีโอไม่ถูกอัปโหลด</p>
       <label class="chk"><input type="checkbox" id="upImg" checked> อัปเกรดรูปคลิปที่เคยทำไว้ให้คมขึ้น (เลือกไฟล์เดิมซ้ำ · ไม่เรียก AI ไม่เสียค่า)</label>
       <div class="row" style="margin-top:12px">
         <button class="btn" id="startBtn" disabled>เริ่มทำดัชนี</button>
@@ -104,7 +104,7 @@
 <div class="big" id="big" hidden><img id="bigImg" alt=""><p id="bigTxt"></p></div>
 <video id="vid" muted playsinline preload="auto" style="position:fixed;left:-9999px;width:2px;height:2px"></video>
 
-<script src="footage-core.js?v=20261014e"></script>
-<script src="footage.js?v=20261014e"></script>
+<script src="footage-core.js?v=20261014f"></script>
+<script src="footage.js?v=20261014f"></script>
 </body>
 </html>
