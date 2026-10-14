@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600&family=Mitr:wght@500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="footage.css?v=20261014f">
+<link rel="stylesheet" href="footage.css?v=20261014g">
 </head>
 <body>
 <header>
@@ -83,6 +83,16 @@
       <p class="hint">สุ่มเฟรมทุก 1 วินาที · ฉากที่ต่างกันน้อยที่สุดจะถูกรวมจนเหลือไม่เกินเพดาน</p>
     </div>
     <div class="panel">
+      <h2>เปลี่ยนชื่ออัลบั้ม</h2>
+      <p class="hint" style="margin-top:0">เปลี่ยนทั้งอัลบั้มพร้อมกัน (ทุกคลิปที่ใช้ชื่อนี้) · อยากเปลี่ยนแค่บางคลิป กด “✎ แก้” ที่การ์ดในแท็บค้นหา</p>
+      <label for="renOld">อัลบั้มที่จะเปลี่ยน</label>
+      <select id="renOld"></select>
+      <label for="renNew">ชื่อใหม่</label>
+      <input id="renNew" type="text" placeholder="เช่น luffy" autocomplete="off">
+      <button class="btn" id="renBtn" style="width:100%;margin-top:12px">เปลี่ยนชื่อ</button>
+      <div id="renMsg"></div>
+    </div>
+    <div class="panel">
       <h2>สำรอง / กู้คืนดัชนี</h2>
       <p class="hint" id="dbInfo"></p>
       <div class="row" style="margin-top:10px">
@@ -104,7 +114,7 @@
 <div class="big" id="big" hidden><img id="bigImg" alt=""><p id="bigTxt"></p></div>
 <video id="vid" muted playsinline preload="auto" style="position:fixed;left:-9999px;width:2px;height:2px"></video>
 
-<script src="footage-core.js?v=20261014f"></script>
-<script src="footage.js?v=20261014f"></script>
+<script src="footage-core.js?v=20261014g"></script>
+<script src="footage.js?v=20261014g"></script>
 </body>
 </html>

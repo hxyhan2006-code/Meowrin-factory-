@@ -274,7 +274,7 @@
     var k = shown.push({ c:c, sc:sc || c.scenes[0] }) - 1; /* แตะปก/ฉาก = ดูรูปใหญ่ */
     return '<div class="card"><div class="shots"><div class="cover" data-k="' + k + '"><img src="' + (c.cover || "") + '" alt="ปกคลิป"><em>' + capDur(c.duration) + "</em></div>"
       + (sc ? '<img class="scene" src="' + sc.thumb + '" alt="ฉาก" data-k="' + k + '">' : "") + '</div><div class="t">'
-      + "<b>" + esc(c.album) + "</b>" + (sc ? ' · <span class="when">ฉาก ' + tm(sc.s) + "–" + tm(sc.e) + "</span>" : " · " + c.scenes.length + " ฉาก")
+      + "<b>" + esc(c.album) + '</b> <button class="tag" data-e="' + k + '" aria-label="แก้ชื่ออัลบั้มของคลิปนี้">✎ แก้</button>' + (sc ? ' · <span class="when">ฉาก ' + tm(sc.s) + "–" + tm(sc.e) + "</span>" : " · " + c.scenes.length + " ฉาก")
       + "<p>" + esc(sc ? (a.summary_th || "(AI ไม่ได้อธิบายฉากนี้)") : (c.summary_th || "")) + "</p>"
       + (who ? "<p>👤 " + esc(who) + "</p>" : "")
       + '<p>' + day(c.lastModified) + '</p><div class="fname">' + esc(c.name) + "</div></div></div>";
@@ -345,7 +345,26 @@
     var cur = $("albumFilter").value;
     $("albumFilter").innerHTML = '<option value="">ทุกอัลบั้ม</option>' + as.map(function(a){ return '<option value="' + esc(a) + '">' + esc(a) + "</option>"; }).join("");
     $("albumFilter").value = as.indexOf(cur) >= 0 ? cur : "";
+    var ro = $("renOld").value;
+    $("renOld").innerHTML = as.length ? as.map(function(a){ return '<option value="' + esc(a) + '">' + esc(a) + " (" + lib.filter(function(c){ return c.album === a; }).length + " คลิป)</option>"; }).join("") : '<option value="">ยังไม่มีอัลบั้ม</option>';
+    if(as.indexOf(ro) >= 0) $("renOld").value = ro;
   }
+  async function rename(clips, name){ /* เปลี่ยนอัลบั้มของคลิปที่ส่งมา แล้วบันทึกลงฐานข้อมูล */
+    clips.forEach(function(c){ c.album = name; });
+    await FT.store.putMany(clips); renderAll();
+  }
+  $("renBtn").addEventListener("click", function(){
+    var from = $("renOld").value, to = $("renNew").value.trim();
+    if(!from || !to){ msg("renMsg", "เลือกอัลบั้มเดิมและพิมพ์ชื่อใหม่ก่อน", "err"); return; }
+    var hit = lib.filter(function(c){ return c.album === from; });
+    rename(hit, to).then(function(){ $("renNew").value = ""; msg("renMsg", "เปลี่ยน “" + from + "” → “" + to + "” แล้ว " + hit.length + " คลิป", "ok"); })
+      .catch(function(err){ msg("renMsg", "เปลี่ยนไม่ได้: " + err.message, "err"); });
+  });
+  $("results").addEventListener("click", function(e){ /* ✎ แก้ = เปลี่ยนอัลบั้มเฉพาะคลิปนี้ */
+    var b = e.target.closest("[data-e]"), h = b && shown[+b.dataset.e]; if(!h) return;
+    var to = window.prompt("ชื่ออัลบั้มของคลิปนี้ (" + h.c.name + ")", h.c.album);
+    if(to && to.trim() && to.trim() !== h.c.album) rename([h.c], to.trim()).catch(function(err){ window.alert("เปลี่ยนไม่ได้: " + err.message); });
+  });
   function renderAll(){ renderQueue(); renderStats(); renderDb(); renderAlbums(); renderDebug(); if($("p-find").classList.contains("on")) search(); }
 
   refreshLib().catch(function(err){ msg("runMsg", "เปิดฐานข้อมูลไม่ได้: " + err.message, "err"); });
