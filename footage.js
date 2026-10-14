@@ -222,6 +222,17 @@
              (a.tags_en || []).concat(a.tags_th || [], [a.action, a.emotion]).join(" ").toLowerCase(),
              [a.summary_th, a.location].join(" ").toLowerCase() ]; /* ระดับฉากเท่านั้น: ไม่รวมสรุปทั้งคลิป (ไม่งั้นทุกฉากในคลิปที่มีลูฟี่ตรงหมด) และไม่รวมชื่ออัลบั้ม */
   }
+  /* "ลูฟี่ตกใจ" ต้องหมายถึงลูฟี่เป็นคนตกใจ ไม่ใช่แค่มีลูฟี่อยู่ในฉากแล้วคนอื่นตกใจ → ดูว่าชื่อตัวละครตามด้วยคำอารมณ์ติดกันในสรุปของฉาก (ไม่เกิน NEAR ตัวอักษร) */
+  var NEAR = 24;
+  function near(sum, nameGrp, emoGrp){
+    return nameGrp.some(function(n){
+      for(var i = sum.indexOf(n); i >= 0; i = sum.indexOf(n, i + 1)){
+        var w = sum.slice(i + n.length, i + n.length + NEAR);
+        if(emoGrp.some(function(e){ return w.indexOf(e) >= 0; })) return true;
+      }
+      return false;
+    });
+  }
   var aiTerms = {}, sT = 0, shown = [], lastQ = "", showPartial = false; /* shown = รายการที่โชว์อยู่ (ให้ปุ่มดูรูปใหญ่อ้างถึง) */
   $("q").addEventListener("input", function(){ clearTimeout(sT); sT = setTimeout(search, 250); });
   $("albumFilter").addEventListener("change", search);
@@ -241,6 +252,7 @@
     }
     var ts = terms(q), hits = []; shown = [];
     var soft = extra.map(function(x){ return String(x).toLowerCase().trim(); }).filter(Boolean); /* คำที่ AI แปลให้ = ช่วยจัดอันดับ ไม่บังคับต้องตรง */
+    var names = ts.filter(function(v){ return NAMES.indexOf(v) >= 0; }), emos = ts.filter(function(v){ return SYN.indexOf(v) >= 0; });
     clips.forEach(function(c){ c.scenes.forEach(function(sc){
       var h = hay(c, sc), hit = 0, score = 0;
       ts.forEach(function(v){
@@ -248,15 +260,18 @@
         if(w){ hit++; score += w; }
       });
       soft.forEach(function(n){ if(h.some(function(t){ return t.indexOf(n) >= 0; })) score += 1; });
-      if(hit) hits.push({ c:c, sc:sc, hit:hit, score:score });
+      var exact = false, sm = (sc.ai && sc.ai.summary_th || "").toLowerCase();
+      names.forEach(function(ng){ emos.forEach(function(eg){ if(near(sm, ng, eg)) exact = true; }); });
+      if(exact) score += 20;
+      if(hit) hits.push({ c:c, sc:sc, hit:hit, score:score, exact:exact });
     }); });
-    hits.sort(function(a, b){ return b.hit - a.hit || b.score - a.score; });
+    hits.sort(function(a, b){ return b.hit - a.hit || b.score - a.score; }); /* ตรงเป๊ะ (ตัวละครเป็นคนมีอารมณ์นั้น) ได้คะแนนพิเศษ จึงขึ้นก่อน */
     var full = hits.filter(function(h){ return h.hit === ts.length; }), part = hits.filter(function(h){ return h.hit < ts.length; });
     if(q !== lastQ){ lastQ = q; showPartial = !full.length; } /* คำค้นใหม่ = ซ่อนที่ตรงบางส่วนไว้ก่อน (ถ้ามีตรงครบ) */
     var list = full.slice(0, 60), html = full.length ? '<p class="hint">ตรงครบทุกคำ ' + full.length + " ฉาก" + (full.length > 60 ? " (โชว์ 60 อันดับแรก)" : "") + "</p>" : "";
-    var out = list.map(function(h){ return card(h.c, h.sc); }).join("");
+    var out = list.map(function(h){ return card(h.c, h.sc, h.exact); }).join("");
     if(part.length){
-      if(showPartial) out += '<p class="hint">ตรงบางส่วน (มีแค่บางคำ) ' + part.length + " ฉาก</p>" + part.slice(0, 40).map(function(h){ return card(h.c, h.sc); }).join("");
+      if(showPartial) out += '<p class="hint">ตรงบางส่วน (มีแค่บางคำ) ' + part.length + " ฉาก</p>" + part.slice(0, 40).map(function(h){ return card(h.c, h.sc, false); }).join("");
       out += '<button class="btn ghost small" id="partialBtn" style="width:100%">' + (showPartial ? "ซ่อน" : "ดู") + "ที่ตรงบางส่วน (" + part.length + ")</button>";
     }
     $("findInfo").textContent = "คำค้น: " + ts.map(function(v){ return v[0]; }).join(" + ") + " · ตรงครบ " + full.length + " ฉาก · ตรงบางส่วน " + part.length + " ฉาก";
@@ -269,13 +284,13 @@
     $("findInfo").textContent = clips.length + " คลิปในดัชนี · พิมพ์คำค้นเพื่อหาฉาก";
     $("results").innerHTML = clips.length ? clips.map(function(c){ return card(c, null); }).join("") : '<p class="empty">ยังไม่มีคลิปในดัชนี ไปที่แท็บ ทำดัชนี ก่อน</p>';
   }
-  function card(c, sc){
+  function card(c, sc, exact){
     var a = sc && sc.ai || {}, who = (a.characters_th && a.characters_th.length ? a.characters_th : a.characters || []).join(", ");
     var k = shown.push({ c:c, sc:sc || c.scenes[0] }) - 1; /* แตะปก/ฉาก = ดูรูปใหญ่ */
     return '<div class="card"><div class="shots"><div class="cover" data-k="' + k + '"><img src="' + (c.cover || "") + '" alt="ปกคลิป"><em>' + capDur(c.duration) + "</em></div>"
       + (sc ? '<img class="scene" src="' + sc.thumb + '" alt="ฉาก" data-k="' + k + '">' : "") + '</div><div class="t">'
       + "<b>" + esc(c.album) + '</b> <button class="tag" data-e="' + k + '" aria-label="แก้ชื่ออัลบั้มของคลิปนี้">✎ แก้</button>' + (sc ? ' · <span class="when">ฉาก ' + tm(sc.s) + "–" + tm(sc.e) + "</span>" : " · " + c.scenes.length + " ฉาก")
-      + "<p>" + esc(sc ? (a.summary_th || "(AI ไม่ได้อธิบายฉากนี้)") : (c.summary_th || "")) + "</p>"
+      + "<p>" + (exact ? '<span class="tag ok">★ ตรงเป๊ะ</span> ' : "") + esc(sc ? (a.summary_th || "(AI ไม่ได้อธิบายฉากนี้)") : (c.summary_th || "")) + "</p>"
       + (who ? "<p>👤 " + esc(who) + "</p>" : "")
       + '<p>' + day(c.lastModified) + '</p><div class="fname">' + esc(c.name) + "</div></div></div>";
   }

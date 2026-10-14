@@ -167,7 +167,7 @@
     " \"scenes\":[{\"i\":<scene number>,\"characters\":[\"English common names e.g. Luffy, Zoro, Nami, Usopp, Sanji, Chopper, Robin, Franky, Brook, Jinbe, Ace, Sabo, Shanks, Garp, Buggy, Hancock, Law\"],",
     " \"characters_th\":[\"same characters in Thai as Thai fans write, e.g. ลูฟี่, โซโร, นามิ, อุซป, ซันจิ, ช็อปเปอร์, โรบิน, แฟรงกี้, บรู๊ค, จินเบ, เอส, ซาโบ้, แชงคูส, การ์ป\"],",
     " \"action\":\"short English\",\"emotion\":\"short English\",\"location\":\"short English\",",
-    " \"tags_en\":[\"3-8 lowercase tags\"],\"tags_th\":[\"3-8 Thai tags e.g. ตกใจ, หัวเราะ, ต่อสู้, ร้องไห้, กิน\"],\"summary_th\":\"one short Thai sentence\"}]}",
+    " \"tags_en\":[\"3-8 lowercase tags\"],\"tags_th\":[\"3-8 Thai tags e.g. ตกใจ, หัวเราะ, ต่อสู้, ร้องไห้, กิน\"],\"summary_th\":\"one short Thai sentence saying WHO does or feels WHAT, starting with that character's Thai name, e.g. ลูฟี่ตกใจเมื่อเห็นศัตรู (do not bury the subject: if a marine is shocked by Luffy, say ทหารเรือตกใจ, not ลูฟี่ตกใจ)\"}]}",
     "Rules: name a character only when reasonably sure, otherwise describe them in tags (e.g. marine soldier).",
     "List every notable visible character. One entry per scene number."
   ].join("\n");
