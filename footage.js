@@ -390,7 +390,7 @@
   $("keyInfo").textContent = FT.orKey() ? "✓ ใช้ OpenRouter key จากแอพหลักในเบราว์เซอร์นี้" : "⚠ ยังไม่เจอ OpenRouter key ในเบราว์เซอร์นี้ ใส่ที่แอพหลัก (ตั้งค่า) ก่อน";
 
   /* ---------- ลบคลิปซ้ำ: ชื่อไฟล์+ขนาดเดียวกัน เก็บตัวที่ทำล่าสุด ---------- */
-  $("dupBtn").addEventListener("click", function(){
+  function findDupes(){ /* คืน { del:[id ที่จะลบ], fix:[รายการที่ต้องแก้อัลบั้ม] } */
     var g = {}, del = [], fix = [];
     lib.forEach(function(c){ var k = c.name + "|" + c.size; (g[k] = g[k] || []).push(c); });
     Object.keys(g).forEach(function(k){
@@ -400,9 +400,14 @@
       if(real && a[0].album !== real.album){ a[0].album = real.album; fix.push(a[0]); }
       a.slice(1).forEach(function(c){ del.push(c.id); });
     });
-    if(!del.length){ msg("dupMsg", "ไม่เจอคลิปซ้ำ (" + lib.length + " คลิป ชื่อไฟล์+ขนาดไม่ซ้ำกันเลย)", "ok"); return; }
-    if(!window.confirm("เจอคลิปซ้ำ " + del.length + " รายการ จะลบตัวที่ซ้ำและเก็บตัวที่ทำล่าสุดไว้ ตกลงไหม?")) return;
-    FT.store.putMany(fix).then(function(){ return FT.store.del(del); }).then(refreshLib).then(function(){ msg("dupMsg", "ลบคลิปซ้ำแล้ว " + del.length + " รายการ เหลือ " + lib.length + " คลิป", "ok"); })
+    return { del:del, fix:fix };
+  }
+  function mergeDupes(d){ return FT.store.putMany(d.fix).then(function(){ return FT.store.del(d.del); }).then(refreshLib); }
+  $("dupBtn").addEventListener("click", function(){
+    var d = findDupes();
+    if(!d.del.length){ msg("dupMsg", "ไม่เจอคลิปซ้ำ (" + lib.length + " คลิป ชื่อไฟล์+ขนาดไม่ซ้ำกันเลย)", "ok"); return; }
+    if(!window.confirm("เจอคลิปซ้ำ " + d.del.length + " รายการ จะลบตัวที่ซ้ำและเก็บตัวที่ทำล่าสุดไว้ ตกลงไหม?")) return;
+    mergeDupes(d).then(function(){ msg("dupMsg", "ลบคลิปซ้ำแล้ว " + d.del.length + " รายการ เหลือ " + lib.length + " คลิป", "ok"); })
       .catch(function(err){ msg("dupMsg", "ลบไม่ได้: " + err.message, "err"); });
   });
 
@@ -475,5 +480,8 @@
   });
   function renderAll(){ renderQueue(); renderStats(); renderDb(); renderAlbums(); renderDebug(); if($("p-find").classList.contains("on")) search(); }
 
-  refreshLib().catch(function(err){ msg("runMsg", "เปิดฐานข้อมูลไม่ได้: " + err.message, "err"); });
+  refreshLib().then(function(){ /* เปิดหน้าครั้งไหน ถ้ามีรายการซ้ำเก่าค้าง รวมให้เองเลย (ลบแค่รายการดัชนีที่ซ้ำ ไม่แตะไฟล์วิดีโอ) */
+    var d = findDupes(); if(!d.del.length) return;
+    return mergeDupes(d).then(function(){ msg("runMsg", "รวมคลิปซ้ำให้อัตโนมัติแล้ว " + d.del.length + " รายการ (เก็บตัวที่ทำล่าสุด) เหลือ " + lib.length + " คลิป", "ok"); });
+  }).catch(function(err){ msg("runMsg", "เปิดฐานข้อมูลไม่ได้: " + err.message, "err"); });
 })();
