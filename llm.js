@@ -21,14 +21,28 @@
   var spend = load(COST, {});
   function fresh(){ if(spend.m !== monthKey()) spend = { m:monthKey(), usd:0, n:0, g:0 }; spend.g = spend.g || 0; }
   function money(x){ return "$" + (x < 0.1 ? x.toFixed(3) : x.toFixed(2)); }
+  var orUse = null; /* ยอดจริงจาก OpenRouter ({d,w,m} USD) ถ้าดึงได้ — รวมทุกการใช้ key นี้ ไม่ใช่แค่ในแอพ */
   function renderSpend(){
     fresh();
     var t = [];
-    if(spend.n) t.push("เดือนนี้ใช้ไป " + money(spend.usd) + " (" + spend.n + " คำขอผ่าน OpenRouter)");
+    if(orUse) t.push("OpenRouter รายงาน (ทุกการใช้ key นี้): วันนี้ " + money(orUse.d) + " · สัปดาห์นี้ " + money(orUse.w) + " · เดือนนี้ " + money(orUse.m) + " (เวลา UTC)");
+    else if(spend.n) t.push("เดือนนี้ใช้ไป " + money(spend.usd) + " (" + spend.n + " คำขอผ่าน OpenRouter)");
     if(spend.g) t.push("ฟรีผ่าน Gemini " + spend.g + " คำขอ");
     $("spendInfo").textContent = t.length ? t.join(" · ") : "ยังไม่มีข้อมูลค่าใช้จ่ายเดือนนี้ (จะแสดงหลังทำบทครั้งถัดไป)";
   }
-  function addSpend(usd, free){ fresh(); if(free) spend.g++; else { spend.usd += usd; spend.n++; } save(COST, spend); renderSpend(); }
+  function addSpend(usd, free){ fresh(); if(free) spend.g++; else { spend.usd += usd; spend.n++; } save(COST, spend); renderSpend(); if(!free) usageSoon(); }
+  /* ดึงยอดจริงจาก OpenRouter (GET /api/v1/key) · ดึงไม่ได้ (เน็ต/CORS/key ผิด) = ใช้ยอดที่แอพนับเองแทน */
+  var usageT = 0;
+  async function refreshUsage(){
+    var key = load(OR_KEY, ""); if(!key){ orUse = null; renderSpend(); return; }
+    try{
+      var res = await fetch("https://openrouter.ai/api/v1/key", { headers:{ "Authorization": "Bearer " + key } });
+      var d = (await res.json()).data, num = function(x){ return typeof x === "number" ? x : null; };
+      orUse = res.ok && d && num(d.usage_daily) !== null && num(d.usage_weekly) !== null && num(d.usage_monthly) !== null ? { d:d.usage_daily, w:d.usage_weekly, m:d.usage_monthly } : null;
+    }catch(err){ orUse = null; }
+    renderSpend();
+  }
+  function usageSoon(){ clearTimeout(usageT); usageT = setTimeout(refreshUsage, 2500); } /* รอให้ OpenRouter อัปเดตยอดสักครู่ */
 
   function isGoogle(m){ return /^google\//.test(m || ""); }
   function short(m){ return String(m || "").replace(/^[^/]+\//, ""); }
@@ -182,5 +196,6 @@
   }
 
   MW.llm = { setOn: function(v){ on = !!v; }, test: testGemini, call: call, isGoogle: isGoogle, short: short, money: money, OR_KEY: OR_KEY, GM_KEY: GM_KEY };
-  renderSpend();
+  renderSpend(); refreshUsage();
+  document.addEventListener("mw:tab", function(e){ if(e.detail === "settings") refreshUsage(); });
 })();

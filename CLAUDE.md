@@ -17,7 +17,7 @@
 - `style.css` ธีมมืด (tokens อยู่ใน `:root`) · `sheet.css` ชีต/โมดัล/แถวพับ/toast/ตัวเลือกแบบชีต (`select[data-sheet]`)/การ์ด PART 1/แท็บเสียง
 - `sync.js` ชั้น YouTube Data API (`yt`, `syncChannel` ดึงย้อนหลัง/ดึงเฉพาะใหม่) — โหลดก่อน app.js ส่งออก `window.MWSync` ไม่แตะ DOM
 - `app.js` คลิป/ช่อง/แท็บ/ตั้งค่า YouTube/สำรองข้อมูล — ส่ง `window.MW` ให้ไฟล์อื่นใช้
-- `llm.js` ชั้นเรียก AI (`MW.llm.call`): Gemini API ตรง (ฟรี, `generateContent`) ใช้เฉพาะคำขอที่ผู้เรียกใส่ `opt.free` (งานเล็ก ข้อความล้วน เช่น แก้บท) + โมเดล Google + มี key + เปิดติ๊ก "ใช้ Gemini ฟรี (งานเล็ก)" (`cfg.gem`) · ดูวิดีโอ/เขียนบทหลักใช้ OpenRouter เสมอ (ทดสอบแล้ว Gemini ฟรีกับวิดีโอช้า/ล่มบ่อย) · โควตาเต็ม/key ผิด/ล่ม/ช้าเกิน 90 วิ → ถอยไป OpenRouter อัตโนมัติ · นับค่าใช้จ่าย `#spendInfo` — โหลดหลัง app.js ก่อน ai.js
+- `llm.js` ชั้นเรียก AI (`MW.llm.call`): Gemini API ตรง (ฟรี, `generateContent`) ใช้เฉพาะคำขอที่ผู้เรียกใส่ `opt.free` (งานเล็ก ข้อความล้วน เช่น แก้บท) + โมเดล Google + มี key + เปิดติ๊ก "ใช้ Gemini ฟรี (งานเล็ก)" (`cfg.gem`) · ดูวิดีโอ/เขียนบทหลักใช้ OpenRouter เสมอ (ทดสอบแล้ว Gemini ฟรีกับวิดีโอช้า/ล่มบ่อย) · โควตาเต็ม/key ผิด/ล่ม/ช้าเกิน 90 วิ → ถอยไป OpenRouter อัตโนมัติ · `#spendInfo` โชว์ยอดจริงจาก OpenRouter (`GET /api/v1/key`: วันนี้/สัปดาห์/เดือน UTC รวมทุกการใช้ key) ถ้าดึงไม่ได้ใช้ยอดที่แอพนับเอง (`mw_cost_v1`) — โหลดหลัง app.js ก่อน ai.js
 - `ai.js` ทำบท/ประวัติ/prompt (เรียก AI ผ่าน `callAI` → `MW.llm.call`) — โหลดหลัง llm.js
 - `tts.js` สร้างเสียงจากบทด้วย ElevenLabs (ฟัง/แชร์/ดาวน์โหลด) — โหลดหลัง ai.js อ่านบทจาก `#vText` และฟัง event `mw:script` · ชีตตั้งค่าเสียง `#vSheet`
 - `manifest.json`, `sw.js` PWA (sw เป็น passthrough ห้ามแคช API)
