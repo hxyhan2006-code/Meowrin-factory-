@@ -33,13 +33,14 @@
 
   /* ---------- เลือกไฟล์ → คิว ---------- */
   $("files").addEventListener("change", function(){
-    var typed = $("album").value.trim(), album = typed || "ไม่ระบุ", picked = Date.now();
+    var typed = $("album").value.trim(), album = typed || "ไม่ระบุ", picked = Date.now(), up = $("toCloud").checked && FT.cloud && FT.cloud.ready();
     var add = Array.prototype.map.call(this.files, function(f){
       var done = findClip(f), id = done ? done.id : FT.clipId(f), fin = done && done.status === "done";
       var old = fin && (done.imgV || 1) < FT.IMG_V && $("upImg").checked; /* รูปรุ่นเก่า (เล็ก/เบลอ) → วาดใหม่ฟรี */
       var relabel = fin && !!typed && done.album !== typed; /* เลือกคลิปเดิมซ้ำพร้อมพิมพ์อัลบั้มใหม่ → แก้ชื่ออัลบั้มให้ (ไม่เรียก AI) */
-      var mode = old ? "up" : relabel ? "label" : "";
-      return { file:f, id:id, album:album, mode:mode, status: fin && !mode ? "skip" : "wait", err:"", p:0,
+      var cloud = up && fin && !done.r2; /* ทำดัชนีแล้วแต่ยังไม่อยู่ในคลัง → อัปอย่างเดียว */
+      var mode = old ? "up" : relabel ? "label" : cloud ? "cloud" : "";
+      return { file:f, id:id, album:album, mode:mode, toCloud:up, status: fin && !mode ? "skip" : "wait", err:"", p:0,
                info:{ name:f.name, type:f.type, size:f.size, lastModified:f.lastModified, picked:picked } };
     });
     queue = queue.filter(function(q){ return q.status === "run"; }).concat(add.filter(function(a){ return !queue.some(function(q){ return q.id === a.id && q.status === "run"; }); }));
@@ -53,8 +54,8 @@
   function renderQueue(){
     if(!queue.length){ $("queue").innerHTML = '<li class="empty">ยังไม่ได้เลือกไฟล์</li>'; }
     else $("queue").innerHTML = queue.map(function(q){
-      var c = byId(q.id), tag = { wait:[q.mode === "up" ? "รออัปเกรดรูป" : q.mode === "label" ? "รอแก้อัลบั้ม" : "รอ",""], run:["กำลังทำ " + Math.round(q.p * 100) + "%","run"], done:["เสร็จ","ok"], error:["error","err"], skip:["ทำแล้ว (ข้าม)","ok"] }[q.status];
-      var sub = q.status === "run" ? esc((q.stage || "เริ่ม...") + " · " + mmss(Date.now() - q.t0)) : q.mode === "label" && q.status === "wait" ? "จะเปลี่ยนอัลบั้ม “" + esc(c.album) + "” → “" + esc(q.album) + "” (ไม่เรียก AI)" : q.mode === "up" && q.status === "wait" ? "รูปรุ่นเก่า (เบลอ) · จะวาดรูปใหม่ ไม่เรียก AI" + (q.album !== "ไม่ระบุ" && q.album !== c.album ? " + เปลี่ยนอัลบั้มเป็น “" + esc(q.album) + "”" : "") : c && c.status === "done" ? c.scenes.length + " ฉาก · " + money(c.cost || 0) + " · " + ((c.ms || 0) / 1000).toFixed(0) + " วิ · " + capDur(c.duration) : esc(q.album || "ไม่ระบุอัลบั้ม");
+      var c = byId(q.id), tag = { wait:[q.mode === "up" ? "รออัปเกรดรูป" : q.mode === "label" ? "รอแก้อัลบั้ม" : q.mode === "cloud" ? "รออัปขึ้นคลัง" : q.key ? "รอ (จากคลัง)" : "รอ",""], run:["กำลังทำ " + Math.round(q.p * 100) + "%","run"], done:["เสร็จ","ok"], error:["error","err"], skip:["ทำแล้ว (ข้าม)","ok"] }[q.status];
+      var sub = q.status === "run" ? esc((q.stage || "เริ่ม...") + " · " + mmss(Date.now() - q.t0)) : q.mode === "cloud" && q.status === "wait" ? "ทำดัชนีแล้ว · จะอัปไฟล์ขึ้นคลัง (ไม่เรียก AI)" : q.mode === "label" && q.status === "wait" ? "จะเปลี่ยนอัลบั้ม “" + esc(c.album) + "” → “" + esc(q.album) + "” (ไม่เรียก AI)" : q.mode === "up" && q.status === "wait" ? "รูปรุ่นเก่า (เบลอ) · จะวาดรูปใหม่ ไม่เรียก AI" + (q.album !== "ไม่ระบุ" && q.album !== c.album ? " + เปลี่ยนอัลบั้มเป็น “" + esc(q.album) + "”" : "") : c && c.status === "done" ? c.scenes.length + " ฉาก · " + money(c.cost || 0) + " · " + ((c.ms || 0) / 1000).toFixed(0) + " วิ · " + capDur(c.duration) : esc(q.album || "ไม่ระบุอัลบั้ม");
       return '<li><img ' + (c && c.cover ? 'src="' + c.cover + '" ' : "") + 'alt=""><div class="t"><b>' + esc(q.info.name) + "</b><span>" + sub + "</span>"
         + (q.err ? '<br><span style="color:var(--err)">' + esc(q.err) + "</span>" : "") + '</div><span class="tag ' + tag[1] + '">' + tag[0] + "</span></li>";
     }).join("");
@@ -119,6 +120,12 @@
     }catch(err){ if(document.hidden){ q.status = "wait"; q.p = 0; } else { q.status = "error"; q.err = err.message || String(err); } }
     renderAll();
   }
+  async function cloudClip(q){
+    var c = byId(q.id); q.status = "run"; q.p = 0; q.err = ""; q.t0 = Date.now(); q.stage = "อัปขึ้นคลัง..."; renderQueue();
+    try{ await FT.cloud.upload(c, q.file, function(p){ q.p = p; q.stage = "อัปขึ้นคลัง " + Math.round(p * 100) + "%"; renderQueue(); }); q.status = "done"; q.p = 1; q.mode = ""; }
+    catch(err){ if(document.hidden){ q.status = "wait"; q.p = 0; } else { q.status = "error"; q.err = err.message || String(err); } }
+    renderAll();
+  }
   async function labelClip(q){
     var c = byId(q.id); c.album = q.album; q.status = "run"; renderQueue();
     try{ await FT.store.put(c); q.status = "done"; q.p = 1; q.mode = ""; }catch(err){ q.status = "error"; q.err = err.message || String(err); }
@@ -127,9 +134,14 @@
   async function processClip(q){
     if(q.mode === "label") return labelClip(q);
     if(q.mode === "up") return upgradeClip(q);
+    if(q.mode === "cloud") return cloudClip(q);
     var t0 = Date.now(), cost = 0, tin = 0, tout = 0, raw = [];
     q.status = "run"; q.p = 0; q.err = ""; q.t0 = t0; renderQueue();
     try{
+      if(!q.file && q.key){ /* คลิปจากคลัง → โหลดทั้งไฟล์มาก่อน (อ่านเฟรมจากในเครื่องเร็วกว่ากรอผ่านเน็ตมาก) */
+        q.stage = "โหลดจากคลัง...";
+        q.file = await FT.cloud.fetch(q, function(p){ q.stage = "โหลดจากคลัง " + Math.round(p * 100) + "%"; renderQueue(); });
+      }
       q.stage = "กำลังเปิดวิดีโอ...";
       var m = await FT.scan($("vid"), q.file, function(p){ q.p = p * 0.5; q.stage = p < 0.7 ? "อ่านเฟรมหาจุดตัดฉาก..." : "จับภาพตัวแทนแต่ละฉาก..."; renderQueue(); });
       var msScan = Date.now() - t0; /* เวลาอ่านเฟรม+ตัดฉาก (ยังไม่นับ AI) */
@@ -157,8 +169,14 @@
         duration:m.duration, w:m.w, h:m.h, cover:m.cover, summary_th: sums.filter(Boolean).join(" / "),
         scenes: m.scenes.map(function(sc){ return { s:sc.s, e:sc.e, thumb:sc.thumb, img:sc.img, ai:sc.ai || null }; }),
         raw:raw, cost:cost, tokens:{ in:tin, out:tout }, ms:Date.now() - t0, imgV:FT.IMG_V, msScan:msScan, msAI:Date.now() - t0 - msScan, model:cfg.model, at:Date.now(), status:"done" };
+      if(q.key) rec.r2 = q.key;
       await FT.store.put(rec);
       lib = lib.filter(function(c){ return c.id !== rec.id; }).concat([rec]);
+      if(q.toCloud && !rec.r2){ /* ติ๊กอัปขึ้นคลัง: อัปต่อเลย (อัปไม่ผ่านไม่ถือว่าดัชนีพัง) */
+        try{ q.stage = "อัปขึ้นคลัง..."; renderQueue(); await FT.cloud.upload(rec, q.file, function(p){ q.stage = "อัปขึ้นคลัง " + Math.round(p * 100) + "%"; renderQueue(); }); }
+        catch(err){ q.err = "ทำดัชนีเสร็จ แต่อัปขึ้นคลังไม่ได้: " + (err.message || err); }
+      }
+      if(q.key) q.file = null; /* ไฟล์ที่โหลดจากคลังกินแรม ปล่อยทิ้ง */
       q.status = "done"; q.p = 1;
     }catch(err){
       q.raw = raw;
@@ -321,17 +339,26 @@
   var pf = {}, bySize = {}, bigCur = null; /* pf = ไฟล์ที่เปิดไว้ในรอบนี้ (ชื่อ|ขนาด → File) หายเมื่อปิดหน้า · bySize = สำรองจับด้วยขนาดอย่างเดียว (แอพไฟล์กับแกลเลอรีอาจตั้งชื่อไม่ตรงกัน) false = ขนาดชนกัน · bigCur = ฉากที่เปิดอยู่ */
   function pfKey(name, size){ return name + "|" + size; }
   function fileOf(c){ return c && (pf[pfKey(c.name, c.size)] || bySize[c.size]) || null; }
+  function hasSrc(c){ return !!fileOf(c) || !!(c && c.r2 && FT.cloud && FT.cloud.ready()); } /* ไฟล์ที่เปิดไว้ในเครื่อง หรืออยู่ในคลัง */
+  async function srcUrl(c){ /* { url, done() } · ในเครื่องก่อน (เร็ว ไม่เปลืองเน็ต) ไม่มีค่อยสตรีมจากคลัง */
+    var f = fileOf(c); if(f){ var u = URL.createObjectURL(f); return { url:u, cloud:false, done:function(){ URL.revokeObjectURL(u); } }; }
+    if(c && c.r2 && FT.cloud && FT.cloud.ready()) return { url:await R2.url(c.r2), cloud:true, done:function(){} };
+    return null;
+  }
   function openBig(c, sc, src, text){
     bigCur = { c:c, sc:sc }; stopPlay();
     $("bigImg").src = src; $("bigTxt").textContent = text; $("playMsg").textContent = ""; $("big").hidden = false; renderPlayBtn();
   }
-  function renderPlayBtn(){ var has = bigCur && fileOf(bigCur.c); $("playBtn").textContent = has ? "▶ ดูฉากนี้" : "▶ ดูฉากนี้ (เลือกไฟล์)"; $("loopSc").parentNode.hidden = !(bigCur && bigCur.sc); }
-  function stopPlay(){ var v = $("bigVid"); v.pause(); if(v.src){ URL.revokeObjectURL(v.src); v.removeAttribute("src"); v.load(); } v.hidden = true; $("bigImg").hidden = false; v.ontimeupdate = v.onloadedmetadata = null; }
-  function playScene(){
-    var f = bigCur && fileOf(bigCur.c);
-    if(!f){ $("playFiles").click(); return; } /* ยังไม่มีไฟล์นี้ → ให้เลือกไฟล์ (เลือกหลายไฟล์พร้อมกันได้) */
-    var v = $("bigVid"), s = bigCur.sc ? bigCur.sc.s : 0, e = bigCur.sc ? bigCur.sc.e : Infinity;
-    stopPlay(); v.src = URL.createObjectURL(f); v.hidden = false; $("bigImg").hidden = true; $("playMsg").textContent = "";
+  function renderPlayBtn(){ var has = bigCur && hasSrc(bigCur.c); $("playBtn").textContent = has ? "▶ ดูฉากนี้" : "▶ ดูฉากนี้ (เลือกไฟล์)"; $("loopSc").parentNode.hidden = !(bigCur && bigCur.sc); }
+  var playDone = null;
+  function stopPlay(){ var v = $("bigVid"); v.pause(); if(playDone){ playDone(); playDone = null; } if(v.src){ v.removeAttribute("src"); v.load(); } v.hidden = true; $("bigImg").hidden = false; v.ontimeupdate = v.onloadedmetadata = null; }
+  async function playScene(){
+    if(!bigCur || !hasSrc(bigCur.c)){ $("playFiles").click(); return; } /* ไม่มีในเครื่องและไม่อยู่ในคลัง → ให้เลือกไฟล์ (ต้องเรียกตอนแตะ ก่อน await) */
+    var cur = bigCur, v = $("bigVid"), s = cur.sc ? cur.sc.s : 0, e = cur.sc ? cur.sc.e : Infinity;
+    stopPlay(); $("playMsg").textContent = "กำลังเปิด...";
+    var src; try{ src = await srcUrl(cur.c); }catch(err){ $("playMsg").textContent = err.message; return; }
+    if(bigCur !== cur){ src.done(); return; } /* ปิด/เปลี่ยนฉากไประหว่างรอ */
+    playDone = src.done; v.src = src.url; v.hidden = false; $("bigImg").hidden = true; $("playMsg").textContent = src.cloud ? "เล่นจากคลัง" : "";
     v.onloadedmetadata = function(){ v.currentTime = Math.min(s, Math.max(0, v.duration - 0.1)); v.play().catch(function(){ $("playMsg").textContent = "กดปุ่มเล่นที่ตัวเล่นเพื่อเริ่ม"; }); };
     v.ontimeupdate = function(){ if(v.currentTime >= e - 0.05){ if($("loopSc").checked && bigCur.sc) v.currentTime = s; else v.pause(); } }; /* ฉากนี้เท่านั้น ไม่เล่นเลยไปฉากอื่น */
     v.onerror = function(){ $("playMsg").textContent = "เบราว์เซอร์เล่นไฟล์นี้ไม่ได้ (รูปแบบไฟล์ไม่รองรับ?)"; };
@@ -489,7 +516,9 @@
   });
   /* ให้ footage-plan.js ใช้ร่วม (ค้น/การ์ด/ไฟล์ที่เปิดไว้) */
   FT.ui = { lib:function(){ return lib; }, terms:terms, hay:hay, card:card, esc:esc, msg:msg, money:money, tm:tm, capDur:capDur,
-            fileFor:fileOf, openFiles:function(docs){ $(docs ? "pickDocs" : "playFiles").click(); },
+            fileFor:fileOf, hasSrc:hasSrc, srcUrl:srcUrl, refresh:refreshLib,
+            addQueue:function(items){ queue = queue.filter(function(q){ return q.status !== "skip"; }).concat(items.filter(function(a){ return !queue.some(function(q){ return q.id === a.id; }); })); renderQueue(); },
+            openFiles:function(docs){ $(docs ? "pickDocs" : "playFiles").click(); },
             addCost:function(x){ runCost += x; renderStats(); }, wake:wake };
   function renderAll(){ renderQueue(); renderStats(); renderDb(); renderAlbums(); renderDebug(); if($("p-find").classList.contains("on")) search(); }
 

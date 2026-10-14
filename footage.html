@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600&family=Mitr:wght@500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="footage.css?v=20261015a">
+<link rel="stylesheet" href="footage.css?v=20261015b">
 </head>
 <body>
 <header>
@@ -27,6 +27,7 @@
       <label for="files">ไฟล์วิดีโอ (เลือกได้หลายไฟล์)</label>
       <input id="files" type="file" accept="video/*" multiple>
       <p class="hint">เลือกทีละอัลบั้ม แล้วพิมพ์ชื่ออัลบั้มนั้น (ไม่ใช่คำอธิบายฉาก AI ดูเนื้อหาเองอยู่แล้ว) · เลือกคลิปที่เคยทำไว้ซ้ำพร้อมพิมพ์ชื่อใหม่ = แก้ชื่ออัลบั้มให้ ไม่เสียค่า AI · วิดีโอไม่ถูกอัปโหลด</p>
+      <label class="chk" id="toCloudRow" hidden><input type="checkbox" id="toCloud" checked> อัปไฟล์ขึ้นคลังด้วย (ต่อไปไม่ต้องเลือกไฟล์อีก · เลือกคลิปที่ทำดัชนีแล้วซ้ำ = อัปอย่างเดียว ไม่เรียก AI)</label>
       <label class="chk"><input type="checkbox" id="upImg" checked> อัปเกรดรูปคลิปที่เคยทำไว้ให้คมขึ้น (เลือกไฟล์เดิมซ้ำ · ไม่เรียก AI ไม่เสียค่า)</label>
       <div class="row" style="margin-top:12px">
         <button class="btn" id="startBtn" disabled>เริ่มทำดัชนี</button>
@@ -37,6 +38,17 @@
       <div class="prog"><i id="progBar"></i></div>
       <p class="hint" id="progTxt"></p>
       <p class="hint">⚠ เปิดหน้านี้ค้างไว้ระหว่างทำ ถ้าสลับแอพ เบราว์เซอร์จะหยุดอ่านวิดีโอ (กลับมาแล้วกด เริ่ม/ทำต่อ ได้)</p>
+    </div>
+    <div class="panel">
+      <h2>คลังบนคลาวด์</h2>
+      <p class="hint" id="cloudOff" style="margin-top:0">ยังไม่ได้ตั้งค่าคลัง (แท็บ ตั้งค่า → คลังวิดีโอ) · ตั้งแล้วฟุตเทจทั้งหมดอยู่บนคลาวด์ ไม่ต้องเลือกไฟล์ทุกครั้ง</p>
+      <div id="cloudBox" hidden>
+        <p class="hint" id="cloudInfo" style="margin-top:0"></p>
+        <ul class="albums" id="cloudAlbums"></ul>
+        <button class="btn ghost" id="cloudList" style="width:100%;margin-top:10px">ดูไฟล์ในคลัง</button>
+        <button class="btn" id="cloudQueue" hidden style="width:100%;margin-top:8px"></button>
+        <div id="cloudMsg"></div>
+      </div>
     </div>
     <div class="panel">
       <h2>ต้นทุนและเวลา</h2>
@@ -113,6 +125,26 @@
       <input id="par" type="number" min="1" max="4" step="1">
     </div>
     <div class="panel">
+      <h2>คลังวิดีโอ (Cloudflare R2)</h2>
+      <p class="hint" style="margin-top:0">เก็บฟุตเทจไว้บนคลาวด์ เล่น/ต่อฉาก/ทำดัชนีจากคลังได้เลย · โฟลเดอร์ในคลัง = อัลบั้ม · คีย์เก็บในเครื่องนี้เท่านั้น ไม่ขึ้น Drive</p>
+      <label for="r2Account">Account ID</label>
+      <input id="r2Account" type="text" autocomplete="off" placeholder="ตัวเลข+ตัวอักษร 32 ตัว">
+      <label for="r2Bucket">ชื่อ bucket</label>
+      <input id="r2Bucket" type="text" autocomplete="off" placeholder="เช่น meowrin-footage">
+      <label for="r2KeyId">Access Key ID</label>
+      <input id="r2KeyId" type="text" autocomplete="off">
+      <label for="r2Secret">Secret Access Key</label>
+      <input id="r2Secret" type="password" autocomplete="off">
+      <details class="dbg"><summary>ขั้นสูง (ที่เก็บแบบ S3 อื่น)</summary>
+        <label for="r2Endpoint">Endpoint (ว่าง = R2)</label>
+        <input id="r2Endpoint" type="text" autocomplete="off" placeholder="https://s3.us-west-004.backblazeb2.com">
+        <label for="r2Region">Region (ว่าง = auto)</label>
+        <input id="r2Region" type="text" autocomplete="off">
+      </details>
+      <button class="btn" id="r2Save" style="width:100%;margin-top:12px">บันทึกและทดสอบ</button>
+      <div id="r2Msg"></div>
+    </div>
+    <div class="panel">
       <h2>ตัดฉาก</h2>
       <label for="thr">ความไวจุดตัดฉาก: <b id="thrVal"></b> (น้อย = ตัดถี่)</label>
       <input id="thr" type="range" min="0.04" max="0.5" step="0.01">
@@ -180,6 +212,6 @@
 <input id="pickDocs" type="file" multiple hidden><!-- ไม่ใส่ accept → Android เปิดแอพไฟล์ (เข้าโฟลเดอร์ + เลือกทั้งหมดได้) แทนตัวเลือกรูป -->
 <video id="vid" muted playsinline preload="auto" style="position:fixed;left:-9999px;width:2px;height:2px"></video>
 
-<script src="store.js?v=20261015a" data-boot="footage-core.js?v=20261015a footage.js?v=20261015a mp4fix.js?v=20261015a footage-plan.js?v=20261015a gdrive.js?v=20261015a"></script>
+<script src="store.js?v=20261015b" data-boot="footage-core.js?v=20261015b r2.js?v=20261015b footage.js?v=20261015b footage-cloud.js?v=20261015b mp4fix.js?v=20261015b footage-plan.js?v=20261015b gdrive.js?v=20261015b"></script>
 </body>
 </html>

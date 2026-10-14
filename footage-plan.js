@@ -128,16 +128,17 @@
     return window.MediaRecorder ? c.find(function(m){ return MediaRecorder.isTypeSupported(m); }) || "" : null;
   }
   function once(el, ev){ return new Promise(function(ok, no){ el.addEventListener(ev, ok, { once:true }); el.addEventListener("error", function(){ no(new Error("เปิดไฟล์วิดีโอไม่ได้")); }, { once:true }); }); }
-  async function openVid(file){
-    var v = document.createElement("video"); v.playsInline = true; v.preload = "auto";
+  async function openVid(c){ /* ไฟล์ในเครื่อง หรือสตรีมจากคลัง (crossOrigin ให้วาดลง canvas/อัดเสียงได้ — คลังต้องตั้ง CORS) */
+    var src = await U.srcUrl(c); if(!src) throw new Error("ไม่มีไฟล์ " + c.name);
+    var v = document.createElement("video"); v.playsInline = true; v.preload = "auto"; v.crossOrigin = "anonymous"; v._done = src.done;
     v.style.cssText = "position:fixed;left:-9999px;width:2px;height:2px"; document.body.appendChild(v);
-    v.src = URL.createObjectURL(file); await once(v, "loadedmetadata"); return v;
+    v.src = src.url; await once(v, "loadedmetadata"); return v;
   }
-  function closeVid(v){ v.pause(); URL.revokeObjectURL(v.src); v.removeAttribute("src"); v.load(); v.remove(); }
+  function closeVid(v){ v.pause(); if(v._done) v._done(); v.removeAttribute("src"); v.load(); v.remove(); }
   async function record(list, mime, ac, onStep){
     var secs = list.reduce(function(t, x){ return t + (x.sc.e - x.sc.s); }, 0);
     var rate = Math.max(MIN_RATE, Math.min(MAX_RATE, MAX_BYTES * 8 / Math.max(secs, 1) * 0.85)); /* ให้ไฟล์รวมไม่เกินเพดานแชร์ */
-    var first = await openVid(U.fileFor(list[0].c)), W = first.videoWidth || 1080, H = first.videoHeight || 1080; closeVid(first);
+    var first = await openVid(list[0].c), W = first.videoWidth || 1080, H = first.videoHeight || 1080; closeVid(first);
     var cv = document.createElement("canvas"); cv.width = W; cv.height = H; var g = cv.getContext("2d");
     var dest = ac.createMediaStreamDestination();
     var stream = new MediaStream(cv.captureStream(30).getVideoTracks().concat(dest.stream.getAudioTracks()));
@@ -146,7 +147,7 @@
     var stopped = new Promise(function(ok){ rec.onstop = ok; });
     try{
       for(var i = 0; i < list.length; i++){
-        var x = list[i], v = await openVid(U.fileFor(x.c)), src = null;
+        var x = list[i], v = await openVid(x.c), src = null;
         try{
           var s = x.sc.s, e = Math.min(x.sc.e, v.duration);
           v.currentTime = s; await once(v, "seeked");
@@ -180,7 +181,7 @@
       + cuts.marks.map(function(m){ return "<li><b>" + m.at.toFixed(1) + " วิ</b> · บรรทัด " + m.lines.join(",") + " · " + U.esc(m.c.album) + " " + U.tm(m.sc.s) + " (" + m.len.toFixed(1) + " วิ)</li>"; }).join("") + "</ol>";
   }
   function renderShare(){
-    var list = picked(), miss = list.filter(function(x){ return !U.fileFor(x.c); }), alb = {};
+    var list = picked(), miss = list.filter(function(x){ return !U.hasSrc(x.c); }), alb = {};
     miss.forEach(function(x){ alb[x.c.album] = (alb[x.c.album] || 0) + 1; });
     var done = cuts && cuts.sig === sig(list);
     $("plShare").textContent = done ? "✂ ทำใหม่อีกรอบ" : "✂ ต่อ " + list.length + " ฉากเป็นวิดีโอเดียว";
@@ -196,7 +197,7 @@
   var lastPick = "";
   FT.onFiles = function(n){
     if(!plan) return;
-    var list = picked(), got = list.filter(function(x){ return U.fileFor(x.c); }).length;
+    var list = picked(), got = list.filter(function(x){ return U.hasSrc(x.c); }).length;
     lastPick = "เลือกมา " + n + " ไฟล์ → ตรงกับแผน " + got + "/" + list.length + " ฉาก" + (got < list.length ? " · เปิดอัลบั้มที่เหลือต่อได้เลย (ของเดิมไม่หาย)" : "");
     renderShare();
   };

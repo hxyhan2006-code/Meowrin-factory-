@@ -91,6 +91,7 @@ textarea{width:100%;border-radius:var(--rc);border:1px solid var(--line-strong);
 .plvid{width:100%;max-height:50vh;border-radius:10px;background:#000;margin-top:12px}
 .marks{margin:6px 0 0;padding-left:22px;font-size:13px;color:var(--muted)}.marks b{color:var(--text)}
 .pl .none{color:var(--muted);font-size:13px;padding:8px 0}
+.albums{list-style:none;margin:8px 0 0;padding:0;font-size:13px;color:var(--muted)}.albums li{padding:6px 0;border-top:1px solid var(--line)}.albums b{color:var(--text)}
 /* debug */
 details.dbg{margin-top:10px;border:1px solid var(--line);border-radius:var(--rc);padding:8px 10px;background:var(--field)}
 details.dbg summary{cursor:pointer;font-size:13px;color:var(--muted)}
