@@ -489,7 +489,7 @@
   /* ให้ footage-plan.js ใช้ร่วม (ค้น/การ์ด/ไฟล์ที่เปิดไว้) */
   FT.ui = { lib:function(){ return lib; }, terms:terms, hay:hay, card:card, esc:esc, msg:msg, money:money, tm:tm, capDur:capDur,
             fileFor:fileOf, openFiles:function(docs){ $(docs ? "pickDocs" : "playFiles").click(); },
-            addCost:function(x){ runCost += x; renderStats(); } };
+            addCost:function(x){ runCost += x; renderStats(); }, wake:wake };
   function renderAll(){ renderQueue(); renderStats(); renderDb(); renderAlbums(); renderDebug(); if($("p-find").classList.contains("on")) search(); }
 
   refreshLib().then(function(){ /* เปิดหน้าครั้งไหน ถ้ามีรายการซ้ำเก่าค้าง รวมให้เองเลย (ลบแค่รายการดัชนีที่ซ้ำ ไม่แตะไฟล์วิดีโอ) */

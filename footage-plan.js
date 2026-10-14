@@ -106,39 +106,113 @@
   });
 
   /* ---------- แชร์ไป CapCut / คัดลอกรายการ ---------- */
-  function picked(){ /* คลิปที่ใช้ เรียงตามบท ตัดตัวที่ซ้ำติดกัน (บรรทัดติดกันใช้คลิปเดียวกัน = ไฟล์เดียว) */
+  /* ฉากที่ใช้ เรียงตามบท (บรรทัดติดกันใช้ฉากเดียวกัน = ไฟล์เดียว) */
+  function picked(){
     var out = [];
     plan.rows.forEach(function(r, k){ var ch = r.use && chosen(r); if(!ch) return;
       var last = out[out.length - 1];
-      if(last && last.c.id === ch.c.id) last.lines.push(k + 1); else out.push({ c:ch.c, sc:ch.c.scenes[ch.pk.si], lines:[k + 1] });
+      if(last && last.c.id === ch.c.id && last.si === ch.pk.si) last.lines.push(k + 1); else out.push({ c:ch.c, si:ch.pk.si, sc:ch.c.scenes[ch.pk.si], lines:[k + 1] });
     });
     return out;
   }
-  var lastPick = "";
+  function sig(list){ return list.map(function(x){ return x.c.id + "#" + x.si; }).join(","); }
+
+  /* ---------- ตัดฉากเป็นไฟล์สั้นในเครื่อง ----------
+     Brave/Chrome Android แชร์ได้ครั้งละ ≤10 ไฟล์ รวม ≤50 MB → คลิปเต็มส่งไม่ได้
+     เลยเล่นเฉพาะช่วงฉากแล้วอัดด้วย MediaRecorder (เวลาจริง ต้องเปิดหน้าค้างไว้) แล้วแบ่งแชร์เป็นชุด */
+  var MAX_FILES = 10, MAX_BYTES = 45 * 1024 * 1024, BITRATE = 8e6;
+  var cuts = null, cutting = false; /* cuts = { sig, files:[File] } หายเมื่อปิดหน้า */
+  function recMime(){
+    var c = ["video/mp4;codecs=avc1.640028,mp4a.40.2", "video/mp4;codecs=avc1,mp4a.40.2", "video/mp4;codecs=avc1", "video/mp4", "video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm"];
+    return window.MediaRecorder ? c.find(function(m){ return MediaRecorder.isTypeSupported(m); }) || "" : null;
+  }
+  function once(el, ev){ return new Promise(function(ok, no){ el.addEventListener(ev, ok, { once:true }); el.addEventListener("error", function(){ no(new Error("เปิดไฟล์วิดีโอไม่ได้")); }, { once:true }); }); }
+  async function cutOne(file, s, e, mime){
+    var v = document.createElement("video"), url = URL.createObjectURL(file);
+    v.muted = true; v.playsInline = true; v.preload = "auto";
+    v.style.cssText = "position:fixed;left:-9999px;width:2px;height:2px"; document.body.appendChild(v);
+    try{
+      v.src = url; await once(v, "loadedmetadata");
+      e = Math.min(e, v.duration); v.currentTime = s; await once(v, "seeked");
+      var stream = v.captureStream ? v.captureStream() : v.mozCaptureStream();
+      var rec = new MediaRecorder(stream, { mimeType:mime, videoBitsPerSecond:BITRATE }), parts = [];
+      rec.ondataavailable = function(ev){ if(ev.data && ev.data.size) parts.push(ev.data); };
+      var stopped = new Promise(function(ok){ rec.onstop = ok; });
+      await v.play(); rec.start();
+      await new Promise(function(ok){ /* หยุดตรงท้ายฉาก (requestVideoFrameCallback แม่นกว่า timeupdate) */
+        function chk(){ if(v.currentTime >= e - 0.03 || v.ended){ ok(); return true; } }
+        if(v.requestVideoFrameCallback){ (function f(){ if(!chk()) v.requestVideoFrameCallback(f); })(); }
+        else v.ontimeupdate = chk;
+        v.onended = ok;
+      });
+      rec.stop(); v.pause(); await stopped;
+      stream.getTracks().forEach(function(t){ t.stop(); });
+      return new Blob(parts, { type:mime.split(";")[0] });
+    }finally{ v.pause(); v.removeAttribute("src"); v.load(); v.remove(); URL.revokeObjectURL(url); }
+  }
+  function batches(files){ /* แบ่งชุดตามเพดานแชร์ ลำดับเดิม */
+    var out = [], cur = [], bytes = 0;
+    files.forEach(function(f){ if(cur.length && (cur.length >= MAX_FILES || bytes + f.size > MAX_BYTES)){ out.push(cur); cur = []; bytes = 0; } cur.push(f); bytes += f.size; });
+    if(cur.length) out.push(cur); return out;
+  }
+  function renderBatches(){
+    var list = picked(), ok = cuts && cuts.sig === sig(list);
+    if(!ok){ $("plBatches").innerHTML = ""; return; }
+    var n = 0;
+    $("plBatches").innerHTML = batches(cuts.files).map(function(b, i){
+      var from = n + 1; n += b.length; var mb = b.reduce(function(t, f){ return t + f.size; }, 0) / 1048576;
+      return '<button class="btn" data-batch="' + i + '" style="width:100%;margin-top:10px">แชร์ชุด ' + (i + 1) + " · ฉาก " + from + "–" + n + " (" + mb.toFixed(1) + " MB)</button>";
+    }).join("") + '<p class="hint">แชร์ทีละชุดตามลำดับ ใน CapCut เลือกวิดีโอเรียงตามที่ส่งมา · ไฟล์ตั้งชื่อนำหน้าเลขบรรทัด</p>';
+  }
   function renderShare(){
     var list = picked(), miss = list.filter(function(x){ return !U.fileFor(x.c); }), alb = {};
     miss.forEach(function(x){ alb[x.c.album] = (alb[x.c.album] || 0) + 1; });
-    $("plShare").textContent = "แชร์ " + list.length + " คลิปไป CapCut";
-    $("plShare").disabled = !list.length || miss.length > 0;
+    var done = cuts && cuts.sig === sig(list);
+    $("plShare").textContent = done ? "✂ ตัดใหม่อีกรอบ" : "✂ ตัด " + list.length + " ฉากไว้แชร์";
+    $("plShare").disabled = cutting || !list.length || miss.length > 0;
     $("plNeed").hidden = !miss.length;
-    $("plNeedTxt").innerHTML = "ยังไม่ได้เปิดไฟล์ " + miss.length + "/" + list.length + " คลิป จากอัลบั้ม: <b>" + Object.keys(alb).map(function(a){ return U.esc(a) + " (" + alb[a] + ")"; }).join(", ") + "</b>"
+    $("plNeedTxt").innerHTML = "ยังไม่ได้เปิดไฟล์ " + miss.length + "/" + list.length + " ฉาก จากอัลบั้ม: <b>" + Object.keys(alb).map(function(a){ return U.esc(a) + " (" + alb[a] + ")"; }).join(", ") + "</b>"
       + "<br>วิธีเร็ว: กดปุ่มด้านล่าง → เข้าโฟลเดอร์ชื่ออัลบั้ม (มักอยู่ใน Movies หรือ DCIM) → กดค้างคลิปแรก → ⋮ → เลือกทั้งหมด → เลือก · แอพคัดเอาเฉพาะคลิปที่ใช้ให้เอง ทำทีละอัลบั้มได้";
-    U.msg("plShareMsg", !list.length ? "" : miss.length ? lastPick
-      : "พร้อมแชร์ " + list.length + " ไฟล์ เรียงตามบท (ตัดช่วงฉากเองใน CapCut ตามเวลาที่บอกในรายการ)", miss.length ? "" : "ok");
+    if(!cutting) U.msg("plShareMsg", !list.length ? "" : miss.length ? lastPick
+      : done ? "ตัดไว้แล้ว " + cuts.files.length + " ฉาก เรียงตามบท กดแชร์ทีละชุดด้านล่าง"
+      : "ไฟล์ครบแล้ว กด ✂ ตัดฉาก แอพจะเล่นเฉพาะช่วงฉากแล้วอัดเป็นไฟล์สั้น (ใช้เวลาเท่าความยาวฉากรวม ≈ " + Math.round(list.reduce(function(t, x){ return t + (x.sc.e - x.sc.s); }, 0)) + " วิ · เปิดหน้าค้างไว้)", done && !miss.length ? "ok" : "");
+    renderBatches();
   }
+  var lastPick = "";
   FT.onFiles = function(n){
     if(!plan) return;
     var list = picked(), got = list.filter(function(x){ return U.fileFor(x.c); }).length;
-    lastPick = "เลือกมา " + n + " ไฟล์ → ตรงกับแผน " + got + "/" + list.length + " คลิป" + (got < list.length ? " · เปิดอัลบั้มที่เหลือต่อได้เลย (ของเดิมไม่หาย)" : "");
+    lastPick = "เลือกมา " + n + " ไฟล์ → ตรงกับแผน " + got + "/" + list.length + " ฉาก" + (got < list.length ? " · เปิดอัลบั้มที่เหลือต่อได้เลย (ของเดิมไม่หาย)" : "");
     renderShare();
   };
   $("plDocs").addEventListener("click", function(){ U.openFiles(true); });
   $("plGal").addEventListener("click", function(){ U.openFiles(false); });
   $("plShare").addEventListener("click", async function(){
-    var list = picked();
-    var files = list.map(function(x){ return U.fileFor(x.c); });
-    if(!navigator.canShare || !navigator.canShare({ files:files })){ U.msg("plShareMsg", "เบราว์เซอร์นี้แชร์หลายไฟล์ไม่ได้ ใช้ปุ่ม คัดลอกรายการ แล้วหยิบคลิปใน CapCut เอง", "err"); return; }
-    try{ await navigator.share({ files:files, title:"ฟุตเทจตามบท" }); }
+    var list = picked(), mime = recMime();
+    if(mime === null || !mime){ U.msg("plShareMsg", "เบราว์เซอร์นี้อัดวิดีโอไม่ได้ (ไม่มี MediaRecorder) ใช้ปุ่ม คัดลอกรายการ แทน", "err"); return; }
+    cutting = true; renderShare(); $("plProg").hidden = false; $("plBar").style.width = "0"; await U.wake(true);
+    var files = [], ext = mime.indexOf("mp4") >= 0 ? "mp4" : "webm", total = 0;
+    try{
+      for(var i = 0; i < list.length; i++){
+        var x = list[i];
+        U.msg("plShareMsg", "กำลังตัดฉาก " + (i + 1) + "/" + list.length + " (" + x.c.album + " " + U.tm(x.sc.s) + "–" + U.tm(x.sc.e) + ") · อย่าสลับแอพ");
+        var blob = await cutOne(U.fileFor(x.c), x.sc.s, x.sc.e, mime);
+        if(!blob.size) throw new Error("ฉาก " + (i + 1) + " อัดได้ไฟล์ว่าง");
+        total += blob.size;
+        files.push(new File([blob], String(x.lines[0]).padStart(2, "0") + "_" + x.c.album.replace(/[^\w\u0E00-\u0E7F-]+/g, "") + "_" + U.tm(x.sc.s).replace(":", "m") + "." + ext, { type:blob.type, lastModified:Date.now() + i }));
+        $("plBar").style.width = ((i + 1) / list.length * 100) + "%";
+      }
+      cuts = { sig:sig(list), files:files };
+      cutting = false; renderShare();
+      U.msg("plShareMsg", "ตัดเสร็จ " + files.length + " ฉาก รวม " + (total / 1048576).toFixed(1) + " MB (" + mime + ")" + (mime.indexOf("avc1") < 0 ? " · ไม่ใช่ H.264 ถ้า CapCut ไม่รับ บอกได้เลย" : "") + " · กดแชร์ทีละชุดด้านล่าง", "ok");
+    }catch(err){ cutting = false; renderShare(); U.msg("plShareMsg", "ตัดฉากไม่ได้: " + err.message + (document.hidden ? " (สลับแอพระหว่างตัด?)" : ""), "err"); }
+    $("plProg").hidden = true; await U.wake(false);
+  });
+  $("plBatches").addEventListener("click", async function(e){
+    var b = e.target.closest("[data-batch]"); if(!b || !cuts) return;
+    var files = batches(cuts.files)[+b.dataset.batch];
+    if(!navigator.canShare || !navigator.canShare({ files:files })){ U.msg("plShareMsg", "เบราว์เซอร์นี้แชร์ไฟล์ชุดนี้ไม่ได้ ใช้ปุ่ม คัดลอกรายการ แล้วหยิบคลิปใน CapCut เอง", "err"); return; }
+    try{ await navigator.share({ files:files, title:"ฟุตเทจตามบท" }); b.textContent = "✓ " + b.textContent.replace(/^✓ /, ""); }
     catch(err){ if(err && err.name !== "AbortError") U.msg("plShareMsg", "แชร์ไม่ได้: " + err.message, "err"); }
   });
   $("plCopy").addEventListener("click", function(){
