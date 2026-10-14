@@ -442,6 +442,18 @@
 
   window.MW = { syncSelects: function(){ sheetSels.forEach(syncSel); }, toast: toast, data: data, persist: persist, esc: esc, showTab: showTab, videoId: videoId, onMadeChange: render,
                 setPick: setPick, ago: ago, thumbUrl: thumbUrl, openModal: openModal, closeModal: closeModal, confirmTap: confirmTap };
+  /* ป้ายสถานะบนหัวข้อที่พับอยู่ในตั้งค่า (อ่านจาก MWStore เปลี่ยนเมื่อไหร่อัปเดตเอง ไม่ต้องให้แต่ละไฟล์ตั้งเอง) */
+  function stTag(id, kind, text){ var el = $(id); if(el){ el.className = "state " + kind; el.textContent = text; } }
+  function settingsTags(){
+    var yt = !!getKey(), or = !!load("mw_openrouter_key_v1", ""), ai = load("mw_ai_cfg_v1", {}) || {}, tt = load("mw_tts_cfg_v1", {}) || {};
+    var miss = []; if(!yt) miss.push("YouTube"); if(!or) miss.push("OpenRouter");
+    stTag("tagKeys", miss.length ? "warn" : "ok", miss.length ? "ขาด " + miss.join(", ") : "ครบ");
+    stTag("tagAi", or ? "ok" : "warn", or ? String(ai.model || "").replace(/^.*\//, "") || "ค่าเริ่มต้น" : "ไม่มี OpenRouter key");
+    var el = !!load("mw_eleven_key_v1", ""), n = (tt.voices || []).length;
+    stTag("tagVoice", el && n ? "ok" : el || n ? "warn" : "idle", el && n ? n + " เสียง" : !el ? "ยังไม่มี key" : "ยังไม่มีเสียง");
+    stTag("tagPrompts", "idle", (ai.prompts || []).length + " อัน");
+  }
+  MWStore.on(settingsTags); settingsTags();
   render(); renderChannels(); renderPick();
   /* เปิดแอพ: ถ้ามี key และ (เกิน 6 ชม. หรือมีช่องที่ยังไม่ได้ดึงย้อนหลัง) → อัปเดตให้เอง */
   if(needSync()) syncAll(true);

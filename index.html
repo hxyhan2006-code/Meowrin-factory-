@@ -13,8 +13,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600&family=Mitr:wght@500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=20261015b">
-<link rel="stylesheet" href="sheet.css?v=20261015b">
+<link rel="stylesheet" href="style.css?v=20261015c">
+<link rel="stylesheet" href="sheet.css?v=20261015c">
 </head>
 <body>
 <div class="wrap">
@@ -172,8 +172,7 @@
 
   <!-- ตั้งค่า -->
   <section id="tab-settings">
-    <div class="panel">
-      <h2>คีย์ API</h2>
+    <details class="fold top"><summary><span>คีย์ API</span><em class="state idle" id="tagKeys"></em></summary><div class="fbody">
       <details class="fold">
         <summary><span>YouTube Data API key</span><em class="state" id="ytState"></em></summary>
         <div class="fbody">
@@ -201,10 +200,9 @@
           <p class="hint">ใช้กับงานเล็กๆ ข้อความล้วน เช่น แก้บทด้วย AI ในหน้าเสียง (ฟรี) · ทำบท/ดูคลิปใช้ OpenRouter เสมอ เพราะ Gemini ฟรีกับวิดีโอช้า/ล่มบ่อย · ถ้า Gemini ใช้ไม่ได้ จะใช้ OpenRouter ให้เอง · ปิดติ๊กด้านบน = ไม่ใช้ Gemini เลย · สร้าง key ได้ที่ Google AI Studio · บันทึกอัตโนมัติ</p>
         </div>
       </details>
-    </div>
+    </div></details>
 
-    <div class="panel">
-      <h2>AI ทำบท</h2>
+    <details class="fold top"><summary><span>AI ทำบท</span><em class="state idle" id="tagAi"></em></summary><div class="fbody">
       <label for="gEye">ตัวดูคลิป (State 1)</label>
       <select id="gEye" data-sheet>
         <option value="google/gemini-3.8-flash" data-tag="แนะนำ" data-desc="เร็วและถูก ดูวิดีโอ YouTube จากลิงก์ได้">google/gemini-3.8-flash</option>
@@ -236,10 +234,9 @@
       </select>
       <p class="hint">เลือกแล้วบันทึกให้อัตโนมัติ</p>
       <p class="hint" id="spendInfo" style="margin-top:-6px"></p>
-    </div>
+    </div></details>
 
-    <div class="panel">
-      <h2>เสียงพากย์ (ElevenLabs)</h2>
+    <details class="fold top"><summary><span>เสียงพากย์ (ElevenLabs)</span><em class="state idle" id="tagVoice"></em></summary><div class="fbody">
       <details class="fold">
         <summary><span>ElevenLabs API key</span><em class="state" id="elState"></em></summary>
         <div class="fbody">
@@ -253,20 +250,18 @@
       <div id="voiceList"></div>
       <button type="button" class="btn ghost" id="addVoice" style="margin-top:10px;width:100%">+ เพิ่มเสียง</button>
       <p class="hint" id="ttsUsage"></p>
-    </div>
+    </div></details>
 
-    <div class="panel">
-      <h2>Prompt</h2>
+    <details class="fold top"><summary><span>Prompt</span><em class="state idle" id="tagPrompts"></em></summary><div class="fbody">
       <p class="hint">กดชื่อเพื่อเปิดแก้ แก้เสร็จบันทึกให้อัตโนมัติ</p>
       <div id="promptList"></div>
       <div class="row" style="margin-top:12px">
         <button class="btn ghost" id="addPrompt" style="flex:1">+ เพิ่ม prompt</button>
         <button class="btn" id="saveAi" style="flex:1">บันทึก</button>
       </div>
-    </div>
+    </div></details>
 
-    <div class="panel">
-      <h2>สำรองข้อมูล <em class="state ok" id="stTag" style="vertical-align:middle;margin-left:6px">ตรวจสอบ...</em></h2>
+    <details class="fold top"><summary><span>สำรองข้อมูล</span><em class="state ok" id="stTag">ตรวจสอบ...</em></summary><div class="fbody">
       <div id="stInfo"></div>
       <details class="fold">
         <summary><span>Google Drive (สำรองอัตโนมัติ)</span><em class="state idle" id="gdTag">ยังไม่ได้ตั้ง</em></summary>
@@ -289,13 +284,13 @@
         <input type="file" id="importFile" accept="application/json" hidden>
       </div>
       <div id="setMsg"></div>
-    </div>
+    </div></details>
 
-    <div class="panel">
-      <h2>เครื่องมือทดลอง</h2>
+    <details class="fold top"><summary><span>เครื่องมือทดลอง</span></summary><div class="fbody">
       <p class="hint" style="margin-top:0">ทำดัชนีฟุตเทจอนิเมะด้วย AI แล้วค้นหาฉากจากคำง่ายๆ (เวอร์ชันทดสอบ แยกหน้า ใช้ OpenRouter key เดียวกับแอพนี้)</p>
       <a class="btn ghost" href="footage.html" style="width:100%">ดัชนีฟุตเทจ (ทดสอบ) →</a>
-    </div>
+    </div></details>
+
   </section>
 </div>
 
@@ -368,6 +363,6 @@
   </div>
 </div>
 
-<script src="store.js?v=20261015b" data-boot="sync.js?v=20261015b app.js?v=20261015b llm.js?v=20261015b ai.js?v=20261015b tts.js?v=20261015b gdrive.js?v=20261015b"></script>
+<script src="store.js?v=20261015c" data-boot="sync.js?v=20261015c app.js?v=20261015c llm.js?v=20261015c ai.js?v=20261015c tts.js?v=20261015c gdrive.js?v=20261015c"></script>
 </body>
 </html>
