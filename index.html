@@ -13,8 +13,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600&family=Mitr:wght@500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=20261015a">
-<link rel="stylesheet" href="sheet.css?v=20261015a">
+<link rel="stylesheet" href="style.css?v=20261015b">
+<link rel="stylesheet" href="sheet.css?v=20261015b">
 </head>
 <body>
 <div class="wrap">
@@ -266,14 +266,14 @@
     </div>
 
     <div class="panel">
-      <h2>สำรองข้อมูล</h2>
-      <p class="hint" id="stInfo"></p>
+      <h2>สำรองข้อมูล <em class="state ok" id="stTag" style="vertical-align:middle;margin-left:6px">ตรวจสอบ...</em></h2>
+      <div id="stInfo"></div>
       <details class="fold">
-        <summary><span>Google Drive (สำรองอัตโนมัติ)</span><em class="state" id="gdTag">ตั้งครั้งเดียว</em></summary>
+        <summary><span>Google Drive (สำรองอัตโนมัติ)</span><em class="state idle" id="gdTag">ยังไม่ได้ตั้ง</em></summary>
         <div class="fbody">
           <p class="hint" style="margin-top:0">ใส่ OAuth Client ID ของ Google Cloud (ไม่ใช่ API key) ครั้งเดียว แล้วกด เชื่อม ทุกครั้งที่เปิดแอพรอบใหม่ ระหว่างที่เชื่อมอยู่ แอพสำรองขึ้นโฟลเดอร์ "meowrin factory" ใน Drive เองทุกครั้งที่ข้อมูลเปลี่ยน (ไม่รวม API key) · ดัชนีฟุตเทจสำรองที่หน้าฟุตเทจ</p>
           <input id="gdClient" type="text" placeholder="xxxx.apps.googleusercontent.com" autocomplete="off" aria-label="Google OAuth Client ID">
-          <p class="hint" id="gdState"></p>
+          <div id="gdState"></div>
           <button class="btn" id="gdConnect" style="width:100%;margin-top:10px">เชื่อม Google Drive</button>
           <div class="row" style="margin-top:8px">
             <button class="btn ghost" id="gdNow">สำรองตอนนี้</button>
@@ -368,6 +368,6 @@
   </div>
 </div>
 
-<script src="store.js?v=20261015a" data-boot="sync.js?v=20261015a app.js?v=20261015a llm.js?v=20261015a ai.js?v=20261015a tts.js?v=20261015a gdrive.js?v=20261015a"></script>
+<script src="store.js?v=20261015b" data-boot="sync.js?v=20261015b app.js?v=20261015b llm.js?v=20261015b ai.js?v=20261015b tts.js?v=20261015b gdrive.js?v=20261015b"></script>
 </body>
 </html>

@@ -9,7 +9,7 @@
   var KEY = "mw_gdrive_v1", SCOPE = "https://www.googleapis.com/auth/drive.file", API = "https://www.googleapis.com/drive/v3", UP = "https://www.googleapis.com/upload/drive/v3";
   var FOLDER = "meowrin factory", DATA = "meowrin-data.json", SKIP = /^mw_(key|openrouter_key|gemini_key|eleven_key|gemini_last|gdrive|r2)_v1$/;
   var $ = function(id){ return document.getElementById(id); };
-  var cfg = MWStore.get(KEY, {}) || {}, tok = null, tokExp = 0, tc = null, folders = {}, dirty = false, timer = 0, busy = false;
+  var cfg = MWStore.get(KEY, {}) || {}, tok = null, tokExp = 0, tc = null, folders = {}, dirty = false, timer = 0, busy = false, lastErr = "";
   function saveCfg(){ MWStore.set(KEY, cfg); }
 
   /* ---------- ล็อกอิน ---------- */
@@ -80,7 +80,7 @@
     var body = JSON.stringify({ app:"meowrin", v:1, at:Date.now(), kv:kv }), root = await folder(FOLDER);
     var f = (await list(root, " and name='" + DATA + "'"))[0];
     await upload(f ? {} : { name:DATA, parents:[root] }, body, f && f.id);
-    dirty = false; cfg.last = Date.now(); saveCfg(); render();
+    dirty = false; lastErr = ""; cfg.last = Date.now(); saveCfg(); render();
     return { keys:Object.keys(kv).length, kb:body.length / 1024 };
   }
   async function restoreData(){
@@ -94,7 +94,7 @@
   function later(){ /* สำรองเองหลังข้อมูลเปลี่ยน (รวบหลายการเปลี่ยนเป็นครั้งเดียว) */
     if(timer || !ready()) return;
     timer = setTimeout(function(){ timer = 0; if(busy || !dirty || !ready()) return; busy = true;
-      backupData().catch(function(err){ show("สำรองอัตโนมัติไม่สำเร็จ: " + err.message, "err"); }).then(function(){ busy = false; }); }, 20000);
+      backupData().catch(function(err){ lastErr = "สำรองอัตโนมัติไม่สำเร็จ: " + err.message; show(lastErr, "err"); }).then(function(){ busy = false; render(); }); }, 20000);
   }
   MWStore.on(function(k){ if(k.indexOf("mw_") === 0 && !SKIP.test(k)){ dirty = true; later(); } });
 
@@ -133,25 +133,45 @@
   /* ---------- หน้าจอ (ปุ่มที่มีในหน้านั้นๆ) ---------- */
   function ago(t){ if(!t) return "ยังไม่เคย"; var m = Math.round((Date.now() - t) / 60000); return m < 1 ? "เมื่อกี้" : m < 60 ? m + " นาทีที่แล้ว" : m < 1440 ? Math.round(m / 60) + " ชม.ที่แล้ว" : Math.round(m / 1440) + " วันที่แล้ว"; }
   function show(text, kind){ var el = $("gdMsg"); if(el) el.innerHTML = text ? '<div class="msg ' + (kind || "") + '">' + text.replace(/</g, "&lt;") + "</div>" : ""; }
+  /* ---------- สถานะ (ป้ายสี: เขียว = ปกติ · เหลือง = ควรดู/ต้องกดอะไรสักอย่าง · แดง = มีปัญหา · เทา = ยังไม่ได้ตั้ง) ---------- */
+  function pill(kind, text){ return '<span class="pill ' + kind + '">' + text + "</span>"; }
+  function row(label, kind, text, extra){ return '<div class="strow"><span>' + label + "</span>" + pill(kind, text) + (extra ? '<small>' + extra + "</small>" : "") + "</div>"; }
+  function tag(id, kind, text){ var el = $(id); if(el){ el.className = "state " + kind; el.textContent = text; } }
+  var RANK = { idle:1, ok:0, warn:2, err:3 };
+  function worst(list){ return list.reduce(function(a, b){ return RANK[b] > RANK[a] ? b : a; }, "ok"); }
+  function driveStatus(){
+    if(lastErr) return { kind:"err", text:"มีปัญหา", why:lastErr };
+    if(!cfg.client) return { kind:"idle", text:"ยังไม่ได้ตั้ง", why:"ใส่ Client ID แล้วกด เชื่อม" };
+    if(!ready()) return { kind:"warn", text:"ต้องเชื่อมรอบนี้", why:"กด เชื่อม Google Drive (ทุกครั้งที่เปิดแอพรอบใหม่)" };
+    return { kind:"ok", text:"เชื่อมอยู่", why:"สำรองเองเมื่อข้อมูลเปลี่ยน" };
+  }
+  function ageKind(t){ return !t ? "idle" : Date.now() - t > 3 * 864e5 ? "warn" : "ok"; }
+  function ageText(t){ return !t ? "ยังไม่เคยสำรอง" : ageKind(t) === "warn" ? ago(t) + " (นานแล้ว)" : ago(t); }
   function render(){
-    var st = $("gdState"); if(!st) return;
-    var old = !cfg.last || Date.now() - cfg.last > 3 * 864e5;
-    st.innerHTML = (!cfg.client ? "ยังไม่ได้ใส่ Client ID" : ready() ? "✓ เชื่อมอยู่ (สำรองเองเมื่อข้อมูลเปลี่ยน)" : "ยังไม่ได้เชื่อมรอบนี้")
-      + "<br>ข้อมูลแอพ: " + (old ? '<b style="color:#f43f5e">' + ago(cfg.last) + "</b>" : ago(cfg.last)) + " · ดัชนีฟุตเทจ: " + ago(cfg.lastFoot);
     ["gdNow", "gdRestore", "gdFootNow", "gdFootRestore"].forEach(function(id){ if($(id)) $(id).disabled = busy; });
     if($("gdConnect")) $("gdConnect").textContent = ready() ? "✓ เชื่อมแล้ว" : "เชื่อม Google Drive";
+    var d = driveStatus(), kd = ageKind(cfg.last), kf = ageKind(cfg.lastFoot);
+    tag("gdTag", d.kind === "ok" && kd === "warn" ? "warn" : d.kind, d.kind === "ok" && kd === "warn" ? "สำรองนานแล้ว" : d.text);
+    var st = $("gdState");
+    if(st) st.innerHTML = row("การเชื่อมต่อ", d.kind, d.text, d.why) + row("ข้อมูลแอพ", kd, ageText(cfg.last))
+      + row("ดัชนีฟุตเทจ", kf, ageText(cfg.lastFoot), kf === "idle" ? "สำรองที่หน้าฟุตเทจ" : "");
+    renderStorage(d, kd);
   }
-  function storeInfo(){
-    var el = $("stInfo"); if(!el) return;
+  function renderStorage(d, kd){
     MWStore.info().then(function(i){
-      el.innerHTML = "เก็บในเครื่อง: " + (i.mode === "idb" ? "IndexedDB ✓" : '<b style="color:#f43f5e">localStorage (IndexedDB ใช้ไม่ได้)</b>')
-        + " · กันเบราว์เซอร์ลบเอง: " + (i.persisted ? "✓" : '<b style="color:#f43f5e">ยังไม่ได้</b> (ติดตั้งแอพลงหน้าจอหลักช่วยได้)')
-        + (i.quota ? " · ใช้ไป " + (i.used / 1048576).toFixed(1) + " MB จาก " + (i.quota / 1073741824).toFixed(1) + " GB" : "");
+      var idb = i.mode === "idb", full = i.quota && i.used / i.quota > 0.8, kinds = [];
+      var html = row("เก็บในเครื่อง", idb ? "ok" : "err", idb ? "IndexedDB" : "ใช้ได้แค่ localStorage", idb ? "" : "เบราว์เซอร์นี้ใช้ IndexedDB ไม่ได้ (โหมดส่วนตัว?) พื้นที่จำกัด")
+        + row("กันเบราว์เซอร์ลบเอง", i.persisted ? "ok" : "warn", i.persisted ? "ได้แล้ว" : "ยังไม่ได้", i.persisted ? "" : "เพิ่มแอพลงหน้าจอหลักช่วยได้")
+        + row("พื้นที่", full ? "warn" : "ok", (i.used / 1048576).toFixed(1) + " MB" + (i.quota ? " / " + (i.quota / 1073741824).toFixed(1) + " GB" : ""), full ? "ใกล้เต็ม" : "");
+      kinds = [idb ? "ok" : "err", i.persisted ? "ok" : "warn", full ? "warn" : "ok"];
+      var el = $("stInfo"); if(el) el.innerHTML = html;
+      var all = worst(kinds.concat([d.kind === "idle" ? "warn" : d.kind === "ok" && kd === "warn" ? "warn" : d.kind]));
+      tag("stTag", all, all === "ok" ? "ปกติ" : all === "err" ? "มีปัญหา" : "ควรดูแล");
     });
   }
   async function act(btn, fn){
     if(busy) return; busy = true; render(); var t = btn.textContent;
-    try{ if(!ready()) await connect(); show(await fn(), "ok"); }catch(err){ show(err.message, "err"); }
+    try{ if(!ready()) await connect(); show(await fn(), "ok"); lastErr = ""; }catch(err){ lastErr = err.message; show(err.message, "err"); }
     busy = false; render(); btn.textContent = t;
   }
   function bind(id, fn){ var el = $(id); if(el) el.addEventListener("click", function(){ act(el, fn); }); }
@@ -178,7 +198,7 @@
     return r.n ? "ดึงกลับมาแล้ว " + r.n + " คลิป กำลังโหลดใหม่..." : "ในเครื่องมีครบแล้ว";
   });
   if(cfg.client) gis().catch(function(){}); /* โหลดไว้ก่อน ให้ปุ่มเชื่อมเปิดป๊อปอัปได้ทันทีตอนแตะ */
-  render(); storeInfo(); setInterval(render, 60000);
+  render(); setInterval(render, 60000);
 
   window.MWDrive = {
     ready:ready, connect:connect, backupData:backupData,
@@ -186,7 +206,7 @@
       if(!ready() || busy || !window.FT || !FT.ui) return;
       busy = true; render();
       backupFootage(FT.ui.lib(), function(d, n){ show("สำรองดัชนีขึ้น Drive " + d + "/" + n + "..."); })
-        .then(function(r){ show(r.up ? "สำรองดัชนีขึ้น Drive แล้ว " + r.up + " คลิป" : "", "ok"); }, function(err){ show("สำรองดัชนีไม่สำเร็จ: " + err.message, "err"); })
+        .then(function(r){ lastErr = ""; show(r.up ? "สำรองดัชนีขึ้น Drive แล้ว " + r.up + " คลิป" : "", "ok"); }, function(err){ lastErr = "สำรองดัชนีไม่สำเร็จ: " + err.message; show(lastErr, "err"); })
         .then(function(){ busy = false; render(); });
     }
   };

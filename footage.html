@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600&family=Mitr:wght@500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="footage.css?v=20261015b">
+<link rel="stylesheet" href="footage.css?v=20261015c">
 </head>
 <body>
 <header>
@@ -177,8 +177,8 @@
       </div>
       <input id="importFile" type="file" accept="application/json,.json" hidden>
       <h2 style="margin-top:16px">Google Drive</h2>
-      <p class="hint" id="stInfo"></p>
-      <p class="hint" id="gdState"></p>
+      <div id="stInfo"></div>
+      <div id="gdState"></div>
       <button class="btn" id="gdConnect" style="width:100%;margin-top:10px">เชื่อม Google Drive</button>
       <div class="row" style="margin-top:8px">
         <button class="btn ghost" id="gdFootNow">สำรองดัชนีขึ้น Drive</button>
@@ -212,6 +212,6 @@
 <input id="pickDocs" type="file" multiple hidden><!-- ไม่ใส่ accept → Android เปิดแอพไฟล์ (เข้าโฟลเดอร์ + เลือกทั้งหมดได้) แทนตัวเลือกรูป -->
 <video id="vid" muted playsinline preload="auto" style="position:fixed;left:-9999px;width:2px;height:2px"></video>
 
-<script src="store.js?v=20261015b" data-boot="footage-core.js?v=20261015b r2.js?v=20261015b footage.js?v=20261015b footage-cloud.js?v=20261015b mp4fix.js?v=20261015b footage-plan.js?v=20261015b gdrive.js?v=20261015b"></script>
+<script src="store.js?v=20261015c" data-boot="footage-core.js?v=20261015c r2.js?v=20261015c footage.js?v=20261015c footage-cloud.js?v=20261015c mp4fix.js?v=20261015c footage-plan.js?v=20261015c gdrive.js?v=20261015c"></script>
 </body>
 </html>
