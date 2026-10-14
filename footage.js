@@ -14,7 +14,8 @@
 
   var lib = [];          /* คลิปที่ทำดัชนีแล้วทั้งหมด (จาก IndexedDB) */
   var queue = [];        /* คิวรอบนี้ [{ file, id, album, status: wait|run|done|error|skip, err, p, info, raw }] */
-  var running = false, paused = false, runCost = 0;
+  var running = false, paused = false, runCost = 0, runStart = 0, tick = 0;
+  function mmss(ms){ var s = Math.max(0, Math.round(ms / 1000)); return Math.floor(s / 60) + ":" + pad(s % 60); }
   function refreshLib(){ return FT.store.all().then(function(a){ lib = a || []; renderAll(); }); }
   function byId(id){ return lib.find(function(c){ return c.id === id; }); }
 
@@ -47,7 +48,7 @@
     if(!queue.length){ $("queue").innerHTML = '<li class="empty">ยังไม่ได้เลือกไฟล์</li>'; }
     else $("queue").innerHTML = queue.map(function(q){
       var c = byId(q.id), tag = { wait:["รอ",""], run:["กำลังทำ " + Math.round(q.p * 100) + "%","run"], done:["เสร็จ","ok"], error:["error","err"], skip:["ทำแล้ว (ข้าม)","ok"] }[q.status];
-      var sub = q.status === "run" ? esc(q.stage || "เริ่ม...") : c && c.status === "done" ? c.scenes.length + " ฉาก · " + money(c.cost || 0) + " · " + ((c.ms || 0) / 1000).toFixed(0) + " วิ · " + capDur(c.duration) : esc(q.album || "ไม่ระบุอัลบั้ม");
+      var sub = q.status === "run" ? esc((q.stage || "เริ่ม...") + " · " + mmss(Date.now() - q.t0)) : c && c.status === "done" ? c.scenes.length + " ฉาก · " + money(c.cost || 0) + " · " + ((c.ms || 0) / 1000).toFixed(0) + " วิ · " + capDur(c.duration) : esc(q.album || "ไม่ระบุอัลบั้ม");
       return '<li><img ' + (c && c.cover ? 'src="' + c.cover + '" ' : "") + 'alt=""><div class="t"><b>' + esc(q.info.name) + "</b><span>" + sub + "</span>"
         + (q.err ? '<br><span style="color:var(--err)">' + esc(q.err) + "</span>" : "") + '</div><span class="tag ' + tag[1] + '">' + tag[0] + "</span></li>";
     }).join("");
@@ -60,7 +61,8 @@
     var cur = work.find(function(q){ return q.status === "run"; });
     var pct = work.length ? (fin + (cur ? cur.p : 0)) / work.length : 0;
     $("progBar").style.width = Math.round(pct * 100) + "%";
-    $("progTxt").textContent = work.length ? "เสร็จ " + fin + "/" + work.length + " คลิป" + (runCost ? " · รอบนี้ใช้ไป " + money(runCost) + " จากงบ " + money(cfg.budget) : "") : "";
+    var el = running ? Date.now() - runStart : 0, eta = running && fin ? el / fin * (work.length - fin) : 0;
+    $("progTxt").textContent = work.length ? "เสร็จ " + fin + "/" + work.length + " คลิป" + (running ? " · ผ่านไป " + mmss(el) + (fin && fin < work.length ? " · เหลือประมาณ " + mmss(eta) : "") : "") + (runCost ? " · รอบนี้ใช้ไป " + money(runCost) + " จากงบ " + money(cfg.budget) : "") : "";
     renderEst();
   }
 
@@ -84,12 +86,14 @@
   async function run(){
     if(running) return;
     if(!FT.orKey()){ msg("runMsg", "ยังไม่มี OpenRouter key ในเบราว์เซอร์นี้ ไปใส่ในแอพหลัก (ตั้งค่า → OpenRouter API key) ก่อน", "err"); return; }
-    running = true; paused = false; msg("runMsg", ""); await wake(true); renderQueue();
+    running = true; paused = false; msg("runMsg", ""); await wake(true);
+    runStart = Date.now(); clearInterval(tick); tick = setInterval(renderQueue, 1000); /* นาฬิกาเดินทุกวินาทีระหว่างทำ */
+    renderQueue();
     for(var q; !paused && (q = queue.find(function(x){ return x.status === "wait"; })); ){
       if(runCost >= cfg.budget) break;
       await processClip(q);
     }
-    running = false; await wake(false);
+    running = false; clearInterval(tick); await wake(false);
     var left = queue.some(function(x){ return x.status === "wait"; });
     if(left && runCost >= cfg.budget) msg("runMsg", "ถึงเพดานงบรอบนี้ " + money(cfg.budget) + " แล้ว พักไว้ก่อน (ปรับงบได้ที่แท็บตั้งค่า แล้วกด ทำต่อ)", "err");
     else if(left && paused) msg("runMsg", document.hidden ? "พักไว้เพราะสลับแอพ กลับมาแล้วกด ทำต่อ" : "พักแล้ว กด ทำต่อ เมื่อพร้อม");
@@ -100,10 +104,11 @@
   var CHUNK = 8; /* กี่ฉากต่อคำขอ AI */
   async function processClip(q){
     var t0 = Date.now(), cost = 0, tin = 0, tout = 0, raw = [];
-    q.status = "run"; q.p = 0; q.err = ""; renderQueue();
+    q.status = "run"; q.p = 0; q.err = ""; q.t0 = t0; renderQueue();
     try{
       q.stage = "กำลังเปิดวิดีโอ...";
       var m = await FT.scan($("vid"), q.file, function(p){ q.p = p * 0.5; q.stage = p < 0.7 ? "อ่านเฟรมหาจุดตัดฉาก..." : "จับภาพตัวแทนแต่ละฉาก..."; renderQueue(); });
+      var msScan = Date.now() - t0; /* เวลาอ่านเฟรม+ตัดฉาก (ยังไม่นับ AI) */
       q.stage = "ฉากทั้งหมด " + m.scenes.length + " · ส่งให้ AI ดู...";
       q.info.duration = m.duration; q.info.w = m.w; q.info.h = m.h; renderDebug();
       m.scenes.forEach(function(sc, i){ sc.n = i + 1; });
@@ -127,7 +132,7 @@
       var rec = { id:q.id, name:q.info.name, album:q.album, size:q.info.size, type:q.info.type, lastModified:q.info.lastModified,
         duration:m.duration, w:m.w, h:m.h, cover:m.cover, summary_th: sums.filter(Boolean).join(" / "),
         scenes: m.scenes.map(function(sc){ return { s:sc.s, e:sc.e, thumb:sc.thumb, img:sc.img, ai:sc.ai || null }; }),
-        raw:raw, cost:cost, tokens:{ in:tin, out:tout }, ms:Date.now() - t0, model:cfg.model, at:Date.now(), status:"done" };
+        raw:raw, cost:cost, tokens:{ in:tin, out:tout }, ms:Date.now() - t0, msScan:msScan, msAI:Date.now() - t0 - msScan, model:cfg.model, at:Date.now(), status:"done" };
       await FT.store.put(rec);
       lib = lib.filter(function(c){ return c.id !== rec.id; }).concat([rec]);
       q.status = "done"; q.p = 1;
@@ -146,15 +151,17 @@
 
   /* ---------- ต้นทุน/เวลา ---------- */
   function totals(){
-    var d = lib.filter(function(c){ return c.status === "done"; }), t = { clips:d.length, scenes:0, cost:0, ms:0, tin:0, tout:0 };
-    d.forEach(function(c){ t.scenes += c.scenes.length; t.cost += c.cost || 0; t.ms += c.ms || 0; t.tin += (c.tokens || {}).in || 0; t.tout += (c.tokens || {}).out || 0; });
+    var d = lib.filter(function(c){ return c.status === "done"; }), t = { clips:d.length, scenes:0, cost:0, ms:0, tin:0, tout:0, scan:0, ai:0, dur:0 };
+    d.forEach(function(c){ t.scan += c.msScan || 0; t.ai += c.msAI || 0; t.dur += c.duration || 0; t.scenes += c.scenes.length; t.cost += c.cost || 0; t.ms += c.ms || 0; t.tin += (c.tokens || {}).in || 0; t.tout += (c.tokens || {}).out || 0; });
     return t;
   }
   function renderStats(){
     var t = totals(), n = t.clips || 1, s = t.scenes || 1;
     var rows = [["คลิปในดัชนี", t.clips], ["ฉากทั้งหมด", t.scenes], ["ต้นทุนรวม", money(t.cost)], ["รอบนี้", money(runCost)],
       ["ต้นทุน/คลิป", t.clips ? money(t.cost / n) : "-"], ["ต้นทุน/ฉาก", t.scenes ? money(t.cost / s) : "-"],
-      ["เวลา/คลิป", t.clips ? (t.ms / n / 1000).toFixed(1) + " วิ" : "-"], ["โทเคน เข้า/ออก", t.tin.toLocaleString() + " / " + t.tout.toLocaleString()]];
+      ["เวลา/คลิป", t.clips ? (t.ms / n / 1000).toFixed(1) + " วิ" : "-"], ["โทเคน เข้า/ออก", t.tin.toLocaleString() + " / " + t.tout.toLocaleString()],
+      ["ส่วนอ่านเฟรม/คลิป", t.scan ? (t.scan / n / 1000).toFixed(1) + " วิ" : "-"], ["ส่วน AI/คลิป", t.ai ? (t.ai / n / 1000).toFixed(1) + " วิ" : "-"],
+      ["เวลา ต่อวิดีโอ 1 นาที", t.dur ? (t.ms / t.dur * 60 / 1000).toFixed(0) + " วิ" : "-"], ["ต้นทุน ต่อวิดีโอ 1 นาที", t.dur ? money(t.cost / t.dur * 60) : "-"]];
     $("stats").innerHTML = rows.map(function(r){ return '<div class="stat"><b>' + esc(r[1]) + "</b><span>" + r[0] + "</span></div>"; }).join("");
   }
   function renderEst(){
