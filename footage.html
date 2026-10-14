@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600&family=Mitr:wght@500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="footage.css?v=20261014l">
+<link rel="stylesheet" href="footage.css?v=20261014m">
 </head>
 <body>
 <header>
@@ -55,6 +55,8 @@
       <input id="q" type="search" enterkeyhint="search" placeholder="เช่น ลูฟี่ตกใจ, โซโร ฟันดาบ" autocomplete="off">
       <label for="albumFilter">อัลบั้ม</label>
       <select id="albumFilter"><option value="">ทุกอัลบั้ม</option></select>
+      <button class="btn ghost small" id="openFilesBtn" style="margin-top:12px;width:100%">📂 เปิดไฟล์ฟุตเทจให้เล่นดูฉากได้</button>
+      <p class="hint" id="openFilesInfo" style="margin-top:6px">ยังไม่ได้เปิดไฟล์ (เลือกไฟล์ของอัลบั้มที่จะใช้ครั้งเดียว แล้วกด ▶ ดูฉากนี้ ได้ทันที · ไฟล์ไม่ถูกอัปโหลด)</p>
       <button class="btn ghost small" id="aiOpt" style="margin-top:12px;width:100%">⚙ ตัวเลือก AI</button>
       <div id="aiOptBox" hidden>
         <label class="sw"><span>ให้ AI แปลคำค้นไทยเป็นแท็กอังกฤษ<small>เสียเงินนิดหน่อยต่อครั้ง ปกติไม่ต้องเปิด</small></span><input type="checkbox" id="aiQuery"><i class="knob"></i></label>
@@ -117,10 +119,21 @@
   </section>
 </main>
 
-<div class="big" id="big" hidden><img id="bigImg" alt=""><p id="bigTxt"></p></div>
+<div class="big" id="big" hidden>
+  <button class="bigx" id="bigX" aria-label="ปิด">✕</button>
+  <img id="bigImg" alt="">
+  <video id="bigVid" controls playsinline hidden></video>
+  <p id="bigTxt"></p>
+  <div class="bigact">
+    <button class="btn" id="playBtn">▶ ดูฉากนี้</button>
+    <label class="chk"><input type="checkbox" id="loopSc" checked> วนซ้ำฉากนี้</label>
+  </div>
+  <p class="bigmsg" id="playMsg"></p>
+</div>
+<input id="playFiles" type="file" accept="video/*" multiple hidden>
 <video id="vid" muted playsinline preload="auto" style="position:fixed;left:-9999px;width:2px;height:2px"></video>
 
-<script src="footage-core.js?v=20261014l"></script>
-<script src="footage.js?v=20261014l"></script>
+<script src="footage-core.js?v=20261014m"></script>
+<script src="footage.js?v=20261014m"></script>
 </body>
 </html>

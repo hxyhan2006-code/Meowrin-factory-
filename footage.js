@@ -18,6 +18,7 @@
   function mmss(ms){ var s = Math.max(0, Math.round(ms / 1000)); return Math.floor(s / 60) + ":" + pad(s % 60); }
   function refreshLib(){ return FT.store.all().then(function(a){ lib = a || []; renderAll(); }); }
   function byId(id){ return lib.find(function(c){ return c.id === id; }); }
+  function findClip(f){ return byId(FT.clipId(f)) || lib.find(function(c){ return c.name === f.name && c.size === f.size; }); } /* แกลเลอรีมือถือบางเครื่องส่ง lastModified ไม่เหมือนเดิมทุกครั้ง → จับคู่ด้วยชื่อ+ขนาดด้วย */
 
   /* ---------- แท็บ ---------- */
   document.querySelector(".tabs").addEventListener("click", function(e){
@@ -32,7 +33,7 @@
   $("files").addEventListener("change", function(){
     var typed = $("album").value.trim(), album = typed || "ไม่ระบุ", picked = Date.now();
     var add = Array.prototype.map.call(this.files, function(f){
-      var id = FT.clipId(f), done = byId(id), fin = done && done.status === "done";
+      var done = findClip(f), id = done ? done.id : FT.clipId(f), fin = done && done.status === "done";
       var old = fin && (done.imgV || 1) < FT.IMG_V && $("upImg").checked; /* รูปรุ่นเก่า (เล็ก/เบลอ) → วาดใหม่ฟรี */
       var relabel = fin && !!typed && done.album !== typed; /* เลือกคลิปเดิมซ้ำพร้อมพิมพ์อัลบั้มใหม่ → แก้ชื่ออัลบั้มให้ (ไม่เรียก AI) */
       var mode = old ? "up" : relabel ? "label" : "";
@@ -309,12 +310,43 @@
   }
   $("p-find").addEventListener("click", function(e){ /* ทั้งผลค้นในเครื่องและผลที่ AI เลือก */
     var el = e.target.closest("[data-k]"), h = el && shown[+el.dataset.k], c = h && h.c, sc = h && h.sc;
-    if(h && h.cover){ $("bigImg").src = c.cover; $("bigTxt").textContent = c.album + " · ปกคลิป (เฟรมแรก) · " + capDur(c.duration); $("big").hidden = false; return; }
+    if(h && h.cover){ openBig(c, null, c.cover, c.album + " · ปกคลิป (เฟรมแรก) · " + capDur(c.duration)); return; }
     if(!sc) return;
-    $("bigImg").src = sc.img || sc.thumb; $("bigTxt").textContent = c.album + " · " + capDur(c.duration) + " · ฉาก " + tm(sc.s) + "–" + tm(sc.e) + (sc.ai && sc.ai.summary_th ? " · " + sc.ai.summary_th : "");
-    $("big").hidden = false;
+    openBig(c, sc, sc.img || sc.thumb, c.album + " · " + capDur(c.duration) + " · ฉาก " + tm(sc.s) + "–" + tm(sc.e) + (sc.ai && sc.ai.summary_th ? " · " + sc.ai.summary_th : ""));
   });
-  $("big").addEventListener("click", function(){ this.hidden = true; });
+  /* ---------- ดูฉากนี้ (เล่นจากไฟล์จริงในเครื่อง ไม่อัปโหลด) ---------- */
+  var pf = {}, bigCur = null; /* pf = ไฟล์ที่เปิดไว้ในรอบนี้ (ชื่อ|ขนาด → File) หายเมื่อปิดหน้า · bigCur = ฉากที่เปิดอยู่ */
+  function pfKey(name, size){ return name + "|" + size; }
+  function openBig(c, sc, src, text){
+    bigCur = { c:c, sc:sc }; stopPlay();
+    $("bigImg").src = src; $("bigTxt").textContent = text; $("playMsg").textContent = ""; $("big").hidden = false; renderPlayBtn();
+  }
+  function renderPlayBtn(){ var has = bigCur && pf[pfKey(bigCur.c.name, bigCur.c.size)]; $("playBtn").textContent = has ? "▶ ดูฉากนี้" : "▶ ดูฉากนี้ (เลือกไฟล์)"; $("loopSc").parentNode.hidden = !(bigCur && bigCur.sc); }
+  function stopPlay(){ var v = $("bigVid"); v.pause(); if(v.src){ URL.revokeObjectURL(v.src); v.removeAttribute("src"); v.load(); } v.hidden = true; $("bigImg").hidden = false; v.ontimeupdate = v.onloadedmetadata = null; }
+  function playScene(){
+    var f = bigCur && pf[pfKey(bigCur.c.name, bigCur.c.size)];
+    if(!f){ $("playFiles").click(); return; } /* ยังไม่มีไฟล์นี้ → ให้เลือกไฟล์ (เลือกหลายไฟล์พร้อมกันได้) */
+    var v = $("bigVid"), s = bigCur.sc ? bigCur.sc.s : 0, e = bigCur.sc ? bigCur.sc.e : Infinity;
+    stopPlay(); v.src = URL.createObjectURL(f); v.hidden = false; $("bigImg").hidden = true; $("playMsg").textContent = "";
+    v.onloadedmetadata = function(){ v.currentTime = Math.min(s, Math.max(0, v.duration - 0.1)); v.play().catch(function(){ $("playMsg").textContent = "กดปุ่มเล่นที่ตัวเล่นเพื่อเริ่ม"; }); };
+    v.ontimeupdate = function(){ if(v.currentTime >= e - 0.05){ if($("loopSc").checked && bigCur.sc) v.currentTime = s; else v.pause(); } }; /* ฉากนี้เท่านั้น ไม่เล่นเลยไปฉากอื่น */
+    v.onerror = function(){ $("playMsg").textContent = "เบราว์เซอร์เล่นไฟล์นี้ไม่ได้ (รูปแบบไฟล์ไม่รองรับ?)"; };
+  }
+  function addPlayFiles(files){
+    Array.prototype.forEach.call(files, function(f){ pf[pfKey(f.name, f.size)] = f; });
+    var n = Object.keys(pf).length;
+    $("openFilesInfo").textContent = "เปิดไฟล์ไว้ " + n + " ไฟล์ (หายเมื่อปิดหน้านี้) · แตะรูปฉาก แล้วกด ▶ ดูฉากนี้";
+    if(!$("big").hidden && bigCur){
+      renderPlayBtn();
+      if(pf[pfKey(bigCur.c.name, bigCur.c.size)]) playScene(); else $("playMsg").textContent = "ไม่เจอไฟล์ " + bigCur.c.name + " ในที่เลือก (ชื่อและขนาดไฟล์ต้องตรงกับตอนทำดัชนี) ลองเลือกไฟล์จากอัลบั้ม “" + bigCur.c.album + "”";
+    }
+  }
+  $("playBtn").addEventListener("click", playScene);
+  $("openFilesBtn").addEventListener("click", function(){ $("playFiles").click(); });
+  $("playFiles").addEventListener("change", function(){ addPlayFiles(this.files); this.value = ""; });
+  $("bigX").addEventListener("click", closeBig);
+  $("big").addEventListener("click", function(e){ if(e.target === this) closeBig(); }); /* แตะพื้นหลังปิด ไม่ปิดเมื่อแตะวิดีโอ/ปุ่ม */
+  function closeBig(){ stopPlay(); $("big").hidden = true; bigCur = null; }
 
   /* ---------- ให้ AI เลือกฉากจากคำขอแบบประโยค ---------- */
   function aiOptLabel(){ var n = ($("aiQuery").checked ? 1 : 0) + ($("aiRank").checked ? 1 : 0); $("aiOpt").textContent = "⚙ ตัวเลือก AI" + (n ? " · เปิดอยู่ " + n : "") + ($("aiOptBox").hidden ? "" : " (ซ่อน)"); }

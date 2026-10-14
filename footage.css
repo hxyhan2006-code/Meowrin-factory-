@@ -80,8 +80,11 @@ details.dbg{margin-top:10px;border:1px solid var(--line);border-radius:var(--rc)
 details.dbg summary{cursor:pointer;font-size:13px;color:var(--muted)}
 pre{white-space:pre-wrap;word-break:break-word;font-size:11px;margin:6px 0 0;color:var(--muted)}
 /* รูปใหญ่ */
-.big{position:fixed;inset:0;background:rgba(0,0,0,.88);display:flex;align-items:center;justify-content:center;z-index:20;padding:14px}
+.big{position:fixed;inset:0;background:rgba(0,0,0,.9);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;z-index:20;padding:14px;overflow-y:auto}
 .big[hidden]{display:none}
-.big img{max-width:100%;max-height:80vh;border-radius:10px}
-.big p{position:absolute;left:14px;right:14px;bottom:18px;text-align:center;color:#fff;font-size:14px;margin:0}
+.big img,.big video{max-width:100%;max-height:62vh;border-radius:10px;background:#000}
+.big p{text-align:center;color:#fff;font-size:14px;margin:0;max-width:520px}
+.big .bigmsg{color:var(--muted);font-size:13px}
+.bigx{position:absolute;top:12px;right:12px;width:44px;height:44px;border-radius:50%;border:1px solid var(--line-strong);background:var(--field);color:var(--text);font-size:18px;cursor:pointer}
+.bigact{display:flex;align-items:center;gap:14px;flex-wrap:wrap;justify-content:center}
 .empty{color:var(--muted);text-align:center;padding:30px 10px}
