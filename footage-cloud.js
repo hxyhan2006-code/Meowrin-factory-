@@ -21,9 +21,11 @@
       if(have){ c.r2 = have.key; await FT.store.put(c); if(onProg) onProg(1); return have.key; }
       var key = folder(c.album) + "/" + file.name, clash = objs && objs.find(function(o){ return o.key === key && o.size !== file.size; });
       if(clash) key = folder(c.album) + "/" + file.name.replace(/(\.\w+)?$/, "_" + file.size + "$1"); /* ชื่อซ้ำแต่คนละไฟล์ → ต่อท้ายขนาด */
+      MWBudget.r2Check(objs.reduce(function(t, o){ return t + o.size; }, 0), file.size); /* เพดานขนาดคลัง (budget.js) */
       await R2.put(key, file, onProg);
       c.r2 = key; await FT.store.put(c);
       if(objs && !objs.some(function(o){ return o.key === key; })) objs.push({ key:key, size:file.size, at:Date.now() });
+      if(objs) MWBudget.r2Stat(objs.reduce(function(t, o){ return t + o.size; }, 0));
       return key;
     }
   };
@@ -78,7 +80,7 @@
     $("cloudList").disabled = true; $("cloudList").textContent = "กำลังดูรายการ..."; msg("cloudMsg", "กำลังขอรายการไฟล์จากคลัง...");
     var t0 = Date.now();
     try{
-      objs = await R2.list();
+      objs = await R2.list(); MWBudget.r2Stat(objs.reduce(function(t, o){ return t + o.size; }, 0));
       /* จับคู่ดัชนีเดิม (ทำจากไฟล์ในเครื่อง) กับไฟล์ในคลังด้วยชื่อ+ขนาด → ต่อไปเล่นจากคลังได้เลย */
       var link = [], m = {}, bs = {}; objs.forEach(function(o){ m[base(o.key) + "|" + o.size] = o.key; bs[o.size] = bs[o.size] === undefined ? o.key : false; });
       (await FT.store.all()).forEach(function(c){ var k = m[c.name + "|" + c.size] || (!c.r2 && bs[c.size]); if(k && c.r2 !== k){ c.r2 = k; link.push(c); } }); /* ชื่อ+ขนาด หรือขนาดอย่างเดียวถ้าในคลังมีไฟล์ขนาดนั้นไฟล์เดียว (ชื่อจากตัวเลือกรูปเป็นเลข ไม่ตรงชื่อจริง) */ /* อ่านจากฐานจริง (ดัชนีในหน้าอาจยังโหลดไม่เสร็จ) */

@@ -17,6 +17,7 @@
   var lib = [];          /* คลิปที่ทำดัชนีแล้วทั้งหมด (จาก IndexedDB) */
   var queue = [];        /* คิวรอบนี้ [{ file, id, album, status: wait|run|done|error|skip, err, p, info, raw }] */
   var running = false, paused = false, runCost = 0, runStart = 0, tick = 0;
+  var capMsg = ""; /* ข้อความเมื่อชนเพดานค่าใช้จ่ายรวม (budget.js) */
   var etaBase = 0, etaAt = 0; /* เวลาที่เหลือ (ms) ประเมินใหม่ทุกครั้งที่คลิปเสร็จ แล้วนับถอยหลังเรียบๆ ระหว่างนั้น → ตัวเลขไม่เด้งขึ้นลง */
   function etaUpdate(){ /* ถ่วงด้วยขนาดไฟล์ (คลิปใหญ่ใช้เวลานานกว่า ทั้งอ่านเฟรม/AI/อัปโหลด) จากเวลาจริงของคลิปที่ทำเสร็จในรอบนี้ */
     var work = queue.filter(function(q){ return q.status !== "skip"; }), dn = work.filter(function(q){ return (q.status === "done" || q.status === "error") && q.tEnd && q.t0; });
@@ -135,7 +136,7 @@
   async function run(){
     if(running) return;
     if(!FT.orKey()){ msg("runMsg", "ยังไม่มี OpenRouter key ในเบราว์เซอร์นี้ ไปใส่ในแอพหลัก (ตั้งค่า → OpenRouter API key) ก่อน", "err"); return; }
-    running = true; paused = false; msg("runMsg", ""); await wake(true);
+    running = true; paused = false; capMsg = ""; msg("runMsg", ""); await wake(true);
     runStart = Date.now(); etaBase = etaAt = 0; clearInterval(tick); renderWake(); tick = setInterval(renderQueue, 1000); /* นาฬิกาเดินทุกวินาทีระหว่างทำ */
     renderQueue();
     for(var q; !paused && (q = queue.find(function(x){ return x.status === "wait"; })); ){
@@ -144,7 +145,8 @@
     }
     running = false; clearInterval(tick); await wake(false);
     var left = queue.some(function(x){ return x.status === "wait"; });
-    if(left && runCost >= cfg.budget) msg("runMsg", "ถึงเพดานงบรอบนี้ " + money(cfg.budget) + " แล้ว พักไว้ก่อน (ปรับงบได้ที่แท็บตั้งค่า แล้วกด ทำต่อ)", "err");
+    if(left && capMsg) msg("runMsg", capMsg, "err");
+    else if(left && runCost >= cfg.budget) msg("runMsg", "ถึงเพดานงบรอบนี้ " + money(cfg.budget) + " แล้ว พักไว้ก่อน (ปรับงบได้ที่แท็บตั้งค่า แล้วกด ทำต่อ)", "err");
     else if(left && paused) msg("runMsg", document.hidden ? "พักไว้เพราะสลับแอพ กลับมาแล้วกด ทำต่อ" : "พักแล้ว กด ทำต่อ เมื่อพร้อม");
     else if(!queue.some(function(x){ return x.status === "wait"; })) msg("runMsg", "เสร็จรอบนี้แล้ว · ใช้ไป " + money(runCost), "ok");
     paused = false; renderQueue();
@@ -165,7 +167,7 @@
   async function cloudClip(q){
     var c = byId(q.id); q.status = "run"; q.p = 0; q.err = ""; q.t0 = Date.now(); q.stage = "อัปขึ้นคลัง..."; renderQueue();
     try{ await FT.cloud.upload(c, q.file, function(p){ q.p = p; q.stage = "อัปขึ้นคลัง " + Math.round(p * 100) + "%"; renderQueue(); }); q.status = "done"; q.p = 1; q.mode = ""; }
-    catch(err){ if(document.hidden){ q.status = "wait"; q.p = 0; } else { q.status = "error"; q.err = err.message || String(err); } }
+    catch(err){ if(document.hidden || err.budget){ q.status = "wait"; q.p = 0; if(err.budget){ paused = true; capMsg = err.message; } } else { q.status = "error"; q.err = err.message || String(err); } }
     renderAll();
   }
   async function labelClip(q){
@@ -223,13 +225,13 @@
       lib = lib.filter(function(c){ return c.id !== rec.id; }).concat([rec]);
       if(q.toCloud && !rec.r2){ /* ติ๊กอัปขึ้นคลัง: อัปต่อเลย (อัปไม่ผ่านไม่ถือว่าดัชนีพัง) */
         try{ q.stage = "อัปขึ้นคลัง..."; renderQueue(); await FT.cloud.upload(rec, q.file, function(p){ q.stage = "อัปขึ้นคลัง " + Math.round(p * 100) + "%"; renderQueue(); }); }
-        catch(err){ q.err = "ทำดัชนีเสร็จ แต่อัปขึ้นคลังไม่ได้: " + (err.message || err); }
+        catch(err){ q.err = "ทำดัชนีเสร็จ แต่อัปขึ้นคลังไม่ได้: " + (err.message || err); if(err.budget){ paused = true; capMsg = err.message; } } /* ชนเพดานคลัง → พักคิว ไม่ทำดัชนีต่อทั้งที่อัปไม่ได้ */
       }
       if(q.key) q.file = null; /* ไฟล์ที่โหลดจากคลังกินแรม ปล่อยทิ้ง */
       q.status = "done"; q.p = 1;
     }catch(err){
       q.raw = raw;
-      if(err.budget || document.hidden){ q.status = "wait"; q.p = 0; if(err.budget) paused = true; } /* ยังไม่ใช่ error จริง ทำใหม่ได้ */
+      if(err.budget || document.hidden){ q.status = "wait"; q.p = 0; if(err.budget){ paused = true; capMsg = err.message === "ถึงเพดานงบ" ? "" : err.message; } } /* ยังไม่ใช่ error จริง ทำใหม่ได้ · capMsg = ชนเพดานรวมใน budget.js */
       else { q.status = "error"; q.err = err.message || String(err); }
     }
     renderAll();

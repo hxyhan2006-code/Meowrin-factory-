@@ -133,6 +133,7 @@
   var URL_OR = "https://openrouter.ai/api/v1/chat/completions";
   async function post(body){
     var key = orKey(); if(!key) throw new Error("ยังไม่ได้ใส่ OpenRouter key ในแอพหลัก (ตั้งค่า → OpenRouter API key) บนเบราว์เซอร์นี้");
+    MWBudget.check(); /* เพดานค่า AI รวมทั้งสองหน้า (budget.js) · เกิน = โยน error ที่มี budget:true → คิวทำดัชนีพักเอง */
     var res, j;
     for(var a = 0; ; a++){
       res = await fetch(URL_OR, { method:"POST", headers:{ "Content-Type":"application/json", "Authorization":"Bearer " + key }, body: JSON.stringify(body) });
@@ -152,6 +153,7 @@
     var t = j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content;
     if(typeof t !== "string" || !t.trim()) throw new Error("AI ไม่ตอบ");
     var u = j.usage || {};
+    MWBudget.add(typeof u.cost === "number" ? u.cost : 0);
     return { text:t, cost: typeof u.cost === "number" ? u.cost : 0, tin:u.prompt_tokens || 0, tout:u.completion_tokens || 0 };
   }
   function parseJSON(t){

@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600&family=Mitr:wght@500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="footage.css?v=20261015j">
+<link rel="stylesheet" href="footage.css?v=20261015k">
 </head>
 <body>
 <header>
@@ -137,6 +137,18 @@
       <button class="btn" id="r2Save" style="width:100%;margin-top:12px">บันทึกและทดสอบ</button>
       <div id="r2Msg"></div>
     </div></details>
+    <details class="panel fold"><summary><span>งบและค่าใช้จ่าย</span><em class="state idle" id="bgTag"></em></summary><div class="fbody">
+      <div id="bgInfo"></div>
+      <p class="hint">เพดานในแอพ (ใส่ 0 = ไม่จำกัด) ถึงแล้วแอพหยุดเรียก AI / หยุดอัปเอง ใช้กับทั้งแอพหลักและหน้าฟุตเทจ · กันบั๊กและใช้เพลินได้ แต่ไม่กันคีย์หลุด ลิมิตแข็งจริงคือเครดิตที่เติมไว้ใน OpenRouter และ Budget Alert ใน Cloudflare</p>
+      <label for="bgDay">เพดานค่า AI ต่อวัน (USD)</label>
+      <input id="bgDay" type="number" min="0" step="0.5" inputmode="decimal">
+      <label for="bgMonth">เพดานค่า AI ต่อเดือน (USD)</label>
+      <input id="bgMonth" type="number" min="0" step="1" inputmode="decimal">
+      <label for="bgR2">เพดานขนาดคลัง R2 (GB)</label>
+      <input id="bgR2" type="number" min="0" step="10" inputmode="numeric">
+      <p class="hint">ค่าเงินบาทคิดที่ ~35 บาท/ดอลลาร์ (ประมาณ) · R2 10 GB แรกฟรี เกินนั้น $0.015/GB/เดือน</p>
+    </div></details>
+
     <details class="panel fold"><summary><span>สำรอง / กู้คืนดัชนี</span><em class="state idle" id="gdTag">...</em></summary><div class="fbody">
       <p class="hint" id="dbInfo"></p>
       <div class="row" style="margin-top:10px">
@@ -210,6 +222,6 @@
 <input id="pickDocs" type="file" multiple hidden><!-- ไม่ใส่ accept → Android เปิดแอพไฟล์ (เข้าโฟลเดอร์ + เลือกทั้งหมดได้) แทนตัวเลือกรูป -->
 <video id="vid" muted playsinline preload="auto" style="position:fixed;left:-9999px;width:2px;height:2px"></video>
 
-<script src="store.js?v=20261015j" data-boot="footage-core.js?v=20261015j r2.js?v=20261015j footage.js?v=20261015j footage-cloud.js?v=20261015j mp4fix.js?v=20261015j footage-plan.js?v=20261015j gdrive.js?v=20261015j"></script>
+<script src="store.js?v=20261015k" data-boot="budget.js?v=20261015k footage-core.js?v=20261015k r2.js?v=20261015k footage.js?v=20261015k footage-cloud.js?v=20261015k mp4fix.js?v=20261015k footage-plan.js?v=20261015k gdrive.js?v=20261015k"></script>
 </body>
 </html>
