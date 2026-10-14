@@ -12,6 +12,8 @@
   function tm(sec){ sec = Math.round(sec); return Math.floor(sec / 60) + ":" + pad(sec % 60); }
   function day(ms){ return new Date(ms).toLocaleDateString("th-TH", { day:"numeric", month:"short", year:"2-digit" }); }
 
+  var sv = document.querySelector('script[src^="footage.js"]'), vm = sv && /v=(\w+)/.exec(sv.getAttribute("src"));
+  if(vm) $("ver").textContent = "ทดสอบ · รุ่น " + vm[1]; /* ไว้เช็กว่าเบราว์เซอร์โหลดไฟล์ใหม่แล้ว (มือถือแคชไฟล์เก่า) */
   var lib = [];          /* คลิปที่ทำดัชนีแล้วทั้งหมด (จาก IndexedDB) */
   var queue = [];        /* คิวรอบนี้ [{ file, id, album, status: wait|run|done|error|skip, err, p, info, raw }] */
   var running = false, paused = false, runCost = 0, runStart = 0, tick = 0;
