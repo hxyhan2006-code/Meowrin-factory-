@@ -298,8 +298,8 @@
   }
   function card(c, sc, exact, why){
     var a = sc && sc.ai || {}, who = (a.characters_th && a.characters_th.length ? a.characters_th : a.characters || []).join(", ");
-    var k = shown.push({ c:c, sc:sc || c.scenes[0] }) - 1; /* แตะปก/ฉาก = ดูรูปใหญ่ */
-    return '<div class="card"><div class="shots"><div class="cover" data-k="' + k + '"><img src="' + (c.cover || "") + '" alt="ปกคลิป"><em>' + capDur(c.duration) + "</em></div>"
+    var kc = shown.push({ c:c, cover:true }) - 1, k = sc ? shown.push({ c:c, sc:sc }) - 1 : kc; /* แตะปก = ดูปกใหญ่ · แตะรูปฉาก = ดูรูปฉากใหญ่ */
+    return '<div class="card"><div class="shots"><div class="cover" data-k="' + kc + '"><img src="' + (c.cover || "") + '" alt="ปกคลิป"><em>' + capDur(c.duration) + "</em></div>"
       + (sc ? '<img class="scene" src="' + sc.thumb + '" alt="ฉาก" data-k="' + k + '">' : "") + '</div><div class="t">'
       + "<b>" + esc(c.album) + "</b>" + (sc ? ' · <span class="when">ฉาก ' + tm(sc.s) + "–" + tm(sc.e) + "</span>" : " · " + c.scenes.length + " ฉาก")
       + "<p>" + (exact ? '<span class="tag ok">★ ตรงเป๊ะ</span> ' : "") + (why ? '<span class="tag run">AI: ' + esc(why) + "</span> " : "") + esc(sc ? (a.summary_th || "(AI ไม่ได้อธิบายฉากนี้)") : (c.summary_th || "")) + "</p>"
@@ -307,8 +307,9 @@
       + (sc ? "" : strip(c)) /* โหมดดูทั้งคลิป: แถบรูปทุกฉาก แตะดูรูปใหญ่ + คำอธิบายฉากนั้น */
       + '<p>' + day(c.lastModified) + '</p><div class="fname">' + esc(c.name) + ' <button class="editbtn" data-e="' + k + '" aria-label="แก้ชื่ออัลบั้มของคลิปนี้">✎ แก้อัลบั้ม</button></div></div></div>';
   }
-  $("results").addEventListener("click", function(e){
+  $("p-find").addEventListener("click", function(e){ /* ทั้งผลค้นในเครื่องและผลที่ AI เลือก */
     var el = e.target.closest("[data-k]"), h = el && shown[+el.dataset.k], c = h && h.c, sc = h && h.sc;
+    if(h && h.cover){ $("bigImg").src = c.cover; $("bigTxt").textContent = c.album + " · ปกคลิป (เฟรมแรก) · " + capDur(c.duration); $("big").hidden = false; return; }
     if(!sc) return;
     $("bigImg").src = sc.img || sc.thumb; $("bigTxt").textContent = c.album + " · " + capDur(c.duration) + " · ฉาก " + tm(sc.s) + "–" + tm(sc.e) + (sc.ai && sc.ai.summary_th ? " · " + sc.ai.summary_th : "");
     $("big").hidden = false;
@@ -316,7 +317,11 @@
   $("big").addEventListener("click", function(){ this.hidden = true; });
 
   /* ---------- ให้ AI เลือกฉากจากคำขอแบบประโยค ---------- */
-  $("aiRank").addEventListener("change", function(){ $("aiGo").hidden = !this.checked; });
+  function aiOptLabel(){ var n = ($("aiQuery").checked ? 1 : 0) + ($("aiRank").checked ? 1 : 0); $("aiOpt").textContent = "⚙ ตัวเลือก AI" + (n ? " · เปิดอยู่ " + n : "") + ($("aiOptBox").hidden ? "" : " (ซ่อน)"); }
+  $("aiQuery").checked = !!cfg.aiQuery; $("aiRank").checked = !!cfg.aiRank; $("aiGo").hidden = !cfg.aiRank; aiOptLabel();
+  $("aiOpt").addEventListener("click", function(){ $("aiOptBox").hidden = !$("aiOptBox").hidden; aiOptLabel(); }); /* ซ่อนสวิตช์ไว้ ต้องกดปุ่มก่อนถึงจะเห็น */
+  $("aiQuery").addEventListener("change", function(){ cfg.aiQuery = this.checked; FT.saveCfg(); aiOptLabel(); });
+  $("aiRank").addEventListener("change", function(){ cfg.aiRank = this.checked; FT.saveCfg(); $("aiGo").hidden = !this.checked; aiOptLabel(); });
   $("q").addEventListener("keydown", function(e){ if(e.key === "Enter" && $("aiRank").checked){ e.preventDefault(); aiSearch(); } });
   $("aiGo").addEventListener("click", function(){ aiSearch(); });
   async function aiSearch(){
@@ -412,7 +417,7 @@
     rename(hit, to).then(function(){ $("renNew").value = ""; msg("renMsg", "เปลี่ยน “" + from + "” → “" + to + "” แล้ว " + hit.length + " คลิป", "ok"); })
       .catch(function(err){ msg("renMsg", "เปลี่ยนไม่ได้: " + err.message, "err"); });
   });
-  $("results").addEventListener("click", function(e){ /* ✎ แก้ = เปลี่ยนอัลบั้มเฉพาะคลิปนี้ */
+  $("p-find").addEventListener("click", function(e){ /* ✎ แก้ = เปลี่ยนอัลบั้มเฉพาะคลิปนี้ */
     var b = e.target.closest("[data-e]"), h = b && shown[+b.dataset.e]; if(!h) return;
     var to = window.prompt("ชื่ออัลบั้มของคลิปนี้ (" + h.c.name + ")", h.c.album);
     if(to && to.trim() && to.trim() !== h.c.album) rename([h.c], to.trim()).catch(function(err){ window.alert("เปลี่ยนไม่ได้: " + err.message); });

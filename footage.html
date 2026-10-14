@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600&family=Mitr:wght@500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="footage.css?v=20261014k">
+<link rel="stylesheet" href="footage.css?v=20261014l">
 </head>
 <body>
 <header>
@@ -55,8 +55,11 @@
       <input id="q" type="search" enterkeyhint="search" placeholder="เช่น ลูฟี่ตกใจ, โซโร ฟันดาบ" autocomplete="off">
       <label for="albumFilter">อัลบั้ม</label>
       <select id="albumFilter"><option value="">ทุกอัลบั้ม</option></select>
-      <label class="chk"><input type="checkbox" id="aiQuery"> ให้ AI แปลคำค้นไทยเป็นแท็กอังกฤษ (เสียเงินนิดหน่อยต่อครั้ง)</label>
-      <label class="chk"><input type="checkbox" id="aiRank"> ให้ AI ช่วยเลือกฉากที่ตรงที่สุด (เข้าใจประโยคยาวๆ · ราว $0.002 ต่อครั้ง)</label>
+      <button class="btn ghost small" id="aiOpt" style="margin-top:12px;width:100%">⚙ ตัวเลือก AI</button>
+      <div id="aiOptBox" hidden>
+        <label class="sw"><span>ให้ AI แปลคำค้นไทยเป็นแท็กอังกฤษ<small>เสียเงินนิดหน่อยต่อครั้ง ปกติไม่ต้องเปิด</small></span><input type="checkbox" id="aiQuery"><i class="knob"></i></label>
+        <label class="sw"><span>ให้ AI ช่วยเลือกฉากที่ตรงที่สุด<small>เข้าใจประโยคยาวๆ · ราว $0.002 ต่อครั้ง · มีปุ่มกดถามต่างหาก</small></span><input type="checkbox" id="aiRank"><i class="knob"></i></label>
+      </div>
       <button class="btn" id="aiGo" hidden style="width:100%;margin-top:10px">ถาม AI เลือกฉากให้</button>
       <p class="hint" id="findInfo"></p>
     </div>
@@ -117,7 +120,7 @@
 <div class="big" id="big" hidden><img id="bigImg" alt=""><p id="bigTxt"></p></div>
 <video id="vid" muted playsinline preload="auto" style="position:fixed;left:-9999px;width:2px;height:2px"></video>
 
-<script src="footage-core.js?v=20261014k"></script>
-<script src="footage.js?v=20261014k"></script>
+<script src="footage-core.js?v=20261014l"></script>
+<script src="footage.js?v=20261014l"></script>
 </body>
 </html>
