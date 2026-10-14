@@ -61,6 +61,10 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 .card .t p{margin:2px 0;color:var(--muted)}
 .card .t .when{color:var(--accent);font-weight:600}
 .fname{font-size:11px;color:var(--muted);word-break:break-all}
+.strip{display:flex;gap:6px;overflow-x:auto;margin:6px 0;padding-bottom:4px;-webkit-overflow-scrolling:touch}
+.strip .st{position:relative;flex:none;width:64px;height:64px}
+.strip img{width:100%;height:100%;object-fit:cover;border-radius:6px;border:1px solid var(--line-strong);background:var(--field)}
+.strip em{position:absolute;right:3px;bottom:2px;font-style:normal;font-size:10px;font-weight:600;color:#fff;text-shadow:0 1px 3px #000}
 /* debug */
 details.dbg{margin-top:10px;border:1px solid var(--line);border-radius:var(--rc);padding:8px 10px;background:var(--field)}
 details.dbg summary{cursor:pointer;font-size:13px;color:var(--muted)}

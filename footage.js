@@ -290,6 +290,12 @@
     $("findInfo").textContent = clips.length + " คลิปในดัชนี · พิมพ์คำค้นเพื่อหาฉาก";
     $("results").innerHTML = clips.length ? clips.map(function(c){ return card(c, null); }).join("") : '<p class="empty">ยังไม่มีคลิปในดัชนี ไปที่แท็บ ทำดัชนี ก่อน</p>';
   }
+  function strip(c){
+    return '<div class="strip">' + c.scenes.map(function(s){
+      var k = shown.push({ c:c, sc:s }) - 1;
+      return '<div class="st" data-k="' + k + '"><img src="' + s.thumb + '" alt="ฉาก"><em>' + tm(s.s) + "</em></div>";
+    }).join("") + "</div>";
+  }
   function card(c, sc, exact, why){
     var a = sc && sc.ai || {}, who = (a.characters_th && a.characters_th.length ? a.characters_th : a.characters || []).join(", ");
     var k = shown.push({ c:c, sc:sc || c.scenes[0] }) - 1; /* แตะปก/ฉาก = ดูรูปใหญ่ */
@@ -298,6 +304,7 @@
       + "<b>" + esc(c.album) + '</b> <button class="tag" data-e="' + k + '" aria-label="แก้ชื่ออัลบั้มของคลิปนี้">✎ แก้</button>' + (sc ? ' · <span class="when">ฉาก ' + tm(sc.s) + "–" + tm(sc.e) + "</span>" : " · " + c.scenes.length + " ฉาก")
       + "<p>" + (exact ? '<span class="tag ok">★ ตรงเป๊ะ</span> ' : "") + (why ? '<span class="tag run">AI: ' + esc(why) + "</span> " : "") + esc(sc ? (a.summary_th || "(AI ไม่ได้อธิบายฉากนี้)") : (c.summary_th || "")) + "</p>"
       + (who ? "<p>👤 " + esc(who) + "</p>" : "")
+      + (sc ? "" : strip(c)) /* โหมดดูทั้งคลิป: แถบรูปทุกฉาก แตะดูรูปใหญ่ + คำอธิบายฉากนั้น */
       + '<p>' + day(c.lastModified) + '</p><div class="fname">' + esc(c.name) + "</div></div></div>";
   }
   $("results").addEventListener("click", function(e){
