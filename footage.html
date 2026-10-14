@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#09090b" />
+<title>ฟุตเทจ · meowrin factory</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600&family=Mitr:wght@500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="footage.css?v=20261014a">
+</head>
+<body>
+<header>
+  <div class="wrap"><h1>ดัชนีฟุตเทจ <span class="tag">ทดสอบ</span></h1><a href="./">← กลับแอพ</a></div>
+  <nav class="tabs"><button data-p="idx" class="on">ทำดัชนี</button><button data-p="find">ค้นหา</button><button data-p="set">ตั้งค่า</button></nav>
+</header>
+
+<main class="wrap">
+  <!-- ทำดัชนี -->
+  <section class="page on" id="p-idx">
+    <div class="panel">
+      <h2>เลือกคลิป</h2>
+      <label for="album">ชื่ออัลบั้ม (ใช้กับคลิปชุดนี้ทั้งหมด)</label>
+      <input id="album" type="text" list="albumList" placeholder="เช่น luffy" autocomplete="off">
+      <datalist id="albumList"></datalist>
+      <label for="files">ไฟล์วิดีโอ (เลือกได้หลายไฟล์)</label>
+      <input id="files" type="file" accept="video/*" multiple>
+      <p class="hint">วิดีโอไม่ถูกอัปโหลด ส่งไปให้ AI แค่รูปเฟรมเล็กๆ · คลิปที่เคยทำแล้วจะข้ามให้เอง</p>
+      <div class="row" style="margin-top:12px">
+        <button class="btn" id="startBtn" disabled>เริ่มทำดัชนี</button>
+        <button class="btn ghost" id="pauseBtn" hidden>พัก</button>
+      </div>
+      <button class="btn ghost small" id="retryBtn" hidden style="margin-top:8px;width:100%">ลองใหม่คลิปที่ error</button>
+      <div id="runMsg"></div>
+      <div class="prog"><i id="progBar"></i></div>
+      <p class="hint" id="progTxt"></p>
+      <p class="hint">⚠ เปิดหน้านี้ค้างไว้ระหว่างทำ ถ้าสลับแอพ เบราว์เซอร์จะหยุดอ่านวิดีโอ (กลับมาแล้วกด เริ่ม/ทำต่อ ได้)</p>
+    </div>
+    <div class="panel">
+      <h2>ต้นทุนและเวลา</h2>
+      <div class="stats" id="stats"></div>
+      <p class="hint" id="estTxt"></p>
+    </div>
+    <div class="panel">
+      <h2>คิวรอบนี้</h2>
+      <ul class="q" id="queue"><li class="empty">ยังไม่ได้เลือกไฟล์</li></ul>
+    </div>
+  </section>
+
+  <!-- ค้นหา -->
+  <section class="page" id="p-find">
+    <div class="panel">
+      <input id="q" type="search" enterkeyhint="search" placeholder="เช่น ลูฟี่ตกใจ, โซโร ฟันดาบ" autocomplete="off">
+      <label for="albumFilter">อัลบั้ม</label>
+      <select id="albumFilter"><option value="">ทุกอัลบั้ม</option></select>
+      <label class="chk"><input type="checkbox" id="aiQuery"> ให้ AI แปลคำค้นไทยเป็นแท็กอังกฤษ (เสียเงินนิดหน่อยต่อครั้ง)</label>
+      <p class="hint" id="findInfo"></p>
+    </div>
+    <div class="res" id="results"></div>
+  </section>
+
+  <!-- ตั้งค่า -->
+  <section class="page" id="p-set">
+    <div class="panel">
+      <h2>AI ดูรูป</h2>
+      <p class="hint" id="keyInfo"></p>
+      <label for="model">โมเดล (OpenRouter model id ที่ดูรูปได้)</label>
+      <input id="model" type="text" list="modelList" autocomplete="off">
+      <datalist id="modelList"><option value="google/gemini-3.8-flash"><option value="google/gemini-4-argon"></datalist>
+      <label for="budget">เพดานงบต่อรอบ (USD) เกินแล้วพักเอง</label>
+      <input id="budget" type="number" min="0.05" step="0.05">
+      <label for="par">ส่งพร้อมกันกี่คำขอ</label>
+      <input id="par" type="number" min="1" max="4" step="1">
+    </div>
+    <div class="panel">
+      <h2>ตัดฉาก</h2>
+      <label for="thr">ความไวจุดตัดฉาก: <b id="thrVal"></b> (น้อย = ตัดถี่)</label>
+      <input id="thr" type="range" min="0.04" max="0.5" step="0.01">
+      <label for="maxScenes">ฉากสูงสุดต่อคลิป</label>
+      <input id="maxScenes" type="number" min="1" max="60" step="1">
+      <p class="hint">สุ่มเฟรมทุก 1 วินาที · ฉากที่ต่างกันน้อยที่สุดจะถูกรวมจนเหลือไม่เกินเพดาน</p>
+    </div>
+    <div class="panel">
+      <h2>สำรอง / กู้คืนดัชนี</h2>
+      <p class="hint" id="dbInfo"></p>
+      <div class="row" style="margin-top:10px">
+        <button class="btn ghost" id="exportBtn">โหลดไฟล์สำรอง</button>
+        <button class="btn ghost" id="importBtn">กู้คืน</button>
+      </div>
+      <input id="importFile" type="file" accept="application/json,.json" hidden>
+      <button class="btn ghost small" id="wipeBtn" style="margin-top:10px;width:100%">ลบดัชนีทั้งหมด</button>
+      <div id="setMsg"></div>
+    </div>
+    <div class="panel">
+      <h2>Debug</h2>
+      <p class="hint">ข้อมูลไฟล์จากตัวเลือกไฟล์ และคำตอบดิบของ AI ต่อคลิป</p>
+      <div id="debug"><p class="empty">ยังไม่มีข้อมูล</p></div>
+    </div>
+  </section>
+</main>
+
+<div class="big" id="big" hidden><img id="bigImg" alt=""><p id="bigTxt"></p></div>
+<video id="vid" muted playsinline preload="auto" style="position:fixed;left:-9999px;width:2px;height:2px"></video>
+
+<script src="footage-core.js?v=20261014a"></script>
+<script src="footage.js?v=20261014a"></script>
+</body>
+</html>
