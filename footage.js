@@ -92,12 +92,32 @@
   }
 
   /* ---------- ทำดัชนี ---------- */
-  var wl = null;
+  /* กันจอดับระหว่างทำ: Wake Lock ก่อน · ไม่ได้ (เครื่อง/โหมดประหยัดแบตไม่ยอม) → เล่นวิดีโอเปล่า 1 ตัววนไว้ (เบราว์เซอร์ไม่ดับจอตอนเล่นวิดีโอ) · ป้ายสถานะ #wakeInfo บอกว่าใช้วิธีไหนอยู่/กันไม่ได้ */
+  var wl = null, nsVid = null, wakeMode = "";
+  var NOSLEEP = "data:video/webm;base64,GkXfo59ChoEBQveBAULygQRC84EIQoKEd2VibUKHgQJChYECGFOAZwEAAAAAAAJAEU2bdLpNu4tTq4QVSalmU6yBoU27i1OrhBZUrmtTrIHYTbuMU6uEElTDZ1OsggEeTbuMU6uEHFO7a1OsggIq7AEAAAAAAABZAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAVSalmsirXsYMPQkBNgI1MYXZmNjAuMTYuMTAwV0GNTGF2ZjYwLjE2LjEwMESJiECPQAAAAAAAFlSua8GuAQAAAAAAADjXgQFzxYiTV9gKWu43OJyBACK1nIN1bmSIgQCGhVZfVlA4g4EBI+ODhAvrwgDgibCBILqBIJqBAhJUw2f8c3OgY8CAZ8iaRaOHRU5DT0RFUkSHjUxhdmY2MC4xNi4xMDBzc9ZjwItjxYiTV9gKWu43OGfIoUWjh0VOQ09ERVJEh5RMYXZjNjAuMzEuMTAyIGxpYnZweGfIoUWjiERVUkFUSU9ORIeTMDA6MDA6MDEuMDAwMDAwMDAwAB9DtnVAheeBAKOkgQAAgDACAJ0BKiAAIAAARwiFhYiFhIgCAgAHkPPJwP7/q1CAo5WBAMgAsQEAARAQABgAGFgv9AAIcACjlYEBkACxAQABEBAAGAAYWC/0AAhwAKOVgQJYALEBAAEQEAAYABhYL/QACHAAo5WBAyAAsQEAARAQABgAGFgv9AAIcAAcU7trkbuPs4EAt4r3gQHxggGf8IED";
+  function nsStop(){ if(nsVid){ nsVid.pause(); nsVid.remove(); nsVid = null; } }
   async function wake(on){
+    if(!on){ wakeMode = ""; nsStop(); try{ if(wl){ await wl.release(); wl = null; } }catch(e){} renderWake(); return; }
+    if(wl || nsVid) return;
     try{
-      if(on && !wl && "wakeLock" in navigator){ wl = await navigator.wakeLock.request("screen"); wl.addEventListener("release", function(){ wl = null; }); }
-      if(!on && wl){ await wl.release(); wl = null; }
-    }catch(e){ /* บางเครื่อง/โหมดประหยัดแบตไม่ให้ใช้ ไม่เป็นไร */ }
+      if("wakeLock" in navigator){ wl = await navigator.wakeLock.request("screen"); wakeMode = "lock";
+        wl.addEventListener("release", function(){ wl = null; if(running && !document.hidden) wake(true); }); /* ระบบปล่อยเอง (เช่นประหยัดแบต) → ขอใหม่ */
+        renderWake(); return; }
+    }catch(e){ /* ตกไปใช้วิดีโอ */ }
+    try{
+      nsVid = document.createElement("video"); nsVid.muted = true; nsVid.loop = true; nsVid.playsInline = true; nsVid.setAttribute("playsinline", "");
+      nsVid.style.cssText = "position:fixed;left:-9999px;width:2px;height:2px"; nsVid.src = NOSLEEP; document.body.appendChild(nsVid);
+      await nsVid.play(); wakeMode = "video";
+    }catch(e){ nsStop(); wakeMode = "none"; }
+    renderWake();
+  }
+  function renderWake(){
+    var el = $("wakeInfo"); if(!el) return;
+    el.hidden = !running && !wakeMode;
+    el.className = "hint " + (wakeMode === "none" ? "bad" : "");
+    el.textContent = wakeMode === "lock" ? "🔆 จอไม่ดับระหว่างทำ ✓ (ต่อให้ตั้งเวลาปิดจอของเครื่องไว้สั้นก็ไม่ดับ)"
+      : wakeMode === "video" ? "🔆 จอไม่ดับระหว่างทำ ✓ (ใช้วิธีเล่นวิดีโอเปล่าแทน เพราะเครื่องไม่ให้ใช้ Wake Lock)"
+      : wakeMode === "none" ? "⚠ กันจอดับไม่ได้ ตั้งเวลาปิดจอของมือถือให้นานสุด และอย่าให้จอล็อก ไม่งั้นจะพักเอง" : "";
   }
   document.addEventListener("visibilitychange", function(){
     if(!running) return;
@@ -112,7 +132,7 @@
     if(running) return;
     if(!FT.orKey()){ msg("runMsg", "ยังไม่มี OpenRouter key ในเบราว์เซอร์นี้ ไปใส่ในแอพหลัก (ตั้งค่า → OpenRouter API key) ก่อน", "err"); return; }
     running = true; paused = false; msg("runMsg", ""); await wake(true);
-    runStart = Date.now(); etaBase = etaAt = 0; clearInterval(tick); tick = setInterval(renderQueue, 1000); /* นาฬิกาเดินทุกวินาทีระหว่างทำ */
+    runStart = Date.now(); etaBase = etaAt = 0; clearInterval(tick); renderWake(); tick = setInterval(renderQueue, 1000); /* นาฬิกาเดินทุกวินาทีระหว่างทำ */
     renderQueue();
     for(var q; !paused && (q = queue.find(function(x){ return x.status === "wait"; })); ){
       if(runCost >= cfg.budget && q.mode !== "up") break;

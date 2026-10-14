@@ -30,6 +30,7 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 .btn:disabled{opacity:.45}
 .row{display:flex;gap:8px;flex-wrap:wrap}.row>.btn{flex:1}
 .hint{color:var(--muted);font-size:13px;margin:6px 0 0}
+.hint.bad{color:#fda4af}
 .msg{border-radius:var(--rc);padding:10px 12px;background:var(--field);border:1px solid var(--line);font-size:14px;margin-top:10px}
 .msg.err{background:var(--err-soft);border-color:rgba(244,63,94,.4)}
 .msg.ok{background:var(--ok-soft);border-color:rgba(16,185,129,.4)}
