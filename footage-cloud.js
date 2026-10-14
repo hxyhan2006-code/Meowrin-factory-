@@ -55,8 +55,12 @@
     var local = lib.filter(function(c){ return c.status === "done" && !c.r2; }).length;
     $("cloudInfo").textContent = "ในคลัง " + vids.length + " คลิป · " + gb(size) + " · ทำดัชนีแล้ว " + (vids.length - todo.length) + " · ยังไม่ทำ " + todo.length
       + (local ? " · ดัชนีที่ไฟล์ยังไม่อยู่ในคลัง " + local + " คลิป" : "");
-    $("cloudAlbums").innerHTML = Object.keys(alb).sort().map(function(a){ var x = alb[a];
-      return "<li><b>" + U.esc(a) + "</b> · " + x.n + " คลิป · " + gb(x.size) + (x.todo ? ' · <span style="color:var(--accent)">ยังไม่ทำดัชนี ' + x.todo + "</span>" : " · ✓ ครบ") + "</li>"; }).join("");
+    var files = {}; vids.forEach(function(o){ var a = albumOf(o.key); (files[a] = files[a] || []).push(o); });
+    $("cloudAlbums").innerHTML = Object.keys(alb).sort().map(function(a){ var x = alb[a], fl = files[a].sort(function(p, q){ return q.at - p.at; });
+      return '<li><details><summary><b>' + U.esc(a) + "</b> · " + x.n + " คลิป · " + gb(x.size) + (x.todo ? ' · <span style="color:var(--accent)">ยังไม่ทำดัชนี ' + x.todo + "</span>" : " · ✓ ครบ") + "</summary><ul class=\"cf\">"
+        + fl.slice(0, 100).map(function(o){ var c = byKey[o.key] || byNs[base(o.key) + "|" + o.size], ok = c && c.status === "done";
+            return "<li><span>" + U.esc(base(o.key)) + "</span><small>" + gb(o.size) + " · " + (ok ? "✓ ทำดัชนีแล้ว" : '<i style="color:var(--accent);font-style:normal">ยังไม่ทำ</i>') + "</small></li>"; }).join("")
+        + (fl.length > 100 ? "<li><small>…และอีก " + (fl.length - 100) + " ไฟล์</small></li>" : "") + "</ul></details></li>"; }).join("");
     $("cloudQueue").hidden = !todo.length; $("cloudQueue").textContent = "เอาคลิปที่ยังไม่ทำเข้าคิว (" + todo.length + ")";
     $("cloudQueue").onclick = function(){
       var now = Date.now();
@@ -68,17 +72,19 @@
   }
   async function listCloud(){
     if(!R2.ready()) return;
-    $("cloudList").disabled = true; msg("cloudMsg", "กำลังดูรายการในคลัง...");
+    $("cloudList").disabled = true; $("cloudList").textContent = "กำลังดูรายการ..."; msg("cloudMsg", "กำลังขอรายการไฟล์จากคลัง...");
+    var t0 = Date.now();
     try{
       objs = await R2.list();
       /* จับคู่ดัชนีเดิม (ทำจากไฟล์ในเครื่อง) กับไฟล์ในคลังด้วยชื่อ+ขนาด → ต่อไปเล่นจากคลังได้เลย */
       var link = [], m = {}; objs.forEach(function(o){ m[base(o.key) + "|" + o.size] = o.key; });
       (await FT.store.all()).forEach(function(c){ var k = m[c.name + "|" + c.size]; if(k && c.r2 !== k){ c.r2 = k; link.push(c); } }); /* อ่านจากฐานจริง (ดัชนีในหน้าอาจยังโหลดไม่เสร็จ) */
       if(link.length) await FT.store.putMany(link);
-      msg("cloudMsg", link.length ? "จับคู่ดัชนีกับไฟล์ในคลังได้ " + link.length + " คลิป (เล่น/ต่อฉากจากคลังได้แล้ว ไม่ต้องเลือกไฟล์)" : "", "ok");
+      var hh = new Date().toLocaleTimeString("th-TH");
+      msg("cloudMsg", "อัปเดตรายการแล้ว " + hh + " · พบ " + objs.length + " ไฟล์ (" + ((Date.now() - t0) / 1000).toFixed(1) + " วิ)" + (link.length ? " · จับคู่ดัชนีกับไฟล์ในคลังได้ " + link.length + " คลิป (เล่น/ต่อฉากจากคลังได้แล้ว ไม่ต้องเลือกไฟล์)" : ""), "ok");
       if(link.length) await U.refresh();
     }catch(err){ tag("err", "เชื่อมไม่ได้"); msg("cloudMsg", "ดูคลังไม่ได้: " + err.message, "err"); }
-    $("cloudList").disabled = false; renderState();
+    $("cloudList").disabled = false; $("cloudList").textContent = "รีเฟรชรายการในคลัง"; renderState();
   }
   $("cloudList").addEventListener("click", listCloud);
   fill(); renderState();

@@ -92,6 +92,10 @@ textarea{width:100%;border-radius:var(--rc);border:1px solid var(--line-strong);
 .marks{margin:6px 0 0;padding-left:22px;font-size:13px;color:var(--muted)}.marks b{color:var(--text)}
 .pl .none{color:var(--muted);font-size:13px;padding:8px 0}
 .albums{list-style:none;margin:8px 0 0;padding:0;font-size:13px;color:var(--muted)}.albums li{padding:6px 0;border-top:1px solid var(--line)}.albums b{color:var(--text)}
+.albums summary{cursor:pointer;list-style:none}.albums summary::-webkit-details-marker{display:none}
+.albums summary::after{content:" ›";color:var(--muted)}.albums details[open] summary::after{content:" ⌄"}
+.cf{list-style:none;margin:6px 0 4px;padding:0}.cf li{display:flex;justify-content:space-between;gap:8px;padding:5px 0;border-top:1px dashed var(--line);font-size:12px}
+.cf li span{word-break:break-all;color:var(--text)}.cf small{flex:none;color:var(--muted)}
 .strow{display:flex;align-items:center;flex-wrap:wrap;gap:4px 10px;padding:7px 0;border-top:1px solid var(--line);font-size:13px;color:var(--muted)}
 .strow:first-child{border-top:0}.strow>span:first-child{flex:1;min-width:110px}.strow small{flex-basis:100%;font-size:12px;color:var(--muted)}
 .pill{display:inline-block;font-size:12px;font-weight:600;padding:1px 10px;border-radius:999px;background:var(--field);color:var(--muted)}

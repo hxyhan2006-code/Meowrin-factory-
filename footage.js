@@ -17,6 +17,15 @@
   var lib = [];          /* คลิปที่ทำดัชนีแล้วทั้งหมด (จาก IndexedDB) */
   var queue = [];        /* คิวรอบนี้ [{ file, id, album, status: wait|run|done|error|skip, err, p, info, raw }] */
   var running = false, paused = false, runCost = 0, runStart = 0, tick = 0;
+  var etaBase = 0, etaAt = 0; /* เวลาที่เหลือ (ms) ประเมินใหม่ทุกครั้งที่คลิปเสร็จ แล้วนับถอยหลังเรียบๆ ระหว่างนั้น → ตัวเลขไม่เด้งขึ้นลง */
+  function etaUpdate(){ /* ถ่วงด้วยขนาดไฟล์ (คลิปใหญ่ใช้เวลานานกว่า ทั้งอ่านเฟรม/AI/อัปโหลด) จากเวลาจริงของคลิปที่ทำเสร็จในรอบนี้ */
+    var work = queue.filter(function(q){ return q.status !== "skip"; }), dn = work.filter(function(q){ return (q.status === "done" || q.status === "error") && q.tEnd && q.t0; });
+    if(dn.length < 2) return; /* ยังน้อยไป ประเมินไม่นิ่ง */
+    var sum = function(a, f){ return a.reduce(function(t, q){ return t + f(q); }, 0); };
+    var ms = sum(dn, function(q){ return q.tEnd - q.t0; }), mbDone = sum(dn, function(q){ return (q.info.size || 0) / 1048576; });
+    var rest = work.filter(function(q){ return q.status === "wait" || q.status === "run"; }), mbLeft = sum(rest, function(q){ return (q.info.size || 0) / 1048576; });
+    etaBase = mbDone > 1 ? ms / mbDone * mbLeft : ms / dn.length * rest.length; etaAt = Date.now();
+  }
   function mmss(ms){ var s = Math.max(0, Math.round(ms / 1000)); return Math.floor(s / 60) + ":" + pad(s % 60); }
   function refreshLib(){ return FT.store.all().then(function(a){ lib = a || []; renderAll(); }); }
   function byId(id){ return lib.find(function(c){ return c.id === id; }); }
@@ -68,8 +77,8 @@
     var cur = work.find(function(q){ return q.status === "run"; });
     var pct = work.length ? (fin + (cur ? cur.p : 0)) / work.length : 0;
     $("progBar").style.width = Math.round(pct * 100) + "%";
-    var el = running ? Date.now() - runStart : 0, eta = running && fin ? el / fin * (work.length - fin) : 0;
-    $("progTxt").textContent = work.length ? "เสร็จ " + fin + "/" + work.length + " คลิป" + (running ? " · ผ่านไป " + mmss(el) + (fin && fin < work.length ? " · เหลือประมาณ " + mmss(eta) : "") : "") + (runCost ? " · รอบนี้ใช้ไป " + money(runCost) + " จากงบ " + money(cfg.budget) : "") : "";
+    var el = running ? Date.now() - runStart : 0, left = running && etaAt ? Math.max(0, etaBase - (Date.now() - etaAt)) : -1;
+    $("progTxt").textContent = work.length ? "เสร็จ " + fin + "/" + work.length + " คลิป" + (running ? " · ผ่านไป " + mmss(el) + (fin < work.length ? (left < 0 ? " · กำลังประเมินเวลา..." : left < 8000 ? " · ใกล้เสร็จ" : " · เหลือประมาณ " + mmss(Math.round(left / 5000) * 5000)) : "") : "") + (runCost ? " · รอบนี้ใช้ไป " + money(runCost) + " จากงบ " + money(cfg.budget) : "") : "";
     renderEst();
   }
 
@@ -94,11 +103,11 @@
     if(running) return;
     if(!FT.orKey()){ msg("runMsg", "ยังไม่มี OpenRouter key ในเบราว์เซอร์นี้ ไปใส่ในแอพหลัก (ตั้งค่า → OpenRouter API key) ก่อน", "err"); return; }
     running = true; paused = false; msg("runMsg", ""); await wake(true);
-    runStart = Date.now(); clearInterval(tick); tick = setInterval(renderQueue, 1000); /* นาฬิกาเดินทุกวินาทีระหว่างทำ */
+    runStart = Date.now(); etaBase = etaAt = 0; clearInterval(tick); tick = setInterval(renderQueue, 1000); /* นาฬิกาเดินทุกวินาทีระหว่างทำ */
     renderQueue();
     for(var q; !paused && (q = queue.find(function(x){ return x.status === "wait"; })); ){
       if(runCost >= cfg.budget && q.mode !== "up") break;
-      await processClip(q);
+      await processClip(q); q.tEnd = Date.now(); etaUpdate();
     }
     running = false; clearInterval(tick); await wake(false);
     var left = queue.some(function(x){ return x.status === "wait"; });

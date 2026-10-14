@@ -32,10 +32,11 @@
     return presign({ method:method, scheme:ep[1], host:ep[2], path:"/" + cfg.bucket + (key ? "/" + key : ""), query:query,
       keyId:cfg.keyId, secret:cfg.secret, region:cfg.region || "auto", expires:expires || 3600 });
   }
-  async function req(method, key, query, body, headers){
-    var url = await sign(method, key, query), r;
-    try{ r = await fetch(url, { method:method, body:body, headers:headers || {} }); }
-    catch(e){ throw new Error("ต่อคลังไม่ได้ (เน็ตหลุด หรือยังไม่ได้ตั้ง CORS ใน R2)"); }
+  async function req(method, key, query, body, headers, ms){ /* ms = เวลารอสูงสุด (ค่าเริ่มต้น 30 วิ ชิ้นอัปโหลดใหญ่ใช้นานกว่า) */
+    var url = await sign(method, key, query), r, ac = new AbortController(), to = setTimeout(function(){ ac.abort(); }, ms || 30000);
+    try{ r = await fetch(url, { method:method, body:body, headers:headers || {}, signal:ac.signal }); }
+    catch(e){ throw new Error(e && e.name === "AbortError" ? "คลังไม่ตอบ (รอเกิน " + Math.round((ms || 30000) / 1000) + " วิ) เน็ตช้าหรือหลุด" : "ต่อคลังไม่ได้ (เน็ตหลุด หรือยังไม่ได้ตั้ง CORS ใน R2)"); }
+    finally{ clearTimeout(to); }
     if(!r.ok){
       var t = await r.text().catch(function(){ return ""; }), m = /<Message>([^<]*)/.exec(t), c = /<Code>([^<]*)/.exec(t);
       throw new Error("คลัง " + r.status + (c ? " " + c[1] : "") + (m ? ": " + m[1] : ""));
@@ -70,7 +71,7 @@
   /* อัปโหลด (เล็ก = ครั้งเดียว · ใหญ่ = ทีละ 10 MB พร้อมกัน 3 ชิ้น) */
   async function put(key, file, onProg){
     var type = file.type || "video/mp4";
-    if(file.size <= PART){ await retry(function(){ return req("PUT", key, null, file, { "Content-Type":type }); }); if(onProg) onProg(1); return; }
+    if(file.size <= PART){ await retry(function(){ return req("PUT", key, null, file, { "Content-Type":type }, 300000); }); if(onProg) onProg(1); return; }
     var id = tag(xml(await (await req("POST", key, { uploads:"" }, null, { "Content-Type":type })).text()), "UploadId");
     if(!id) throw new Error("คลังไม่ให้เริ่มอัปโหลด");
     var n = Math.ceil(file.size / PART), etags = [], next = 0, done = 0;
@@ -78,7 +79,7 @@
       await Promise.all(Array.from({ length:Math.min(PAR, n) }, async function(){
         while(next < n){
           var i = next++, blob = file.slice(i * PART, Math.min(file.size, (i + 1) * PART));
-          var r = await retry(function(){ return req("PUT", key, { partNumber:String(i + 1), uploadId:id }, blob); });
+          var r = await retry(function(){ return req("PUT", key, { partNumber:String(i + 1), uploadId:id }, blob, null, 300000); });
           etags[i] = r.headers.get("ETag"); if(!etags[i]) throw new Error("อ่าน ETag ไม่ได้ (CORS ต้อง ExposeHeaders ETag)");
           done++; if(onProg) onProg(done / n);
         }
