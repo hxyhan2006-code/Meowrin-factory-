@@ -301,11 +301,11 @@
     var k = shown.push({ c:c, sc:sc || c.scenes[0] }) - 1; /* แตะปก/ฉาก = ดูรูปใหญ่ */
     return '<div class="card"><div class="shots"><div class="cover" data-k="' + k + '"><img src="' + (c.cover || "") + '" alt="ปกคลิป"><em>' + capDur(c.duration) + "</em></div>"
       + (sc ? '<img class="scene" src="' + sc.thumb + '" alt="ฉาก" data-k="' + k + '">' : "") + '</div><div class="t">'
-      + "<b>" + esc(c.album) + '</b> <button class="tag" data-e="' + k + '" aria-label="แก้ชื่ออัลบั้มของคลิปนี้">✎ แก้</button>' + (sc ? ' · <span class="when">ฉาก ' + tm(sc.s) + "–" + tm(sc.e) + "</span>" : " · " + c.scenes.length + " ฉาก")
+      + "<b>" + esc(c.album) + "</b>" + (sc ? ' · <span class="when">ฉาก ' + tm(sc.s) + "–" + tm(sc.e) + "</span>" : " · " + c.scenes.length + " ฉาก")
       + "<p>" + (exact ? '<span class="tag ok">★ ตรงเป๊ะ</span> ' : "") + (why ? '<span class="tag run">AI: ' + esc(why) + "</span> " : "") + esc(sc ? (a.summary_th || "(AI ไม่ได้อธิบายฉากนี้)") : (c.summary_th || "")) + "</p>"
       + (who ? "<p>👤 " + esc(who) + "</p>" : "")
       + (sc ? "" : strip(c)) /* โหมดดูทั้งคลิป: แถบรูปทุกฉาก แตะดูรูปใหญ่ + คำอธิบายฉากนั้น */
-      + '<p>' + day(c.lastModified) + '</p><div class="fname">' + esc(c.name) + "</div></div></div>";
+      + '<p>' + day(c.lastModified) + '</p><div class="fname">' + esc(c.name) + ' <button class="editbtn" data-e="' + k + '" aria-label="แก้ชื่ออัลบั้มของคลิปนี้">✎ แก้อัลบั้ม</button></div></div></div>';
   }
   $("results").addEventListener("click", function(e){
     var el = e.target.closest("[data-k]"), h = el && shown[+el.dataset.k], c = h && h.c, sc = h && h.sc;
