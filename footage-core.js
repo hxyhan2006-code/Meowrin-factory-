@@ -184,6 +184,20 @@
     try{ j = parseJSON(r.text); }catch(err){ err.raw = r.text; err.cost = r.cost; throw err; }
     r.json = j; return r;
   }
+  /* ให้ AI เลือกฉากที่ตรงกับคำขอแบบประโยคจากรายการผู้สมัคร (ข้อความล้วน ไม่มีรูป) items:[{i,who,sum,tags,loc}] → picks:[{i,why}] */
+  async function rank(q, items){
+    var lines = items.map(function(it){ return "#" + it.i + " | " + it.who + " | " + it.sum + (it.tags ? " | " + it.tags : "") + (it.loc ? " | " + it.loc : ""); }).join("\n");
+    var body = { model:cfg.model, usage:{ include:true }, messages:[{ role:"user", content:
+      "A Thai One Piece fan and video editor describes a scene they want: \"" + q + "\"\n" +
+      "Candidate scenes (index | characters | description | tags | place), from an automatic index that can be imperfect:\n" + lines + "\n\n" +
+      "Pick up to 10 candidates that best match the request, best first. Think about meaning, not just exact words (e.g. rowing a boat ~ on a boat at sea). Only include scenes that really fit; fewer is fine; none is fine.\n" +
+      "Return ONLY JSON: {\"picks\":[{\"i\":<candidate number>,\"why\":\"one short Thai phrase why it fits\"}]}" }] };
+    if(/^google\//.test(cfg.model)) body.reasoning = { effort:"low" };
+    var r = await post(body), j;
+    try{ j = parseJSON(r.text); }catch(err){ err.cost = r.cost; throw err; }
+    r.picks = (Array.isArray(j.picks) ? j.picks : []).map(function(p){ return { i:Number(p.i), why:String(p.why || "") }; }).filter(function(p){ return p.i > 0; });
+    return r;
+  }
   /* แปลคำค้นไทย → คำค้นอังกฤษ/ชื่อตัวละคร (ข้อความล้วน เล็กมาก) */
   async function expandQuery(q){
     var r = await post({ model:cfg.model, usage:{ include:true }, messages:[{ role:"user", content:
@@ -191,5 +205,5 @@
     var j = parseJSON(r.text); r.terms = Array.isArray(j.terms) ? j.terms.map(String) : []; return r;
   }
 
-  window.FT = { cfg:cfg, saveCfg:saveCfg, orKey:orKey, store:store, clipId:clipId, scan:scan, refreshImages:refreshImages, IMG_V:IMG.v, describe:describe, expandQuery:expandQuery };
+  window.FT = { cfg:cfg, saveCfg:saveCfg, orKey:orKey, store:store, clipId:clipId, scan:scan, refreshImages:refreshImages, IMG_V:IMG.v, describe:describe, expandQuery:expandQuery, rank:rank };
 })();

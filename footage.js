@@ -204,6 +204,10 @@
     ["กลัว","หวาดกลัว","scare","afraid","fear","terrif"],["ดีใจ","มีความสุข","ยินดี","happy","joy","excite"],["ต่อสู้","ต่อย","โจมตี","สู้","fight","battle","attack","punch"],
     ["ฟันดาบ","ดาบ","sword","slash"],["กิน","อาหาร","หิว","eat","food","hungry"],["วิ่ง","หนี","run","flee","chase"],["เท่","เจ๋ง","cool","badass"]
   ];
+  SYN.push(["พายเรือ","ล่องเรือ","แล่นเรือ","เรือ","พาย","boat","ship","row","sail","raft"],["ทะเล","มหาสมุทร","คลื่น","sea","ocean","wave"],["ป่า","ต้นไม้","forest","jungle"],
+    ["เมือง","หมู่บ้าน","ชาวบ้าน","town","village"],["นอน","หลับ","เตียง","sleep","bed"],["พูด","คุย","บอก","talk","speak","say"],["ร้อง","ตะโกน","scream","shout","yell"],["ร้องเพลง","เพลง","sing","song"],
+    ["ซ่อน","แอบ","hide","sneak"],["กอด","hug","embrace"],["วิ่ง","หนี","run","flee","chase"]);
+  var STOP = ["ฉาก","ฉากที่","ที่","ซึ่ง","อยู่","กับ","และ","ของ","ใน","ตอน","ตอนที่","แบบ","มี","เป็น","ให้","ไป","มา","คือ","หา","อยาก","ได้","เวลา","เจอ","ครับ","ค่ะ","หน่อย","ด้วย","แล้ว","จะ","ก็","ไหม","มั้ย","อะ","นะ","เมื่อ","กำลัง","แต่","หรือ","กัน","เรื่อง","ภาพ","คลิป","ช่วง","ที"];
   var seg = null; try{ seg = new Intl.Segmenter("th", { granularity:"word" }); }catch(e){}
   function terms(q){ /* คืนกลุ่มคำ [[คำที่ความหมายเดียวกัน...]] แต่ละกลุ่ม = 1 เงื่อนไขที่ต้องตรง */
     var out = [], rest = q.toLowerCase();
@@ -211,8 +215,8 @@
     rest.split(/[\s,]+/).filter(Boolean).forEach(function(p){
       if(/[฀-๿]/.test(p) && seg){
         var ws = Array.from(seg.segment(p)).filter(function(x){ return x.isWordLike && x.segment.length >= 2; }).map(function(x){ return x.segment; });
-        (ws.length ? ws : [p]).forEach(function(w){ out.push([w]); });
-      } else if(p.length >= 2) out.push([p]);
+        (ws.length ? ws : [p]).forEach(function(w){ if(STOP.indexOf(w) < 0) out.push([w]); });
+      } else if(p.length >= 2 && STOP.indexOf(p) < 0) out.push([p]);
     });
     return out;
   }
@@ -233,7 +237,7 @@
       return false;
     });
   }
-  var aiTerms = {}, sT = 0, shown = [], lastQ = "", showPartial = false; /* shown = รายการที่โชว์อยู่ (ให้ปุ่มดูรูปใหญ่อ้างถึง) */
+  var aiTerms = {}, sT = 0, shown = [], lastQ = "", showPartial = false, lastHits = [], aiQ = ""; /* lastHits = ผลค้นในเครื่องล่าสุด (ผู้สมัครของ AI) · aiQ = คำค้นที่ AI เลือกให้อยู่ */ /* shown = รายการที่โชว์อยู่ (ให้ปุ่มดูรูปใหญ่อ้างถึง) */
   $("q").addEventListener("input", function(){ clearTimeout(sT); sT = setTimeout(search, 250); });
   $("albumFilter").addEventListener("change", search);
   $("aiQuery").addEventListener("change", search);
@@ -250,7 +254,7 @@
       extra = aiTerms[q];
       if(q !== $("q").value.trim()) return; /* พิมพ์ต่อระหว่างรอ */
     }
-    var ts = terms(q), hits = []; shown = [];
+    var ts = terms(q), hits = [];
     var soft = extra.map(function(x){ return String(x).toLowerCase().trim(); }).filter(Boolean); /* คำที่ AI แปลให้ = ช่วยจัดอันดับ ไม่บังคับต้องตรง */
     var names = ts.filter(function(v){ return NAMES.indexOf(v) >= 0; }), emos = ts.filter(function(v){ return SYN.indexOf(v) >= 0; });
     clips.forEach(function(c){ c.scenes.forEach(function(sc){
@@ -266,6 +270,8 @@
       if(hit) hits.push({ c:c, sc:sc, hit:hit, score:score, exact:exact });
     }); });
     hits.sort(function(a, b){ return b.hit - a.hit || b.score - a.score; }); /* ตรงเป๊ะ (ตัวละครเป็นคนมีอารมณ์นั้น) ได้คะแนนพิเศษ จึงขึ้นก่อน */
+    lastHits = hits;
+    if(q !== aiQ) $("aiRes").innerHTML = ""; /* เปลี่ยนคำค้น = ล้างผลที่ AI เลือกให้ของคำเก่า */
     var full = hits.filter(function(h){ return h.hit === ts.length; }), part = hits.filter(function(h){ return h.hit < ts.length; });
     if(q !== lastQ){ lastQ = q; showPartial = !full.length; } /* คำค้นใหม่ = ซ่อนที่ตรงบางส่วนไว้ก่อน (ถ้ามีตรงครบ) */
     var list = full.slice(0, 60), html = full.length ? '<p class="hint">ตรงครบทุกคำ ' + full.length + " ฉาก" + (full.length > 60 ? " (โชว์ 60 อันดับแรก)" : "") + "</p>" : "";
@@ -279,18 +285,18 @@
   }
   $("results").addEventListener("click", function(e){ if(e.target.closest("#partialBtn")){ showPartial = !showPartial; search(); } });
   function browse(clips){ /* ไม่พิมพ์คำค้น = โชว์ทุกคลิปพร้อมสรุป (แก้ปัญหาเห็นแค่ปก) */
-    shown = [];
+    lastHits = [];
     clips = clips.slice().sort(function(a, b){ return a.album.localeCompare(b.album) || b.lastModified - a.lastModified; });
     $("findInfo").textContent = clips.length + " คลิปในดัชนี · พิมพ์คำค้นเพื่อหาฉาก";
     $("results").innerHTML = clips.length ? clips.map(function(c){ return card(c, null); }).join("") : '<p class="empty">ยังไม่มีคลิปในดัชนี ไปที่แท็บ ทำดัชนี ก่อน</p>';
   }
-  function card(c, sc, exact){
+  function card(c, sc, exact, why){
     var a = sc && sc.ai || {}, who = (a.characters_th && a.characters_th.length ? a.characters_th : a.characters || []).join(", ");
     var k = shown.push({ c:c, sc:sc || c.scenes[0] }) - 1; /* แตะปก/ฉาก = ดูรูปใหญ่ */
     return '<div class="card"><div class="shots"><div class="cover" data-k="' + k + '"><img src="' + (c.cover || "") + '" alt="ปกคลิป"><em>' + capDur(c.duration) + "</em></div>"
       + (sc ? '<img class="scene" src="' + sc.thumb + '" alt="ฉาก" data-k="' + k + '">' : "") + '</div><div class="t">'
       + "<b>" + esc(c.album) + '</b> <button class="tag" data-e="' + k + '" aria-label="แก้ชื่ออัลบั้มของคลิปนี้">✎ แก้</button>' + (sc ? ' · <span class="when">ฉาก ' + tm(sc.s) + "–" + tm(sc.e) + "</span>" : " · " + c.scenes.length + " ฉาก")
-      + "<p>" + (exact ? '<span class="tag ok">★ ตรงเป๊ะ</span> ' : "") + esc(sc ? (a.summary_th || "(AI ไม่ได้อธิบายฉากนี้)") : (c.summary_th || "")) + "</p>"
+      + "<p>" + (exact ? '<span class="tag ok">★ ตรงเป๊ะ</span> ' : "") + (why ? '<span class="tag run">AI: ' + esc(why) + "</span> " : "") + esc(sc ? (a.summary_th || "(AI ไม่ได้อธิบายฉากนี้)") : (c.summary_th || "")) + "</p>"
       + (who ? "<p>👤 " + esc(who) + "</p>" : "")
       + '<p>' + day(c.lastModified) + '</p><div class="fname">' + esc(c.name) + "</div></div></div>";
   }
@@ -301,6 +307,30 @@
     $("big").hidden = false;
   });
   $("big").addEventListener("click", function(){ this.hidden = true; });
+
+  /* ---------- ให้ AI เลือกฉากจากคำขอแบบประโยค ---------- */
+  $("aiRank").addEventListener("change", function(){ $("aiGo").hidden = !this.checked; });
+  $("q").addEventListener("keydown", function(e){ if(e.key === "Enter" && $("aiRank").checked){ e.preventDefault(); aiSearch(); } });
+  $("aiGo").addEventListener("click", function(){ aiSearch(); });
+  async function aiSearch(){
+    var q = $("q").value.trim();
+    if(!q){ msg("aiRes", "พิมพ์ฉากที่อยากหาก่อน เช่น ฉากที่ลูฟี่พายเรืออยู่กับโซโล", "err"); return; }
+    if(!FT.orKey()){ msg("aiRes", "ยังไม่มี OpenRouter key ในเบราว์เซอร์นี้", "err"); return; }
+    await search(); /* ให้ผลค้นในเครื่องล่าสุดพร้อมก่อน */
+    var pool = lastHits.slice(0, 80);
+    if(!pool.length){ msg("aiRes", "คำค้นไม่ตรงกับฉากไหนเลย ให้ AI เลือกไม่ได้ ลองใส่ชื่อตัวละครหรือคำสำคัญ", "err"); return; }
+    var items = pool.map(function(h, i){ var a = h.sc.ai || {};
+      return { i:i + 1, who:(a.characters_th && a.characters_th.length ? a.characters_th : a.characters || []).join(","), sum:a.summary_th || "", tags:(a.tags_th || []).join(","), loc:a.location || "" }; });
+    $("aiGo").disabled = true; $("aiGo").textContent = "AI กำลังเลือก..."; msg("aiRes", "");
+    var t0 = Date.now();
+    try{
+      var r = await FT.rank(q, items); runCost += r.cost; aiQ = q;
+      var picks = r.picks.filter(function(p){ return p.i <= pool.length; });
+      $("aiRes").innerHTML = '<p class="hint">AI เลือกจาก ' + pool.length + " ฉาก · ได้ " + picks.length + " ฉาก · ใช้ " + money(r.cost) + " · " + ((Date.now() - t0) / 1000).toFixed(1) + " วิ</p>"
+        + (picks.length ? picks.map(function(p){ var h = pool[p.i - 1]; return card(h.c, h.sc, h.exact, p.why || "ตรง"); }).join("") : '<p class="empty">AI ไม่เจอฉากที่ตรงในกลุ่มนี้ ลองอธิบายใหม่ หรือดูผลค้นด้านล่าง</p>');
+    }catch(err){ msg("aiRes", "ให้ AI เลือกไม่ได้: " + err.message, "err"); }
+    $("aiGo").disabled = false; $("aiGo").textContent = "ถาม AI เลือกฉากให้"; renderStats();
+  }
 
   /* ---------- ตั้งค่า ---------- */
   $("model").value = cfg.model; $("budget").value = cfg.budget; $("par").value = cfg.par; $("thr").value = cfg.thr; $("maxScenes").value = cfg.maxScenes;
