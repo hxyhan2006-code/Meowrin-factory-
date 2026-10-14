@@ -1,13 +1,13 @@
 /* footage-plan.js — แท็บ "วางแผน": บท → AI คิดฉากทีละบรรทัด (FT.plan) → หาคลิปจริงในดัชนี (ค้นในเครื่อง + FT.rank)
    → เลือก/สลับ → แชร์ไฟล์คลิปที่เลือกเรียงตามบทไป CapCut (Web Share) · โหลดหลัง footage.js (ใช้ FT.ui)
-   แผนล่าสุดเก็บใน localStorage mw_footage_plan_v1 (อ้างคลิปด้วย id + ลำดับฉาก ไม่เก็บรูป) */
+   แผนล่าสุดเก็บใน MWStore (store.js) key mw_footage_plan_v1 (อ้างคลิปด้วย id + ลำดับฉาก ไม่เก็บรูป) */
 (function(){
   "use strict";
   var FT = window.FT, U = FT && FT.ui; if(!U) return;
   var $ = function(id){ return document.getElementById(id); };
   var KEY = "mw_footage_plan_v1", POOL = 40, PICKS = 3, PAR = 3, MAX_LINES = 40;
-  function load(k, d){ try{ var v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } }
-  function save(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+  function load(k, d){ return MWStore.get(k, d); } /* store.js: IndexedDB + แคช */
+  function save(k, v){ return MWStore.set(k, v); }
   var plan = load(KEY, null); /* { at, cost, rows:[{ line, scene, backup, picks:[{id, si, why}], sel, use }] } */
 
   /* ---------- บทจากประวัติของแอพหลัก (mw_history_v1) ---------- */

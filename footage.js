@@ -105,6 +105,7 @@
     else if(left && paused) msg("runMsg", document.hidden ? "พักไว้เพราะสลับแอพ กลับมาแล้วกด ทำต่อ" : "พักแล้ว กด ทำต่อ เมื่อพร้อม");
     else if(!queue.some(function(x){ return x.status === "wait"; })) msg("runMsg", "เสร็จรอบนี้แล้ว · ใช้ไป " + money(runCost), "ok");
     paused = false; renderQueue();
+    if(window.MWDrive) MWDrive.autoFootage(); /* เชื่อม Drive อยู่ → อัปคลิปที่เพิ่งทำขึ้นไปเลย */
   }
 
   var CHUNK = 8; /* กี่ฉากต่อคำขอ AI */

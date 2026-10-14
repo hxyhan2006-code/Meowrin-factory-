@@ -8,7 +8,7 @@
   var MAX_PER_CHANNEL = 1000;
   var MAX_SECS = 180;      /* เก็บเฉพาะคลิปสั้น */
 
-  function getKey(){ try{ return JSON.parse(localStorage.getItem(KEY_STORE) || '""'); }catch(e){ return ""; } }
+  function getKey(){ return MWStore.get(KEY_STORE, "") || ""; }
   function secs(iso){ var m = /^PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$/.exec(iso||""); if(!m) return 0; return (+m[1]||0)*3600+(+m[2]||0)*60+(+m[3]||0); }
   function fatal(err){ return /โควต้า|API key/.test(err.message); } /* error ที่ลองช่องอื่นต่อไปก็ไม่มีประโยชน์ */
 

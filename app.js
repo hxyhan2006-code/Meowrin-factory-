@@ -3,8 +3,8 @@
   var KEY_STORE = "mw_key_v1", DATA_STORE = "mw_data_v1", CACHE_STORE = "mw_cache_v1";
   var $ = function(id){ return document.getElementById(id); };
 
-  function load(k, d){ try{ var v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } }
-  function save(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); return true; }catch(e){ return false; } }
+  function load(k, d){ return MWStore.get(k, d); } /* store.js: IndexedDB + แคช */
+  function save(k, v){ return MWStore.set(k, v); }
   var data = load(DATA_STORE, { channels: [], made: {}, picked: null });
   data.saved = data.saved || {}; data.cols = data.cols || 2; /* saved = เก็บไว้ทำทีหลัง · cols = จำนวนคอลัมน์การ์ด */
   var cache = load(CACHE_STORE, { at: 0, clips: [] });
@@ -390,7 +390,7 @@
   function keyState(){ $("ytState").textContent = getKey() ? "✓ ตั้งแล้ว" : "ยังไม่ได้ตั้ง"; $("ytState").classList.toggle("ok", !!getKey()); }
   $("ytKey").value = getKey(); keyState();
   function saveYt(){
-    try{ localStorage.setItem(KEY_STORE, JSON.stringify($("ytKey").value.trim())); msg("setMsg","บันทึก key แล้ว"); keyState(); }catch(e){ msg("setMsg","บันทึกไม่ได้",true); }
+    MWStore.set(KEY_STORE, $("ytKey").value.trim()); msg("setMsg","บันทึก key แล้ว"); keyState();
   }
   $("saveKey").addEventListener("click", saveYt);
   $("ytKey").addEventListener("change", saveYt); /* วาง/ลบ ผ่านปุ่มแล้วบันทึกให้เลย */
@@ -451,7 +451,7 @@
 
 /* ---------- PWA: service worker ---------- */
 if ("serviceWorker" in navigator) {
-  window.addEventListener("load", function(){
-    navigator.serviceWorker.register("sw.js").catch(function(){ /* ไม่ลงทะเบียนก็ยังใช้แอพได้ */ });
-  });
+  /* app.js ถูกโหลดโดย store.js หลังข้อมูลพร้อม อาจหลัง window load ไปแล้ว */
+  var regSw = function(){ navigator.serviceWorker.register("sw.js").catch(function(){ /* ไม่ลงทะเบียนก็ยังใช้แอพได้ */ }); };
+  if(document.readyState === "complete") regSw(); else window.addEventListener("load", regSw);
 }

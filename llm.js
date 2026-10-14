@@ -10,8 +10,8 @@
   var OR_URL = "https://openrouter.ai/api/v1/chat/completions";
   var GM_TIMEOUT = 90e3;
   var GM_URL = "https://generativelanguage.googleapis.com/v1beta/models/";
-  function load(k, d){ try{ var v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } }
-  function save(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); return true; }catch(e){ return false; } }
+  function load(k, d){ return MWStore.get(k, d); } /* store.js: IndexedDB + แคช */
+  function save(k, v){ return MWStore.set(k, v); }
   function sleep(ms){ return new Promise(function(r){ setTimeout(r, ms); }); }
 
   /* ---------- ค่าใช้จ่ายรายเดือน (mw_cost_v1) · g = จำนวนคำขอที่ใช้ Gemini ฟรี ---------- */

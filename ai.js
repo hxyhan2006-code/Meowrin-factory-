@@ -11,8 +11,8 @@
   var isGoogle = L.isGoogle, short = L.short, money = L.money;
   var DEFAULT_MODEL = "google/gemini-3.8-flash";
   var CHARS_PER_SEC = 14; /* ความเร็วพากย์ไทยโดยประมาณ ใช้กะความยาวบท */
-  function load(k, d){ try{ var v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } }
-  function save(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); return true; }catch(e){ return false; } }
+  function load(k, d){ return MWStore.get(k, d); } /* store.js: IndexedDB + แคช */
+  function save(k, v){ return MWStore.set(k, v); }
 
   /* ---------- ตั้งค่า (mw_ai_cfg_v1) ----------
      model = ตัวเขียนบท (State 2) · eye = ตัวดูคลิป (State 1) · prompts = [{id,name,text}] · sel = prompt ที่เลือกไว้

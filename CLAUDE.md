@@ -13,7 +13,9 @@
 ยังไม่ทำ: ฐานข้อมูลฉากฟุตเทจ, ตัดต่ออัตโนมัติ (รอมีคอม)
 
 ## โครงสร้างไฟล์
-- `index.html` โครงหน้าเท่านั้น ไม่มี inline script
+- `index.html` โครงหน้าเท่านั้น ไม่มี inline script · มี `<script>` แค่ `store.js` ตัวเดียว สคริปต์อื่นอยู่ใน `data-boot` (เรียงลำดับโหลด + `?v=` อยู่ในนั้น) — footage.html แบบเดียวกัน
+- `store.js` (`window.MWStore`) ที่เก็บข้อมูลของทั้งสองหน้า: IndexedDB `mw_store_v1` store `kv` (key ชื่อเดิม ค่า = ข้อความ JSON) + แคชในหน่วยความจำ อ่าน/เขียนแบบ sync ได้ (`get/set/del/keys/raw/on`) · เขียนสำเนาลง localStorage ด้วยถ้าที่พอ (เผื่อย้อนโค้ด) · ครั้งแรกคัดลอก `mw_*` จาก localStorage เข้ามา · ขอ `storage.persist()` · หลายแท็บซิงก์ผ่าน BroadcastChannel · ข้อมูลพร้อมแล้วค่อยโหลดสคริปต์ใน `data-boot` · ห้ามเรียก localStorage ตรงๆ ในไฟล์อื่น ใช้ `MWStore` (ผ่าน `load/save` ของแต่ละไฟล์)
+- `gdrive.js` (`window.MWDrive`) สำรอง/กู้คืนขึ้น Google Drive ของ Han (Google Identity Services, scope `drive.file`, token ~1 ชม. อยู่ในหน่วยความจำ ต้องกด เชื่อม ทุกรอบที่เปิดแอพ) · โฟลเดอร์ "meowrin factory": `meowrin-data.json` = ทุก key `mw_*` ยกเว้น API key (สำรองเองหลังข้อมูลเปลี่ยน 20 วิ ระหว่างเชื่อมอยู่) · `footage/clip_*.json` 1 ไฟล์ต่อคลิป (appProperties cid/sig) อัปเฉพาะใหม่/เปลี่ยน, หน้าฟุตเทจอัปเองหลังทำดัชนีเสร็จ · ตั้งค่า `mw_gdrive_v1` {client (OAuth Client ID), ok, last, lastFoot}
 - `style.css` ธีมมืด (tokens อยู่ใน `:root`) · `sheet.css` ชีต/โมดัล/แถวพับ/toast/ตัวเลือกแบบชีต (`select[data-sheet]`)/การ์ด PART 1/แท็บเสียง
 - `sync.js` ชั้น YouTube Data API (`yt`, `syncChannel` ดึงย้อนหลัง/ดึงเฉพาะใหม่) — โหลดก่อน app.js ส่งออก `window.MWSync` ไม่แตะ DOM
 - `app.js` คลิป/ช่อง/แท็บ/ตั้งค่า YouTube/สำรองข้อมูล — ส่ง `window.MW` ให้ไฟล์อื่นใช้
@@ -25,8 +27,8 @@
 
 ## ข้อกำหนดเทคนิค
 - Vanilla HTML/CSS/JS ล้วน ไม่มี build step ไม่มี framework ไม่มี npm
-- ข้อมูลทั้งหมดอยู่ใน localStorage: `mw_key_v1` (YouTube key), `mw_data_v1` (ช่อง/ทำแล้ว/คลิปที่เลือก), `mw_cache_v1` (คลิปที่ดึงมา), `mw_ai_cfg_v1` (model=ตัวเขียนบท, eye=ตัวดูคลิป, prompts[], sel[] — A/B เก็บสำเนาไว้เผื่อย้อนโค้ด), `mw_openrouter_key_v1`, `mw_gemini_key_v1` (Gemini API key ฟรี ไม่บังคับ), `mw_history_v1` (ประวัติบท ต่อคลิปมี vers[] หลายเวอร์ชัน), `mw_cost_v1` (ค่าใช้จ่าย OpenRouter รายเดือน + `g` = จำนวนคำขอฟรีผ่าน Gemini), `mw_eleven_key_v1` (ElevenLabs key), `mw_tts_cfg_v1` (voices[] = เสียงของฉัน, voice = Voice ID ที่เลือกอยู่, model/stability/warm/trim/tsOff/ยอดตัวอักษรรายเดือน) · `mw_data_v1` มี `saved` (เก็บไว้ทำทีหลัง) กับ `cols` (2/3 คอลัมน์)
-  หน้า footage: `mw_footage_cfg_v1` (model/thr/maxScenes/budget/par) ใน localStorage · ดัชนีอยู่ใน IndexedDB `mw_footage_v1` store `clips` (1 รายการต่อคลิป: id = ชื่อไฟล์|ขนาด|lastModified, album, cover, summary_th, scenes[{s,e,thumb,img,ai}], raw, cost, tokens, ms, imgV = รุ่นรูป: 2 = cover/thumb 240px, img 480px · รุ่น 1 เล็กกว่า อัปเกรดรูปได้โดยไม่เรียก AI ผ่านติ๊ก "อัปเกรดรูป") · ใช้ `mw_openrouter_key_v1` ร่วมกับแอพหลัก
+- ข้อมูลทั้งหมดอยู่ใน `MWStore` (store.js → IndexedDB `mw_store_v1`, ชื่อ key เดิมจากสมัยใช้ localStorage): `mw_key_v1` (YouTube key), `mw_data_v1` (ช่อง/ทำแล้ว/คลิปที่เลือก), `mw_cache_v1` (คลิปที่ดึงมา), `mw_ai_cfg_v1` (model=ตัวเขียนบท, eye=ตัวดูคลิป, prompts[], sel[] — A/B เก็บสำเนาไว้เผื่อย้อนโค้ด), `mw_openrouter_key_v1`, `mw_gemini_key_v1` (Gemini API key ฟรี ไม่บังคับ), `mw_history_v1` (ประวัติบท ต่อคลิปมี vers[] หลายเวอร์ชัน), `mw_cost_v1` (ค่าใช้จ่าย OpenRouter รายเดือน + `g` = จำนวนคำขอฟรีผ่าน Gemini), `mw_eleven_key_v1` (ElevenLabs key), `mw_tts_cfg_v1` (voices[] = เสียงของฉัน, voice = Voice ID ที่เลือกอยู่, model/stability/warm/trim/tsOff/ยอดตัวอักษรรายเดือน) · `mw_data_v1` มี `saved` (เก็บไว้ทำทีหลัง) กับ `cols` (2/3 คอลัมน์)
+  หน้า footage: `mw_footage_cfg_v1` (model/thr/maxScenes/budget/par) ใน MWStore · ดัชนีอยู่ใน IndexedDB `mw_footage_v1` store `clips` (1 รายการต่อคลิป: id = ชื่อไฟล์|ขนาด|lastModified, album, cover, summary_th, scenes[{s,e,thumb,img,ai}], raw, cost, tokens, ms, imgV = รุ่นรูป: 2 = cover/thumb 240px, img 480px · รุ่น 1 เล็กกว่า อัปเกรดรูปได้โดยไม่เรียก AI ผ่านติ๊ก "อัปเกรดรูป") · ใช้ `mw_openrouter_key_v1` ร่วมกับแอพหลัก
   ห้ามเปลี่ยนชื่อ key เหล่านี้โดยไม่ทำ migration เพราะข้อมูลในเครื่องผู้ใช้จะหาย
 - ข้อความในหน้าเป็นภาษาไทยทั้งหมด ภาษาพูดเป็นกันเอง
 - ต้องใช้งานได้ดีบนจอมือถือกว้าง ~380px

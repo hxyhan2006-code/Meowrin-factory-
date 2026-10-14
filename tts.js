@@ -12,8 +12,8 @@
   var MAX_CHARS = 5000; /* เพดานต่อคำขอของ ElevenLabs */
   var WARM_MIN = 40;    /* hook ที่ใช้วอร์มยาวอย่างน้อยกี่ตัวอักษร (ราว 3 วิ) */
   var ONSET_TH = 0.012, ONSET_SPAN = 2.5, ONSET_LEAD = 0.08; /* หาเสียงพูดเริ่มจริง: ระดับเสียงขั้นต่ำ (~-38 dB) · มองหาไม่เกินกี่วินาทีหลังจุดตัด · เหลือเงียบนำหน้ากี่วินาที */
-  function load(k, d){ try{ var v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } }
-  function save(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); return true; }catch(e){ return false; } }
+  function load(k, d){ return MWStore.get(k, d); } /* store.js: IndexedDB + แคช */
+  function save(k, v){ return MWStore.set(k, v); }
   function monthKey(){ var d = new Date(); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0"); }
 
   /* ค่าเริ่มต้นตรงกับที่ Han ใช้บนเว็บ: Eleven v3 · Stability Natural (0.5) · ภาษาอัตโนมัติ · MP3 44.1kHz 128kbps

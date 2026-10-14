@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600&family=Mitr:wght@500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="footage.css?v=20261014v">
+<link rel="stylesheet" href="footage.css?v=20261015a">
 </head>
 <body>
 <header>
@@ -144,6 +144,16 @@
         <button class="btn ghost" id="importBtn">กู้คืน</button>
       </div>
       <input id="importFile" type="file" accept="application/json,.json" hidden>
+      <h2 style="margin-top:16px">Google Drive</h2>
+      <p class="hint" id="stInfo"></p>
+      <p class="hint" id="gdState"></p>
+      <button class="btn" id="gdConnect" style="width:100%;margin-top:10px">เชื่อม Google Drive</button>
+      <div class="row" style="margin-top:8px">
+        <button class="btn ghost" id="gdFootNow">สำรองดัชนีขึ้น Drive</button>
+        <button class="btn ghost" id="gdFootRestore">ดึงดัชนีจาก Drive</button>
+      </div>
+      <p class="hint">อัปเฉพาะคลิปใหม่/ที่เปลี่ยน · ทำดัชนีเสร็จแต่ละรอบ ถ้าเชื่อมอยู่จะอัปให้เอง · ใส่ Client ID ที่ ตั้งค่า ของแอพหลัก</p>
+      <div id="gdMsg"></div>
       <button class="btn ghost small" id="wipeBtn" style="margin-top:10px;width:100%">ลบดัชนีทั้งหมด</button>
       <div id="setMsg"></div>
     </div>
@@ -170,9 +180,6 @@
 <input id="pickDocs" type="file" multiple hidden><!-- ไม่ใส่ accept → Android เปิดแอพไฟล์ (เข้าโฟลเดอร์ + เลือกทั้งหมดได้) แทนตัวเลือกรูป -->
 <video id="vid" muted playsinline preload="auto" style="position:fixed;left:-9999px;width:2px;height:2px"></video>
 
-<script src="footage-core.js?v=20261014v"></script>
-<script src="footage.js?v=20261014v"></script>
-<script src="mp4fix.js?v=20261014v"></script>
-<script src="footage-plan.js?v=20261014v"></script>
+<script src="store.js?v=20261015a" data-boot="footage-core.js?v=20261015a footage.js?v=20261015a mp4fix.js?v=20261015a footage-plan.js?v=20261015a gdrive.js?v=20261015a"></script>
 </body>
 </html>

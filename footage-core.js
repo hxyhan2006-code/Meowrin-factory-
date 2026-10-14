@@ -1,10 +1,10 @@
 /* footage-core.js — ส่วนไม่มีหน้าจอของหน้า "ดัชนีฟุตเทจ" (ทดสอบ)
-   ตั้งค่า (localStorage mw_footage_cfg_v1) · ฐานข้อมูล (IndexedDB mw_footage_v1) · อ่านเฟรม/ตัดฉากจาก <video> · เรียก AI ดูรูปผ่าน OpenRouter
+   ตั้งค่า (MWStore mw_footage_cfg_v1) · ฐานข้อมูล (IndexedDB mw_footage_v1) · อ่านเฟรม/ตัดฉากจาก <video> · เรียก AI ดูรูปผ่าน OpenRouter
    ใช้ OpenRouter key ตัวเดียวกับแอพหลัก (mw_openrouter_key_v1) · ส่งออก window.FT */
 (function(){
   "use strict";
-  function load(k, d){ try{ var v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } }
-  function save(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); return true; }catch(e){ return false; } }
+  function load(k, d){ return MWStore.get(k, d); } /* store.js: IndexedDB + แคช */
+  function save(k, v){ return MWStore.set(k, v); }
   var sleep = function(ms){ return new Promise(function(r){ setTimeout(r, ms); }); };
 
   /* ---------- ตั้งค่า ---------- */
