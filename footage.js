@@ -29,7 +29,7 @@
 
   /* ---------- เลือกไฟล์ → คิว ---------- */
   $("files").addEventListener("change", function(){
-    var album = $("album").value.trim(), picked = Date.now();
+    var album = $("album").value.trim() || "ไม่ระบุ", picked = Date.now();
     var add = Array.prototype.map.call(this.files, function(f){
       var id = FT.clipId(f), done = byId(id);
       return { file:f, id:id, album:album, status: done && done.status === "done" ? "skip" : "wait", err:"", p:0,
@@ -40,19 +40,19 @@
     renderQueue(); renderDebug();
   });
   $("album").addEventListener("input", function(){ /* เปลี่ยนชื่ออัลบั้มก่อนกดเริ่ม = ใช้กับคลิปที่ยังรออยู่ */
-    var a = this.value.trim(); queue.forEach(function(q){ if(q.status === "wait") q.album = a; }); renderQueue();
+    var a = this.value.trim() || "ไม่ระบุ"; queue.forEach(function(q){ if(q.status === "wait") q.album = a; }); renderQueue();
   });
 
   function renderQueue(){
     if(!queue.length){ $("queue").innerHTML = '<li class="empty">ยังไม่ได้เลือกไฟล์</li>'; }
     else $("queue").innerHTML = queue.map(function(q){
       var c = byId(q.id), tag = { wait:["รอ",""], run:["กำลังทำ " + Math.round(q.p * 100) + "%","run"], done:["เสร็จ","ok"], error:["error","err"], skip:["ทำแล้ว (ข้าม)","ok"] }[q.status];
-      var sub = c && c.status === "done" ? c.scenes.length + " ฉาก · " + money(c.cost || 0) + " · " + ((c.ms || 0) / 1000).toFixed(0) + " วิ · " + capDur(c.duration) : esc(q.album || "ยังไม่ใส่อัลบั้ม");
+      var sub = q.status === "run" ? esc(q.stage || "เริ่ม...") : c && c.status === "done" ? c.scenes.length + " ฉาก · " + money(c.cost || 0) + " · " + ((c.ms || 0) / 1000).toFixed(0) + " วิ · " + capDur(c.duration) : esc(q.album || "ไม่ระบุอัลบั้ม");
       return '<li><img ' + (c && c.cover ? 'src="' + c.cover + '" ' : "") + 'alt=""><div class="t"><b>' + esc(q.info.name) + "</b><span>" + sub + "</span>"
         + (q.err ? '<br><span style="color:var(--err)">' + esc(q.err) + "</span>" : "") + '</div><span class="tag ' + tag[1] + '">' + tag[0] + "</span></li>";
     }).join("");
     var wait = queue.filter(function(q){ return q.status === "wait"; }).length, errs = queue.filter(function(q){ return q.status === "error"; }).length;
-    $("startBtn").disabled = running || !wait || !$("album").value.trim() && queue.some(function(q){ return q.status === "wait" && !q.album; });
+    $("startBtn").disabled = running || !wait; /* อัลบั้มไม่บังคับ (ว่าง = "ไม่ระบุ") */
     $("startBtn").textContent = running ? "กำลังทำ..." : wait ? (queue.some(function(q){ return q.status === "done" || q.status === "error"; }) ? "ทำต่อ " : "เริ่มทำดัชนี ") + wait + " คลิป" : "เริ่มทำดัชนี";
     $("pauseBtn").hidden = !running; $("pauseBtn").textContent = paused ? "จะพักหลังคลิปนี้..." : "พัก";
     $("retryBtn").hidden = running || !errs; $("retryBtn").textContent = "ลองใหม่คลิปที่ error (" + errs + ")";
@@ -102,7 +102,9 @@
     var t0 = Date.now(), cost = 0, tin = 0, tout = 0, raw = [];
     q.status = "run"; q.p = 0; q.err = ""; renderQueue();
     try{
-      var m = await FT.scan($("vid"), q.file, function(p){ q.p = p * 0.5; renderQueue(); });
+      q.stage = "กำลังเปิดวิดีโอ...";
+      var m = await FT.scan($("vid"), q.file, function(p){ q.p = p * 0.5; q.stage = p < 0.7 ? "อ่านเฟรมหาจุดตัดฉาก..." : "จับภาพตัวแทนแต่ละฉาก..."; renderQueue(); });
+      q.stage = "ฉากทั้งหมด " + m.scenes.length + " · ส่งให้ AI ดู...";
       q.info.duration = m.duration; q.info.w = m.w; q.info.h = m.h; renderDebug();
       m.scenes.forEach(function(sc, i){ sc.n = i + 1; });
       var chunks = []; for(var i = 0; i < m.scenes.length; i += CHUNK) chunks.push(m.scenes.slice(i, i + CHUNK));
@@ -119,7 +121,7 @@
               var sc = ch.find(function(x){ return x.n === Number(a.i); }); if(sc) sc.ai = cleanAi(a);
             });
           }catch(err){ if(err.raw) raw.push({ chunk:i + k + 1, text:err.raw }); if(err.cost){ cost += err.cost; runCost += err.cost; } throw err; }
-          finally{ doneChunks++; q.p = 0.5 + doneChunks / chunks.length * 0.5; renderQueue(); }
+          finally{ doneChunks++; q.p = 0.5 + doneChunks / chunks.length * 0.5; q.stage = "AI ตอบแล้ว " + doneChunks + "/" + chunks.length + " ชุด"; renderQueue(); }
         }));
       }
       var rec = { id:q.id, name:q.info.name, album:q.album, size:q.info.size, type:q.info.type, lastModified:q.info.lastModified,

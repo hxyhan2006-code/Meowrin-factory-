@@ -146,7 +146,7 @@
   }
   var PROMPT = [
     "You are indexing anime footage clips (mostly One Piece, Thai dub) for a video editor's search tool.",
-    "Album hint set by the user (loose, may be wrong): \"{album}\". Clip length: {dur}s.",
+    "Album label set loosely by the user (often WRONG: a Luffy scene may sit in a Zoro album, and scenes mix many characters): \"{album}\". Identify characters ONLY from what you see in each frame; use the label just to break ties. Clip length: {dur}s.",
     "Below are {n} frames, one per scene, in order. Each image is preceded by its scene number.",
     "Return ONLY JSON, no markdown:",
     "{\"clip_summary_th\":\"one short Thai sentence about what happens in these scenes\",",
