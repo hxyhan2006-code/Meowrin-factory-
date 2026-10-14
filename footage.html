@@ -8,12 +8,12 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600&family=Mitr:wght@500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="footage.css?v=20261014q">
+<link rel="stylesheet" href="footage.css?v=20261014r">
 </head>
 <body>
 <header>
   <div class="wrap"><h1>ดัชนีฟุตเทจ <span class="tag" id="ver">ทดสอบ</span></h1><a href="./">← กลับแอพ</a></div>
-  <nav class="tabs"><button data-p="idx" class="on">ทำดัชนี</button><button data-p="find">ค้นหา</button><button data-p="set">ตั้งค่า</button></nav>
+  <nav class="tabs"><button data-p="idx" class="on">ทำดัชนี</button><button data-p="find">ค้นหา</button><button data-p="plan">วางแผน</button><button data-p="set">ตั้งค่า</button></nav>
 </header>
 
 <main class="wrap">
@@ -67,6 +67,29 @@
     </div>
     <div class="res" id="aiRes"></div>
     <div class="res" id="results"></div>
+  </section>
+
+  <!-- วางแผนฉากตามบท -->
+  <section class="page" id="p-plan">
+    <div class="panel">
+      <h2>วางแผนฉากตามบท</h2>
+      <p class="hint" style="margin-top:0">เลือกบทจากประวัติในแอพหลัก (หรือวาง/แก้เอง) → AI คิดฉากทีละบรรทัด แล้วหาคลิปที่ตรงจากดัชนีของคุณ → แชร์คลิปที่เลือกเรียงตามบทไป CapCut · ราว $0.03-0.05 ต่อบท</p>
+      <label for="plSrc">บทจากประวัติ</label>
+      <select id="plSrc"></select>
+      <label for="plText">บท (1 บรรทัด = 1 ช็อต)</label>
+      <textarea id="plText" rows="8" placeholder="วางบทพากย์ที่นี่ บรรทัดละช่วง"></textarea>
+      <button class="btn" id="plGo" style="width:100%;margin-top:12px">วางแผนฉาก</button>
+      <div id="plMsg"></div>
+    </div>
+    <div class="panel" id="plOut" hidden>
+      <p class="hint" id="plInfo" style="margin-top:0"></p>
+      <div class="row" style="margin-top:10px">
+        <button class="btn" id="plShare">แชร์คลิปไป CapCut</button>
+        <button class="btn ghost" id="plCopy">คัดลอกรายการ</button>
+      </div>
+      <div id="plShareMsg"></div>
+    </div>
+    <div id="plRows"></div>
   </section>
 
   <!-- ตั้งค่า -->
@@ -139,7 +162,8 @@
 <input id="playFiles" type="file" accept="video/*" multiple hidden>
 <video id="vid" muted playsinline preload="auto" style="position:fixed;left:-9999px;width:2px;height:2px"></video>
 
-<script src="footage-core.js?v=20261014q"></script>
-<script src="footage.js?v=20261014q"></script>
+<script src="footage-core.js?v=20261014r"></script>
+<script src="footage.js?v=20261014r"></script>
+<script src="footage-plan.js?v=20261014r"></script>
 </body>
 </html>

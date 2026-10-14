@@ -310,7 +310,7 @@
       + (sc ? "" : strip(c)) /* โหมดดูทั้งคลิป: แถบรูปทุกฉาก แตะดูรูปใหญ่ + คำอธิบายฉากนั้น */
       + '<p>' + day(c.lastModified) + '</p><div class="fname">' + esc(c.name) + ' <button class="editbtn" data-e="' + k + '" aria-label="แก้ชื่ออัลบั้มของคลิปนี้">✎ แก้อัลบั้ม</button></div></div></div>';
   }
-  $("p-find").addEventListener("click", function(e){ /* ทั้งผลค้นในเครื่องและผลที่ AI เลือก */
+  document.querySelector("main").addEventListener("click", function(e){ /* การ์ดในทุกหน้า (ค้นหา/ผลที่ AI เลือก/วางแผนฉาก) */
     var el = e.target.closest("[data-k]"), h = el && shown[+el.dataset.k], c = h && h.c, sc = h && h.sc;
     if(h && h.cover){ openBig(c, null, c.cover, c.album + " · ปกคลิป (เฟรมแรก) · " + capDur(c.duration)); return; }
     if(!sc) return;
@@ -337,6 +337,7 @@
   function addPlayFiles(files){
     Array.prototype.forEach.call(files, function(f){ pf[pfKey(f.name, f.size)] = f; });
     var n = Object.keys(pf).length;
+    if(FT.onFiles) FT.onFiles(); /* หน้าวางแผนฉากอัปเดตสถานะไฟล์ที่พร้อมแชร์ */
     $("openFilesInfo").textContent = "เปิดไฟล์ไว้ " + n + " ไฟล์ (หายเมื่อปิดหน้านี้) · แตะรูปฉาก แล้วกด ▶ ดูฉากนี้";
     if(!$("big").hidden && bigCur){
       renderPlayBtn();
@@ -473,11 +474,15 @@
     rename(hit, to).then(function(){ $("renNew").value = ""; msg("renMsg", "เปลี่ยน “" + from + "” → “" + to + "” แล้ว " + hit.length + " คลิป", "ok"); })
       .catch(function(err){ msg("renMsg", "เปลี่ยนไม่ได้: " + err.message, "err"); });
   });
-  $("p-find").addEventListener("click", function(e){ /* ✎ แก้ = เปลี่ยนอัลบั้มเฉพาะคลิปนี้ */
+  document.querySelector("main").addEventListener("click", function(e){ /* ✎ แก้ = เปลี่ยนอัลบั้มเฉพาะคลิปนี้ */
     var b = e.target.closest("[data-e]"), h = b && shown[+b.dataset.e]; if(!h) return;
     var to = window.prompt("ชื่ออัลบั้มของคลิปนี้ (" + h.c.name + ")", h.c.album);
     if(to && to.trim() && to.trim() !== h.c.album) rename([h.c], to.trim()).catch(function(err){ window.alert("เปลี่ยนไม่ได้: " + err.message); });
   });
+  /* ให้ footage-plan.js ใช้ร่วม (ค้น/การ์ด/ไฟล์ที่เปิดไว้) */
+  FT.ui = { lib:function(){ return lib; }, terms:terms, hay:hay, card:card, esc:esc, msg:msg, money:money, tm:tm, capDur:capDur,
+            fileFor:function(c){ return pf[pfKey(c.name, c.size)]; }, openFiles:function(){ $("playFiles").click(); },
+            addCost:function(x){ runCost += x; renderStats(); } };
   function renderAll(){ renderQueue(); renderStats(); renderDb(); renderAlbums(); renderDebug(); if($("p-find").classList.contains("on")) search(); }
 
   refreshLib().then(function(){ /* เปิดหน้าครั้งไหน ถ้ามีรายการซ้ำเก่าค้าง รวมให้เองเลย (ลบแค่รายการดัชนีที่ซ้ำ ไม่แตะไฟล์วิดีโอ) */
