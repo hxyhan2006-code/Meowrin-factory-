@@ -351,6 +351,7 @@
   /* ---------- ตั้งค่า AI ---------- */
   function pickModel(selId, val, fallback){ $(selId).value = val; if($(selId).value !== val){ $(selId).value = fallback; return fallback; } return val; } /* โมเดลที่เซฟไว้แต่ไม่อยู่ในรายการ → ค่าเริ่มต้น */
   $("gKey").value = load(OR_KEY, ""); $("gmKey").value = load(GM_KEY, "");
+  $("gmOn").checked = cfg.gem !== false; L.setOn($("gmOn").checked); /* ติ๊ก "ใช้ Gemini ฟรี" เก็บใน mw_ai_cfg_v1 (gem) */
   cfg.model = pickModel("gModel", cfg.model, DEFAULT_MODEL);
   cfg.eye = pickModel("gEye", cfg.eye, DEFAULT_MODEL);
   $("gThink").value = cfg.think;
@@ -363,12 +364,13 @@
   }
   orState();
   function saveAi(){
+    cfg.gem = $("gmOn").checked; L.setOn(cfg.gem);
     cfg.model = $("gModel").value || DEFAULT_MODEL; cfg.eye = $("gEye").value || DEFAULT_MODEL; cfg.think = $("gThink").value;
     var ok = saveCfg() && save(OR_KEY, $("gKey").value.trim()) && save(GM_KEY, $("gmKey").value.trim());
     MW.toast(ok ? "บันทึกแล้ว" : "บันทึกไม่ได้", !ok);
     updateModelLine(); orState();
   }
-  ["gKey","gmKey","gModel","gEye","gThink"].forEach(function(id){ $(id).addEventListener("change", saveAi); }); /* บันทึกอัตโนมัติทุกครั้งที่แก้ */
+  ["gKey","gmKey","gmOn","gModel","gEye","gThink"].forEach(function(id){ $(id).addEventListener("change", saveAi); }); /* บันทึกอัตโนมัติทุกครั้งที่แก้ */
   $("saveAi").addEventListener("click", saveAi);
   $("gmTest").addEventListener("click", async function(){
     var b = this; b.disabled = true; b.textContent = "กำลังทดสอบ...";
@@ -378,7 +380,7 @@
   });
 
   /* ---------- สำรอง/นำเข้า (ให้ app.js เรียก) ไม่รวม key ---------- */
-  function aiBackup(){ return { model:cfg.model, eye:cfg.eye, think:cfg.think, prompts:cfg.prompts, sel:cfg.sel }; }
+  function aiBackup(){ return { gem:cfg.gem !== false, model:cfg.model, eye:cfg.eye, think:cfg.think, prompts:cfg.prompts, sel:cfg.sel }; }
   function hasText(p){ return !!(p && p.text && p.text.trim()); }
   MW.aiCfg = {
     get: aiBackup,
@@ -398,6 +400,7 @@
       if(has("gModel", o.model)) cfg.model = o.model;
       if(has("gEye", o.eye)) cfg.eye = o.eye;
       if(has("gThink", o.think)) cfg.think = o.think;
+      if(typeof o.gem === "boolean"){ cfg.gem = o.gem; $("gmOn").checked = o.gem; L.setOn(o.gem); }
       saveCfg();
       $("gModel").value = cfg.model; $("gEye").value = cfg.eye; $("gThink").value = cfg.think; MW.syncSelects();
       renderPrompts(); renderChips(); updateModelLine();

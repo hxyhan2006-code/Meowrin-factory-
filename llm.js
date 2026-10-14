@@ -8,6 +8,7 @@
   var $ = function(id){ return document.getElementById(id); };
   var OR_KEY = "mw_openrouter_key_v1", GM_KEY = "mw_gemini_key_v1";
   var OR_URL = "https://openrouter.ai/api/v1/chat/completions";
+  var GM_TIMEOUT = 90e3;
   var GM_URL = "https://generativelanguage.googleapis.com/v1beta/models/";
   function load(k, d){ try{ var v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } }
   function save(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); return true; }catch(e){ return false; } }
@@ -93,25 +94,28 @@
       return { role: msg.role === "assistant" ? "model" : "user", parts: parts };
     });
   }
+  var on = true; /* เปิด/ปิดใช้ Gemini ตรง (ตั้งจาก ai.js ตามติ๊ก "ใช้ Gemini ฟรี") */
   var skip = {}, noThink = {}; /* skip.all = งดเรียก Gemini ตรงถึงเวลานี้ (โควตาเต็ม/key ผิด) · skip[model] = ไม่รู้จักโมเดลนี้ · noThink[model] = ไม่รับระดับการคิด */
   function gemFail(why, fallback){ var e = new Error(why); e.fallback = fallback; return e; }
   async function viaGemini(messages, system, model, think, key){
     var body = { contents: toGemini(messages) };
     if(system) body.systemInstruction = { parts:[{ text: system }] };
     if(think && !noThink[model]) body.generationConfig = { thinkingConfig:{ thinkingLevel: think } };
-    var res, j;
+    var res, j, ctl = new AbortController(), timer = setTimeout(function(){ ctl.abort(); }, GM_TIMEOUT); /* ฟรีอาจคิวยาว ช้าเกินกำหนด = ถอยไป OpenRouter */
     for(var attempt = 0; attempt < 2; attempt++){
       try{
         res = await fetch(GM_URL + encodeURIComponent(short(model)) + ":generateContent", {
-          method:"POST", headers:{ "Content-Type":"application/json", "x-goog-api-key": key }, body: JSON.stringify(body)
+          method:"POST", headers:{ "Content-Type":"application/json", "x-goog-api-key": key }, body: JSON.stringify(body), signal: ctl.signal
         });
-      }catch(err){ throw gemFail("ต่อ Gemini ไม่ได้", true); } /* เน็ต/CORS */
-      j = await res.json().catch(function(){ return {}; });
+        j = await res.json().catch(function(){ return {}; });
+      }catch(err){ clearTimeout(timer); if(ctl.signal.aborted) skip.all = Date.now() + 10 * 60e3; /* ช้าเกิน = งด Gemini ชั่วคราว ไม่ต้องรอซ้ำทุกขั้น */
+        throw gemFail(ctl.signal.aborted ? "Gemini ตอบช้าเกิน " + GM_TIMEOUT / 1000 + " วินาที" : "ต่อ Gemini ไม่ได้", true); } /* เน็ต/CORS/หมดเวลา */
       var m = (j.error && j.error.message) || "";
       /* โมเดลไม่รับระดับการคิดที่ตั้งไว้ → ลองใหม่ครั้งเดียวด้วยค่าเริ่มต้นของโมเดล */
       if(res.status === 400 && body.generationConfig && /thinking/i.test(m)){ delete body.generationConfig; noThink[model] = true; continue; }
       break;
     }
+    clearTimeout(timer);
     if(!res.ok){
       var st = res.status, why = (j.error && j.error.message) || ("HTTP " + st);
       var g = " [" + st + ": " + why.slice(0, 160) + "]"; /* ข้อความจริงจาก Google ไว้ดูสาเหตุ */
@@ -135,7 +139,7 @@
   async function call(messages, system, model, opt){
     opt = opt || {};
     var gk = load(GM_KEY, "");
-    if(gk && isGoogle(model) && !skip[model] && !(skip.all > Date.now())){
+    if(on && gk && isGoogle(model) && !skip[model] && !(skip.all > Date.now())){
       try{
         var t = await viaGemini(messages, system, model, opt.think, gk);
         if(opt.v) opt.v.free = (opt.v.free || 0) + 1;
@@ -177,6 +181,6 @@
     return out;
   }
 
-  MW.llm = { test: testGemini, call: call, isGoogle: isGoogle, short: short, money: money, OR_KEY: OR_KEY, GM_KEY: GM_KEY };
+  MW.llm = { setOn: function(v){ on = !!v; }, test: testGemini, call: call, isGoogle: isGoogle, short: short, money: money, OR_KEY: OR_KEY, GM_KEY: GM_KEY };
   renderSpend();
 })();

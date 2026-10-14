@@ -13,8 +13,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600&family=Mitr:wght@500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=20261014c">
-<link rel="stylesheet" href="sheet.css?v=20261014c">
+<link rel="stylesheet" href="style.css?v=20261014d">
+<link rel="stylesheet" href="sheet.css?v=20261014d">
 </head>
 <body>
 <div class="wrap">
@@ -194,11 +194,11 @@
       <details class="fold">
         <summary><span>Gemini API key (ฟรี)</span><em class="state" id="gmState"></em></summary>
         <div class="fbody">
-          <div class="ftools"><button type="button" class="btn small ghost" data-paste="gmKey" data-trim>วาง</button><button type="button" class="btn small ghost" data-clear="gmKey">ลบ</button></div>
+          <div class="ftools"><label class="chk" style="margin-right:auto"><input type="checkbox" id="gmOn" checked> ใช้ Gemini ฟรี</label><button type="button" class="btn small ghost" data-paste="gmKey" data-trim>วาง</button><button type="button" class="btn small ghost" data-clear="gmKey">ลบ</button></div>
           <input id="gmKey" type="password" placeholder="AIza..." autocomplete="off" aria-label="Gemini API key">
           <div class="row" style="margin-top:10px"><button type="button" class="btn small ghost" id="gmTest">ทดสอบ Gemini</button></div>
           <pre class="hint" id="gmTestOut" style="white-space:pre-wrap;margin-top:8px"></pre>
-          <p class="hint">ใส่แล้วโมเดล Google จะใช้ Gemini ตรงก่อน (ฟรี) ถ้าโควตาเต็มหรือ key ใช้ไม่ได้ จะใช้ OpenRouter ให้เอง · สร้าง key ได้ที่ Google AI Studio · บันทึกอัตโนมัติ</p>
+          <p class="hint">ใส่แล้วโมเดล Google จะใช้ Gemini ตรงก่อน (ฟรี) ถ้าโควตาเต็ม key ใช้ไม่ได้ หรือช้าเกิน 90 วินาที จะใช้ OpenRouter ให้เอง · ปิดติ๊กด้านบน = ข้าม Gemini ใช้ OpenRouter ตรงๆ · สร้าง key ได้ที่ Google AI Studio · บันทึกอัตโนมัติ</p>
         </div>
       </details>
     </div>
@@ -347,10 +347,10 @@
   </div>
 </div>
 
-<script src="sync.js?v=20261014c"></script>
-<script src="app.js?v=20261014c"></script>
-<script src="llm.js?v=20261014c"></script>
-<script src="ai.js?v=20261014c"></script>
-<script src="tts.js?v=20261014c"></script>
+<script src="sync.js?v=20261014d"></script>
+<script src="app.js?v=20261014d"></script>
+<script src="llm.js?v=20261014d"></script>
+<script src="ai.js?v=20261014d"></script>
+<script src="tts.js?v=20261014d"></script>
 </body>
 </html>
