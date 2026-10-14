@@ -178,26 +178,31 @@
     ["law","ลอว์","ลอ"],["kid","คิด"],["yamato","ยามาโตะ"],["kaido","ไคโด"],["big mom","บิ๊กมัม"],["blackbeard","หนวดดำ","ทีช"],
     ["whitebeard","หนวดขาว"],["vivi","วีวี่"],["shirahoshi","ชิราโฮชิ"],["mihawk","มิฮอว์ค"],["dragon","ดราก้อน"],["koby","โคบี้"],["smoker","สโมกเกอร์"]
   ];
+  var SYN = [ /* อารมณ์/การกระทำที่ AI อาจใช้คำต่างกัน (ไทย+อังกฤษ) → ค้นคำไหนก็เจอทุกคำในกลุ่ม */
+    ["ตกใจ","ตกตะลึง","ช็อก","ช็อค","อึ้ง","สะดุ้ง","shock","surprise","startle","astonish"],["โกรธ","โมโห","เดือด","angry","anger","furious","rage"],
+    ["ร้องไห้","น้ำตา","เสียใจ","cry","sad","tear"],["หัวเราะ","ขำ","ตลก","laugh","funny","smile"],["งง","สับสน","confus","puzzl"],
+    ["กลัว","หวาดกลัว","scare","afraid","fear","terrif"],["ดีใจ","มีความสุข","ยินดี","happy","joy","excite"],["ต่อสู้","ต่อย","โจมตี","สู้","fight","battle","attack","punch"],
+    ["ฟันดาบ","ดาบ","sword","slash"],["กิน","อาหาร","หิว","eat","food","hungry"],["วิ่ง","หนี","run","flee","chase"],["เท่","เจ๋ง","cool","badass"]
+  ];
   var seg = null; try{ seg = new Intl.Segmenter("th", { granularity:"word" }); }catch(e){}
-  function terms(q, extra){
+  function terms(q){ /* คืนกลุ่มคำ [[คำที่ความหมายเดียวกัน...]] แต่ละกลุ่ม = 1 เงื่อนไขที่ต้องตรง */
     var out = [], rest = q.toLowerCase();
-    NAMES.forEach(function(v){ if(v.some(function(n){ return rest.indexOf(n) >= 0; })){ out.push(v); v.forEach(function(n){ rest = rest.split(n).join(" "); }); } });
+    NAMES.concat(SYN).forEach(function(v){ if(v.some(function(n){ return rest.indexOf(n) >= 0; })){ out.push(v); v.forEach(function(n){ rest = rest.split(n).join(" "); }); } });
     rest.split(/[\s,]+/).filter(Boolean).forEach(function(p){
       if(/[฀-๿]/.test(p) && seg){
         var ws = Array.from(seg.segment(p)).filter(function(x){ return x.isWordLike && x.segment.length >= 2; }).map(function(x){ return x.segment; });
         (ws.length ? ws : [p]).forEach(function(w){ out.push([w]); });
       } else if(p.length >= 2) out.push([p]);
     });
-    (extra || []).forEach(function(x){ x = String(x).toLowerCase().trim(); if(x && !out.some(function(v){ return v.indexOf(x) >= 0; })) out.push([x]); });
     return out;
   }
   function hay(c, sc){
     var a = sc.ai || {};
     return [ (a.characters || []).concat(a.characters_th || []).join(" ").toLowerCase(),
              (a.tags_en || []).concat(a.tags_th || [], [a.action, a.emotion]).join(" ").toLowerCase(),
-             [a.summary_th, a.location, c.summary_th].join(" ").toLowerCase() ]; /* ไม่รวมชื่ออัลบั้ม (กรองด้วยตัวเลือกอัลบั้มแทน) */
+             [a.summary_th, a.location].join(" ").toLowerCase() ]; /* ระดับฉากเท่านั้น: ไม่รวมสรุปทั้งคลิป (ไม่งั้นทุกฉากในคลิปที่มีลูฟี่ตรงหมด) และไม่รวมชื่ออัลบั้ม */
   }
-  var aiTerms = {}, sT = 0, shown = []; /* shown = รายการที่โชว์อยู่ (ให้ปุ่มดูรูปใหญ่อ้างถึง) */
+  var aiTerms = {}, sT = 0, shown = [], lastQ = "", showPartial = false; /* shown = รายการที่โชว์อยู่ (ให้ปุ่มดูรูปใหญ่อ้างถึง) */
   $("q").addEventListener("input", function(){ clearTimeout(sT); sT = setTimeout(search, 250); });
   $("albumFilter").addEventListener("change", search);
   $("aiQuery").addEventListener("change", search);
@@ -214,19 +219,30 @@
       extra = aiTerms[q];
       if(q !== $("q").value.trim()) return; /* พิมพ์ต่อระหว่างรอ */
     }
-    var ts = terms(q, extra), hits = []; shown = [];
+    var ts = terms(q), hits = []; shown = [];
+    var soft = extra.map(function(x){ return String(x).toLowerCase().trim(); }).filter(Boolean); /* คำที่ AI แปลให้ = ช่วยจัดอันดับ ไม่บังคับต้องตรง */
     clips.forEach(function(c){ c.scenes.forEach(function(sc){
       var h = hay(c, sc), hit = 0, score = 0;
       ts.forEach(function(v){
         var w = [4, 2, 1].find(function(_, k){ return v.some(function(n){ return h[k].indexOf(n) >= 0; }); });
         if(w){ hit++; score += w; }
       });
+      soft.forEach(function(n){ if(h.some(function(t){ return t.indexOf(n) >= 0; })) score += 1; });
       if(hit) hits.push({ c:c, sc:sc, hit:hit, score:score });
     }); });
     hits.sort(function(a, b){ return b.hit - a.hit || b.score - a.score; });
-    $("findInfo").textContent = "คำค้น: " + ts.map(function(v){ return v[0]; }).join(" + ") + " · เจอ " + hits.length + " ฉาก" + (hits.length > 60 ? " (โชว์ 60 อันดับแรก)" : "");
-    $("results").innerHTML = hits.length ? hits.slice(0, 60).map(function(h){ return card(h.c, h.sc); }).join("") : '<p class="empty">ไม่เจอฉากที่ตรง ลองคำอื่น หรือติ๊กให้ AI แปลคำค้น</p>';
+    var full = hits.filter(function(h){ return h.hit === ts.length; }), part = hits.filter(function(h){ return h.hit < ts.length; });
+    if(q !== lastQ){ lastQ = q; showPartial = !full.length; } /* คำค้นใหม่ = ซ่อนที่ตรงบางส่วนไว้ก่อน (ถ้ามีตรงครบ) */
+    var list = full.slice(0, 60), html = full.length ? '<p class="hint">ตรงครบทุกคำ ' + full.length + " ฉาก" + (full.length > 60 ? " (โชว์ 60 อันดับแรก)" : "") + "</p>" : "";
+    var out = list.map(function(h){ return card(h.c, h.sc); }).join("");
+    if(part.length){
+      if(showPartial) out += '<p class="hint">ตรงบางส่วน (มีแค่บางคำ) ' + part.length + " ฉาก</p>" + part.slice(0, 40).map(function(h){ return card(h.c, h.sc); }).join("");
+      out += '<button class="btn ghost small" id="partialBtn" style="width:100%">' + (showPartial ? "ซ่อน" : "ดู") + "ที่ตรงบางส่วน (" + part.length + ")</button>";
+    }
+    $("findInfo").textContent = "คำค้น: " + ts.map(function(v){ return v[0]; }).join(" + ") + " · ตรงครบ " + full.length + " ฉาก · ตรงบางส่วน " + part.length + " ฉาก";
+    $("results").innerHTML = (html + out) || '<p class="empty">ไม่เจอฉากที่ตรง ลองคำอื่น หรือติ๊กให้ AI แปลคำค้น</p>';
   }
+  $("results").addEventListener("click", function(e){ if(e.target.closest("#partialBtn")){ showPartial = !showPartial; search(); } });
   function browse(clips){ /* ไม่พิมพ์คำค้น = โชว์ทุกคลิปพร้อมสรุป (แก้ปัญหาเห็นแค่ปก) */
     shown = [];
     clips = clips.slice().sort(function(a, b){ return a.album.localeCompare(b.album) || b.lastModified - a.lastModified; });
