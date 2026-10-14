@@ -73,13 +73,14 @@
   /* สุ่มเฟรมทุก 1 วิ → หาจุดตัดฉาก → รวมฉากสั้น/ฉากเกินเพดาน → จับเฟรมกลางฉาก
      คืน { duration, w, h, cover, scenes:[{s,e,thumb,img,ai512}] } (ai512 ใช้ส่ง AI ไม่เก็บลงฐานข้อมูล) */
   var STEP = 1, MIN_SCENE = 1;
+  var IMG = { cover:240, thumb:240, big:480, v:2 }; /* ขนาดรูปที่เก็บ (px กว้าง) · v = รุ่นของรูป (รุ่น 1 เล็กกว่า เบลอบนจอมือถือ) */
   async function scan(v, file, onStep){
     await openVideo(v, file);
     var dur = v.duration, ts = [];
     for(var t = 0.05; t < dur - 0.05; t += STEP) ts.push(t);
     if(!ts.length) ts.push(Math.min(0.05, dur / 2));
     await seek(v, ts[0]);
-    var cover = jpeg(v, 160, 0.7), gs = [gray(v)], scenes = [{ s:0, score:1, idx:0 }];
+    var cover = jpeg(v, IMG.cover, 0.75), gs = [gray(v)], scenes = [{ s:0, score:1, idx:0 }];
     for(var i = 1; i < ts.length; i++){
       await seek(v, ts[i]); gs[i] = gray(v);
       var d = diff(gs[i-1], gs[i]);
@@ -108,10 +109,23 @@
     for(k = 0; k < scenes.length; k++){
       var sc = scenes[k], mid = Math.min(dur - 0.05, (sc.s + sc.e) / 2);
       await seek(v, Math.max(0.05, mid));
-      sc.ai512 = jpeg(v, 512, 0.75); sc.img = jpeg(v, 320, 0.7); sc.thumb = jpeg(v, 160, 0.6); delete sc.score; delete sc.idx;
+      sc.ai512 = jpeg(v, 512, 0.75); sc.img = jpeg(v, IMG.big, 0.78); sc.thumb = jpeg(v, IMG.thumb, 0.75); delete sc.score; delete sc.idx;
       if(onStep) onStep(0.7 + (k + 1) / scenes.length * 0.3);
     }
     return { duration:dur, w:v.videoWidth, h:v.videoHeight, cover:cover, scenes:scenes };
+  }
+
+  /* วาดรูปใหม่ให้คมขึ้นตามช่วงฉากเดิมที่เก็บไว้ (ไม่เรียก AI ไม่เสียค่า) คืน { cover, imgs:[{img,thumb}] } */
+  async function refreshImages(v, file, rec, onStep){
+    await openVideo(v, file);
+    await seek(v, Math.min(0.05, v.duration / 2));
+    var cover = jpeg(v, IMG.cover, 0.75), imgs = [];
+    for(var k = 0; k < rec.scenes.length; k++){
+      var sc = rec.scenes[k]; await seek(v, Math.max(0.05, Math.min(v.duration - 0.05, (sc.s + sc.e) / 2)));
+      imgs.push({ img:jpeg(v, IMG.big, 0.78), thumb:jpeg(v, IMG.thumb, 0.75) });
+      if(onStep) onStep((k + 1) / rec.scenes.length);
+    }
+    return { cover:cover, imgs:imgs };
   }
 
   /* ---------- OpenRouter ---------- */
@@ -177,5 +191,5 @@
     var j = parseJSON(r.text); r.terms = Array.isArray(j.terms) ? j.terms.map(String) : []; return r;
   }
 
-  window.FT = { cfg:cfg, saveCfg:saveCfg, orKey:orKey, store:store, clipId:clipId, scan:scan, describe:describe, expandQuery:expandQuery };
+  window.FT = { cfg:cfg, saveCfg:saveCfg, orKey:orKey, store:store, clipId:clipId, scan:scan, refreshImages:refreshImages, IMG_V:IMG.v, describe:describe, expandQuery:expandQuery };
 })();

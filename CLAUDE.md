@@ -26,7 +26,7 @@
 ## ข้อกำหนดเทคนิค
 - Vanilla HTML/CSS/JS ล้วน ไม่มี build step ไม่มี framework ไม่มี npm
 - ข้อมูลทั้งหมดอยู่ใน localStorage: `mw_key_v1` (YouTube key), `mw_data_v1` (ช่อง/ทำแล้ว/คลิปที่เลือก), `mw_cache_v1` (คลิปที่ดึงมา), `mw_ai_cfg_v1` (model=ตัวเขียนบท, eye=ตัวดูคลิป, prompts[], sel[] — A/B เก็บสำเนาไว้เผื่อย้อนโค้ด), `mw_openrouter_key_v1`, `mw_gemini_key_v1` (Gemini API key ฟรี ไม่บังคับ), `mw_history_v1` (ประวัติบท ต่อคลิปมี vers[] หลายเวอร์ชัน), `mw_cost_v1` (ค่าใช้จ่าย OpenRouter รายเดือน + `g` = จำนวนคำขอฟรีผ่าน Gemini), `mw_eleven_key_v1` (ElevenLabs key), `mw_tts_cfg_v1` (voices[] = เสียงของฉัน, voice = Voice ID ที่เลือกอยู่, model/stability/warm/trim/tsOff/ยอดตัวอักษรรายเดือน) · `mw_data_v1` มี `saved` (เก็บไว้ทำทีหลัง) กับ `cols` (2/3 คอลัมน์)
-  หน้า footage: `mw_footage_cfg_v1` (model/thr/maxScenes/budget/par) ใน localStorage · ดัชนีอยู่ใน IndexedDB `mw_footage_v1` store `clips` (1 รายการต่อคลิป: id = ชื่อไฟล์|ขนาด|lastModified, album, cover, summary_th, scenes[{s,e,thumb,img,ai}], raw, cost, tokens, ms) · ใช้ `mw_openrouter_key_v1` ร่วมกับแอพหลัก
+  หน้า footage: `mw_footage_cfg_v1` (model/thr/maxScenes/budget/par) ใน localStorage · ดัชนีอยู่ใน IndexedDB `mw_footage_v1` store `clips` (1 รายการต่อคลิป: id = ชื่อไฟล์|ขนาด|lastModified, album, cover, summary_th, scenes[{s,e,thumb,img,ai}], raw, cost, tokens, ms, imgV = รุ่นรูป: 2 = cover/thumb 240px, img 480px · รุ่น 1 เล็กกว่า อัปเกรดรูปได้โดยไม่เรียก AI ผ่านติ๊ก "อัปเกรดรูป") · ใช้ `mw_openrouter_key_v1` ร่วมกับแอพหลัก
   ห้ามเปลี่ยนชื่อ key เหล่านี้โดยไม่ทำ migration เพราะข้อมูลในเครื่องผู้ใช้จะหาย
 - ข้อความในหน้าเป็นภาษาไทยทั้งหมด ภาษาพูดเป็นกันเอง
 - ต้องใช้งานได้ดีบนจอมือถือกว้าง ~380px

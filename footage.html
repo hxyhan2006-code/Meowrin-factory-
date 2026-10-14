@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600&family=Mitr:wght@500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="footage.css?v=20261014d">
+<link rel="stylesheet" href="footage.css?v=20261014e">
 </head>
 <body>
 <header>
@@ -27,6 +27,7 @@
       <label for="files">ไฟล์วิดีโอ (เลือกได้หลายไฟล์)</label>
       <input id="files" type="file" accept="video/*" multiple>
       <p class="hint">วิดีโอไม่ถูกอัปโหลด ส่งไปให้ AI แค่รูปเฟรมเล็กๆ · คลิปที่เคยทำแล้วจะข้ามให้เอง</p>
+      <label class="chk"><input type="checkbox" id="upImg" checked> อัปเกรดรูปคลิปที่เคยทำไว้ให้คมขึ้น (เลือกไฟล์เดิมซ้ำ · ไม่เรียก AI ไม่เสียค่า)</label>
       <div class="row" style="margin-top:12px">
         <button class="btn" id="startBtn" disabled>เริ่มทำดัชนี</button>
         <button class="btn ghost" id="pauseBtn" hidden>พัก</button>
@@ -103,7 +104,7 @@
 <div class="big" id="big" hidden><img id="bigImg" alt=""><p id="bigTxt"></p></div>
 <video id="vid" muted playsinline preload="auto" style="position:fixed;left:-9999px;width:2px;height:2px"></video>
 
-<script src="footage-core.js?v=20261014d"></script>
-<script src="footage.js?v=20261014d"></script>
+<script src="footage-core.js?v=20261014e"></script>
+<script src="footage.js?v=20261014e"></script>
 </body>
 </html>

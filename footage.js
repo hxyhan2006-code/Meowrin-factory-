@@ -33,7 +33,8 @@
     var album = $("album").value.trim() || "ไม่ระบุ", picked = Date.now();
     var add = Array.prototype.map.call(this.files, function(f){
       var id = FT.clipId(f), done = byId(id);
-      return { file:f, id:id, album:album, status: done && done.status === "done" ? "skip" : "wait", err:"", p:0,
+      var old = done && done.status === "done" && (done.imgV || 1) < FT.IMG_V; /* ทำดัชนีไว้แล้วแต่รูปรุ่นเก่า (เล็ก/เบลอ) */
+      return { file:f, id:id, album:album, mode: old && $("upImg").checked ? "up" : "", status: done && done.status === "done" && !(old && $("upImg").checked) ? "skip" : "wait", err:"", p:0,
                info:{ name:f.name, type:f.type, size:f.size, lastModified:f.lastModified, picked:picked } };
     });
     queue = queue.filter(function(q){ return q.status === "run"; }).concat(add.filter(function(a){ return !queue.some(function(q){ return q.id === a.id && q.status === "run"; }); }));
@@ -47,8 +48,8 @@
   function renderQueue(){
     if(!queue.length){ $("queue").innerHTML = '<li class="empty">ยังไม่ได้เลือกไฟล์</li>'; }
     else $("queue").innerHTML = queue.map(function(q){
-      var c = byId(q.id), tag = { wait:["รอ",""], run:["กำลังทำ " + Math.round(q.p * 100) + "%","run"], done:["เสร็จ","ok"], error:["error","err"], skip:["ทำแล้ว (ข้าม)","ok"] }[q.status];
-      var sub = q.status === "run" ? esc((q.stage || "เริ่ม...") + " · " + mmss(Date.now() - q.t0)) : c && c.status === "done" ? c.scenes.length + " ฉาก · " + money(c.cost || 0) + " · " + ((c.ms || 0) / 1000).toFixed(0) + " วิ · " + capDur(c.duration) : esc(q.album || "ไม่ระบุอัลบั้ม");
+      var c = byId(q.id), tag = { wait:[q.mode === "up" ? "รออัปเกรดรูป" : "รอ",""], run:["กำลังทำ " + Math.round(q.p * 100) + "%","run"], done:["เสร็จ","ok"], error:["error","err"], skip:["ทำแล้ว (ข้าม)","ok"] }[q.status];
+      var sub = q.status === "run" ? esc((q.stage || "เริ่ม...") + " · " + mmss(Date.now() - q.t0)) : q.mode === "up" && q.status === "wait" ? "รูปรุ่นเก่า (เบลอ) · จะวาดรูปใหม่ ไม่เรียก AI" : c && c.status === "done" ? c.scenes.length + " ฉาก · " + money(c.cost || 0) + " · " + ((c.ms || 0) / 1000).toFixed(0) + " วิ · " + capDur(c.duration) : esc(q.album || "ไม่ระบุอัลบั้ม");
       return '<li><img ' + (c && c.cover ? 'src="' + c.cover + '" ' : "") + 'alt=""><div class="t"><b>' + esc(q.info.name) + "</b><span>" + sub + "</span>"
         + (q.err ? '<br><span style="color:var(--err)">' + esc(q.err) + "</span>" : "") + '</div><span class="tag ' + tag[1] + '">' + tag[0] + "</span></li>";
     }).join("");
@@ -90,7 +91,7 @@
     runStart = Date.now(); clearInterval(tick); tick = setInterval(renderQueue, 1000); /* นาฬิกาเดินทุกวินาทีระหว่างทำ */
     renderQueue();
     for(var q; !paused && (q = queue.find(function(x){ return x.status === "wait"; })); ){
-      if(runCost >= cfg.budget) break;
+      if(runCost >= cfg.budget && q.mode !== "up") break;
       await processClip(q);
     }
     running = false; clearInterval(tick); await wake(false);
@@ -102,7 +103,17 @@
   }
 
   var CHUNK = 8; /* กี่ฉากต่อคำขอ AI */
+  async function upgradeClip(q){ /* วาดรูปใหม่ตามช่วงฉากเดิม ไม่ยุ่งผลของ AI */
+    var c = byId(q.id); q.status = "run"; q.p = 0; q.err = ""; q.t0 = Date.now(); q.stage = "วาดรูปใหม่ให้คมขึ้น..."; renderQueue();
+    try{
+      var r = await FT.refreshImages($("vid"), q.file, c, function(p){ q.p = p; renderQueue(); });
+      c.cover = r.cover; c.scenes.forEach(function(sc, i){ sc.img = r.imgs[i].img; sc.thumb = r.imgs[i].thumb; }); c.imgV = FT.IMG_V;
+      await FT.store.put(c); q.status = "done"; q.p = 1; q.mode = "";
+    }catch(err){ if(document.hidden){ q.status = "wait"; q.p = 0; } else { q.status = "error"; q.err = err.message || String(err); } }
+    renderAll();
+  }
   async function processClip(q){
+    if(q.mode === "up") return upgradeClip(q);
     var t0 = Date.now(), cost = 0, tin = 0, tout = 0, raw = [];
     q.status = "run"; q.p = 0; q.err = ""; q.t0 = t0; renderQueue();
     try{
@@ -132,7 +143,7 @@
       var rec = { id:q.id, name:q.info.name, album:q.album, size:q.info.size, type:q.info.type, lastModified:q.info.lastModified,
         duration:m.duration, w:m.w, h:m.h, cover:m.cover, summary_th: sums.filter(Boolean).join(" / "),
         scenes: m.scenes.map(function(sc){ return { s:sc.s, e:sc.e, thumb:sc.thumb, img:sc.img, ai:sc.ai || null }; }),
-        raw:raw, cost:cost, tokens:{ in:tin, out:tout }, ms:Date.now() - t0, msScan:msScan, msAI:Date.now() - t0 - msScan, model:cfg.model, at:Date.now(), status:"done" };
+        raw:raw, cost:cost, tokens:{ in:tin, out:tout }, ms:Date.now() - t0, imgV:FT.IMG_V, msScan:msScan, msAI:Date.now() - t0 - msScan, model:cfg.model, at:Date.now(), status:"done" };
       await FT.store.put(rec);
       lib = lib.filter(function(c){ return c.id !== rec.id; }).concat([rec]);
       q.status = "done"; q.p = 1;
