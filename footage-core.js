@@ -38,6 +38,7 @@
     all: function(){ return tx("readonly", function(s){ return s.getAll(); }); },
     put: function(c){ return tx("readwrite", function(s){ s.put(c); }); },
     putMany: function(arr){ return tx("readwrite", function(s){ arr.forEach(function(c){ s.put(c); }); }); },
+    del: function(ids){ return tx("readwrite", function(s){ ids.forEach(function(id){ s.delete(id); }); }); },
     clear: function(){ return tx("readwrite", function(s){ s.clear(); }); }
   };
   function clipId(f){ return f.name + "|" + f.size + "|" + f.lastModified; }
