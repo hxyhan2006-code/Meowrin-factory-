@@ -423,6 +423,12 @@
   $("model").addEventListener("change", function(){ cfg.model = this.value.trim() || "google/gemini-3.8-flash"; this.value = cfg.model; FT.saveCfg(); });
   $("thr").addEventListener("input", function(){ cfg.thr = Number(this.value); $("thrVal").textContent = cfg.thr.toFixed(2); FT.saveCfg(); });
   $("thrVal").textContent = Number(cfg.thr).toFixed(2);
+  function setTag(id, kind, text){ var el = $(id); el.className = "state " + kind; el.textContent = text; } /* ป้ายสีบนหัวข้อที่พับอยู่ในตั้งค่า */
+  function tagsSet(){
+    setTag("tagAi", FT.orKey() ? "ok" : "warn", FT.orKey() ? String(cfg.model).replace(/^.*\//, "") : "ไม่มี key");
+    setTag("tagCut", "idle", "ไว " + Number(cfg.thr).toFixed(2) + " · ≤" + cfg.maxScenes + " ฉาก");
+  }
+  ["model", "thr", "maxScenes"].forEach(function(id){ $(id).addEventListener("input", tagsSet); }); tagsSet();
   $("keyInfo").textContent = FT.orKey() ? "✓ ใช้ OpenRouter key จากแอพหลักในเบราว์เซอร์นี้" : "⚠ ยังไม่เจอ OpenRouter key ในเบราว์เซอร์นี้ ใส่ที่แอพหลัก (ตั้งค่า) ก่อน";
 
   /* ---------- ลบคลิปซ้ำ: ชื่อไฟล์+ขนาดเดียวกัน เก็บตัวที่ทำล่าสุด ---------- */

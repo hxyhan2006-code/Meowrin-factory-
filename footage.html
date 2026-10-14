@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600&family=Mitr:wght@500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="footage.css?v=20261015c">
+<link rel="stylesheet" href="footage.css?v=20261015d">
 </head>
 <body>
 <header>
@@ -113,19 +113,7 @@
 
   <!-- ตั้งค่า -->
   <section class="page" id="p-set">
-    <div class="panel">
-      <h2>AI ดูรูป</h2>
-      <p class="hint" id="keyInfo"></p>
-      <label for="model">โมเดล (OpenRouter model id ที่ดูรูปได้)</label>
-      <input id="model" type="text" list="modelList" autocomplete="off">
-      <datalist id="modelList"><option value="google/gemini-3.8-flash"><option value="google/gemini-4-argon"></datalist>
-      <label for="budget">เพดานงบต่อรอบ (USD) เกินแล้วพักเอง</label>
-      <input id="budget" type="number" min="0.05" step="0.05">
-      <label for="par">ส่งพร้อมกันกี่คำขอ</label>
-      <input id="par" type="number" min="1" max="4" step="1">
-    </div>
-    <div class="panel">
-      <h2>คลังวิดีโอ (Cloudflare R2)</h2>
+    <details class="panel fold"><summary><span>คลังวิดีโอ (Cloudflare R2)</span><em class="state idle" id="tagR2">ยังไม่ตั้ง</em></summary><div class="fbody">
       <p class="hint" style="margin-top:0">เก็บฟุตเทจไว้บนคลาวด์ เล่น/ต่อฉาก/ทำดัชนีจากคลังได้เลย · โฟลเดอร์ในคลัง = อัลบั้ม · คีย์เก็บในเครื่องนี้เท่านั้น ไม่ขึ้น Drive</p>
       <label for="r2Account">Account ID</label>
       <input id="r2Account" type="text" autocomplete="off" placeholder="ตัวเลข+ตัวอักษร 32 ตัว">
@@ -143,33 +131,8 @@
       </details>
       <button class="btn" id="r2Save" style="width:100%;margin-top:12px">บันทึกและทดสอบ</button>
       <div id="r2Msg"></div>
-    </div>
-    <div class="panel">
-      <h2>ตัดฉาก</h2>
-      <label for="thr">ความไวจุดตัดฉาก: <b id="thrVal"></b> (น้อย = ตัดถี่)</label>
-      <input id="thr" type="range" min="0.04" max="0.5" step="0.01">
-      <label for="maxScenes">ฉากสูงสุดต่อคลิป</label>
-      <input id="maxScenes" type="number" min="1" max="60" step="1">
-      <p class="hint">สุ่มเฟรมทุก 1 วินาที · ฉากที่ต่างกันน้อยที่สุดจะถูกรวมจนเหลือไม่เกินเพดาน</p>
-    </div>
-    <div class="panel">
-      <h2>คลิปซ้ำ</h2>
-      <p class="hint" style="margin-top:0">รายการซ้ำ (ชื่อไฟล์และขนาดเท่ากัน) ระบบรวมให้เองทุกครั้งที่เปิดหน้า เก็บตัวที่ทำล่าสุดไว้ตัวเดียว · ปุ่มนี้ไว้ตรวจเองหรือสั่งรวมทันที</p>
-      <button class="btn ghost" id="dupBtn" style="width:100%">ตรวจหาและลบคลิปซ้ำ</button>
-      <div id="dupMsg"></div>
-    </div>
-    <div class="panel">
-      <h2>เปลี่ยนชื่ออัลบั้ม</h2>
-      <p class="hint" style="margin-top:0">เปลี่ยนทั้งอัลบั้มพร้อมกัน (ทุกคลิปที่ใช้ชื่อนี้) · อยากเปลี่ยนแค่บางคลิป กด “✎ แก้” ที่การ์ดในแท็บค้นหา</p>
-      <label for="renOld">อัลบั้มที่จะเปลี่ยน</label>
-      <select id="renOld"></select>
-      <label for="renNew">ชื่อใหม่</label>
-      <input id="renNew" type="text" placeholder="เช่น luffy" autocomplete="off">
-      <button class="btn" id="renBtn" style="width:100%;margin-top:12px">เปลี่ยนชื่อ</button>
-      <div id="renMsg"></div>
-    </div>
-    <div class="panel">
-      <h2>สำรอง / กู้คืนดัชนี</h2>
+    </div></details>
+    <details class="panel fold"><summary><span>สำรอง / กู้คืนดัชนี</span><em class="state idle" id="gdTag">...</em></summary><div class="fbody">
       <p class="hint" id="dbInfo"></p>
       <div class="row" style="margin-top:10px">
         <button class="btn ghost" id="exportBtn">โหลดไฟล์สำรอง</button>
@@ -188,12 +151,42 @@
       <div id="gdMsg"></div>
       <button class="btn ghost small" id="wipeBtn" style="margin-top:10px;width:100%">ลบดัชนีทั้งหมด</button>
       <div id="setMsg"></div>
-    </div>
-    <div class="panel">
-      <h2>Debug</h2>
+    </div></details>
+    <details class="panel fold"><summary><span>AI ดูรูป</span><em class="state idle" id="tagAi"></em></summary><div class="fbody">
+      <p class="hint" id="keyInfo"></p>
+      <label for="model">โมเดล (OpenRouter model id ที่ดูรูปได้)</label>
+      <input id="model" type="text" list="modelList" autocomplete="off">
+      <datalist id="modelList"><option value="google/gemini-3.8-flash"><option value="google/gemini-4-argon"></datalist>
+      <label for="budget">เพดานงบต่อรอบ (USD) เกินแล้วพักเอง</label>
+      <input id="budget" type="number" min="0.05" step="0.05">
+      <label for="par">ส่งพร้อมกันกี่คำขอ</label>
+      <input id="par" type="number" min="1" max="4" step="1">
+    </div></details>
+    <details class="panel fold"><summary><span>ตัดฉาก</span><em class="state idle" id="tagCut"></em></summary><div class="fbody">
+      <label for="thr">ความไวจุดตัดฉาก: <b id="thrVal"></b> (น้อย = ตัดถี่)</label>
+      <input id="thr" type="range" min="0.04" max="0.5" step="0.01">
+      <label for="maxScenes">ฉากสูงสุดต่อคลิป</label>
+      <input id="maxScenes" type="number" min="1" max="60" step="1">
+      <p class="hint">สุ่มเฟรมทุก 1 วินาที · ฉากที่ต่างกันน้อยที่สุดจะถูกรวมจนเหลือไม่เกินเพดาน</p>
+    </div></details>
+    <details class="panel fold"><summary><span>คลิปซ้ำ</span></summary><div class="fbody">
+      <p class="hint" style="margin-top:0">รายการซ้ำ (ชื่อไฟล์และขนาดเท่ากัน) ระบบรวมให้เองทุกครั้งที่เปิดหน้า เก็บตัวที่ทำล่าสุดไว้ตัวเดียว · ปุ่มนี้ไว้ตรวจเองหรือสั่งรวมทันที</p>
+      <button class="btn ghost" id="dupBtn" style="width:100%">ตรวจหาและลบคลิปซ้ำ</button>
+      <div id="dupMsg"></div>
+    </div></details>
+    <details class="panel fold"><summary><span>เปลี่ยนชื่ออัลบั้ม</span></summary><div class="fbody">
+      <p class="hint" style="margin-top:0">เปลี่ยนทั้งอัลบั้มพร้อมกัน (ทุกคลิปที่ใช้ชื่อนี้) · อยากเปลี่ยนแค่บางคลิป กด “✎ แก้” ที่การ์ดในแท็บค้นหา</p>
+      <label for="renOld">อัลบั้มที่จะเปลี่ยน</label>
+      <select id="renOld"></select>
+      <label for="renNew">ชื่อใหม่</label>
+      <input id="renNew" type="text" placeholder="เช่น luffy" autocomplete="off">
+      <button class="btn" id="renBtn" style="width:100%;margin-top:12px">เปลี่ยนชื่อ</button>
+      <div id="renMsg"></div>
+    </div></details>
+    <details class="panel fold"><summary><span>Debug</span></summary><div class="fbody">
       <p class="hint">ข้อมูลไฟล์จากตัวเลือกไฟล์ และคำตอบดิบของ AI ต่อคลิป</p>
       <div id="debug"><p class="empty">ยังไม่มีข้อมูล</p></div>
-    </div>
+    </div></details>
   </section>
 </main>
 
@@ -212,6 +205,6 @@
 <input id="pickDocs" type="file" multiple hidden><!-- ไม่ใส่ accept → Android เปิดแอพไฟล์ (เข้าโฟลเดอร์ + เลือกทั้งหมดได้) แทนตัวเลือกรูป -->
 <video id="vid" muted playsinline preload="auto" style="position:fixed;left:-9999px;width:2px;height:2px"></video>
 
-<script src="store.js?v=20261015c" data-boot="footage-core.js?v=20261015c r2.js?v=20261015c footage.js?v=20261015c footage-cloud.js?v=20261015c mp4fix.js?v=20261015c footage-plan.js?v=20261015c gdrive.js?v=20261015c"></script>
+<script src="store.js?v=20261015d" data-boot="footage-core.js?v=20261015d r2.js?v=20261015d footage.js?v=20261015d footage-cloud.js?v=20261015d mp4fix.js?v=20261015d footage-plan.js?v=20261015d gdrive.js?v=20261015d"></script>
 </body>
 </html>

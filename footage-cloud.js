@@ -34,12 +34,14 @@
     R2.setCfg(c); fill(); renderState();
     if(!R2.ready()){ msg("r2Msg", "บันทึกแล้ว แต่ยังกรอกไม่ครบ (Account ID, ชื่อ bucket, Access Key ID, Secret)", "err"); return; }
     msg("r2Msg", "กำลังทดสอบ...");
-    try{ await R2.test(); msg("r2Msg", "เชื่อมคลังได้แล้ว ✓", "ok"); listCloud(); }catch(err){ msg("r2Msg", "ยังเชื่อมไม่ได้: " + err.message, "err"); }
+    try{ await R2.test(); msg("r2Msg", "เชื่อมคลังได้แล้ว ✓", "ok"); listCloud(); }catch(err){ tag("err", "เชื่อมไม่ได้"); msg("r2Msg", "ยังเชื่อมไม่ได้: " + err.message, "err"); }
   });
 
   /* ---------- คลังบนคลาวด์ (แท็บทำดัชนี) ---------- */
+  function tag(kind, text){ var el = $("tagR2"); el.className = "state " + kind; el.textContent = text; }
   function renderState(){
     var on = R2.ready();
+    if(!on) tag("idle", "ยังไม่ตั้ง"); else if(!objs) tag("warn", "ยังไม่ได้เช็ก");
     $("cloudBox").hidden = !on; $("cloudOff").hidden = on; $("toCloudRow").hidden = !on;
     if(!on) return;
     if(!objs){ $("cloudInfo").textContent = "กด ดูไฟล์ในคลัง เพื่อเช็กว่ามีอะไรบ้าง"; $("cloudQueue").hidden = true; $("cloudAlbums").innerHTML = ""; return; }
@@ -49,6 +51,7 @@
     var size = vids.reduce(function(t, o){ return t + o.size; }, 0), alb = {};
     vids.forEach(function(o){ var a = albumOf(o.key); alb[a] = alb[a] || { n:0, todo:0, size:0 }; alb[a].n++; alb[a].size += o.size; });
     todo.forEach(function(o){ alb[albumOf(o.key)].todo++; });
+    tag("ok", vids.length + " คลิป · " + gb(size));
     var local = lib.filter(function(c){ return c.status === "done" && !c.r2; }).length;
     $("cloudInfo").textContent = "ในคลัง " + vids.length + " คลิป · " + gb(size) + " · ทำดัชนีแล้ว " + (vids.length - todo.length) + " · ยังไม่ทำ " + todo.length
       + (local ? " · ดัชนีที่ไฟล์ยังไม่อยู่ในคลัง " + local + " คลิป" : "");
@@ -74,7 +77,7 @@
       if(link.length) await FT.store.putMany(link);
       msg("cloudMsg", link.length ? "จับคู่ดัชนีกับไฟล์ในคลังได้ " + link.length + " คลิป (เล่น/ต่อฉากจากคลังได้แล้ว ไม่ต้องเลือกไฟล์)" : "", "ok");
       if(link.length) await U.refresh();
-    }catch(err){ msg("cloudMsg", "ดูคลังไม่ได้: " + err.message, "err"); }
+    }catch(err){ tag("err", "เชื่อมไม่ได้"); msg("cloudMsg", "ดูคลังไม่ได้: " + err.message, "err"); }
     $("cloudList").disabled = false; renderState();
   }
   $("cloudList").addEventListener("click", listCloud);
