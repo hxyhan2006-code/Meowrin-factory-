@@ -107,7 +107,9 @@
   }
 
   async function speak(script){
-    var warm = warmFor(script), sent = warm ? warm + "\n\n" + script : script;
+    /* บรรทัดว่างคั่นท่อนในจอ ElevenLabs (v3) อ่านเป็นเว้นเงียบ ~0.7-0.8 วิ ทุกครั้ง (วัดจากไฟล์จริง) → ส่งไปเป็นขึ้นบรรทัดเดียว ในจอยังเห็นบรรทัดว่างเหมือนเดิม */
+    var body = script.replace(/[ \t]*\n(?:[ \t]*\n)+/g, "\n");
+    var warm = warmFor(script), sent = warm ? warm + "\n\n" + body : body;
     if(sent.length > MAX_CHARS) throw new Error("บท" + (warm ? "รวมช่วงวอร์ม" : "") + "ยาว " + sent.length.toLocaleString() + " ตัวอักษร เกินเพดาน " + MAX_CHARS.toLocaleString() + " ต่อครั้งของ ElevenLabs ตัดให้สั้นลงก่อน");
     var full = null, al = null, tsTried = !!warm && cfg.trim && !cfg.tsOff;
     if(tsTried){
@@ -124,7 +126,7 @@
 
     var take = { raw:full, blob:full, cut:null, warm:!!warm };
     if(warm && cfg.trim && al){
-      var c = cutTime(al, sent, script), bytes = c === null ? null : mp3Cut(new Uint8Array(await full.arrayBuffer()), c);
+      var c = cutTime(al, sent, body), bytes = c === null ? null : mp3Cut(new Uint8Array(await full.arrayBuffer()), c);
       if(bytes && bytes.length){ take.blob = new Blob([bytes], { type:"audio/mpeg" }); take.cut = c; }
     }
     return take;
