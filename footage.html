@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600&family=Mitr:wght@500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="footage.css?v=20261015g">
+<link rel="stylesheet" href="footage.css?v=20261015h">
 </head>
 <body>
 <header>
@@ -25,6 +25,10 @@
       <input id="album" type="text" list="albumList" placeholder="เช่น luffy" autocomplete="off">
       <datalist id="albumList"></datalist>
       <label for="files">ไฟล์วิดีโอ (เลือกได้หลายไฟล์)</label>
+      <button class="btn" id="filesDocsBtn" type="button" style="width:100%">📁 เลือกจากแอพไฟล์ (เลือกทั้งอัลบั้มได้)</button>
+      <input id="filesDocs" type="file" multiple hidden><!-- ไม่ใส่ accept → Android เปิดแอพไฟล์ เข้า Pictures/Gallery/owner/<อัลบั้ม> แล้วเลือกทั้งหมดได้ -->
+      <p class="hint" style="margin-top:6px">อัลบั้มของแกลเลอรีอยู่ที่ Pictures → Gallery → owner → ชื่ออัลบั้ม · กดค้างไฟล์แรก → เลือกทั้งหมด · เลือกซ้ำได้ คลิปที่ทำ/อัปแล้วจะถูกข้ามเอง</p>
+      <label for="files" style="margin-top:10px">หรือเลือกจากแกลเลอรี</label>
       <input id="files" type="file" accept="video/*" multiple>
       <p class="hint">เลือกทีละอัลบั้ม แล้วพิมพ์ชื่ออัลบั้มนั้น (ไม่ใช่คำอธิบายฉาก AI ดูเนื้อหาเองอยู่แล้ว) · เลือกคลิปที่เคยทำไว้ซ้ำพร้อมพิมพ์ชื่อใหม่ = แก้ชื่ออัลบั้มให้ ไม่เสียค่า AI · วิดีโอไม่ถูกอัปโหลด</p>
       <label class="chk" id="toCloudRow" hidden><input type="checkbox" id="toCloud" checked> อัปไฟล์ขึ้นคลังด้วย (ต่อไปไม่ต้องเลือกไฟล์อีก · เลือกคลิปที่ทำดัชนีแล้วซ้ำ = อัปอย่างเดียว ไม่เรียก AI)</label>
@@ -205,6 +209,6 @@
 <input id="pickDocs" type="file" multiple hidden><!-- ไม่ใส่ accept → Android เปิดแอพไฟล์ (เข้าโฟลเดอร์ + เลือกทั้งหมดได้) แทนตัวเลือกรูป -->
 <video id="vid" muted playsinline preload="auto" style="position:fixed;left:-9999px;width:2px;height:2px"></video>
 
-<script src="store.js?v=20261015g" data-boot="footage-core.js?v=20261015g r2.js?v=20261015g footage.js?v=20261015g footage-cloud.js?v=20261015g mp4fix.js?v=20261015g footage-plan.js?v=20261015g gdrive.js?v=20261015g"></script>
+<script src="store.js?v=20261015h" data-boot="footage-core.js?v=20261015h r2.js?v=20261015h footage.js?v=20261015h footage-cloud.js?v=20261015h mp4fix.js?v=20261015h footage-plan.js?v=20261015h gdrive.js?v=20261015h"></script>
 </body>
 </html>

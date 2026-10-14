@@ -16,6 +16,9 @@
     fetch:async function(q, onProg){ var b = await R2.get(q.key, onProg); return new File([b], q.info.name, { type:b.type || "video/mp4", lastModified:q.info.lastModified }); },
     upload:async function(c, file, onProg){
       if(!file) throw new Error("ไม่มีไฟล์ในเครื่องให้อัป");
+      if(!objs) objs = await R2.list(); /* กันอัปซ้ำ: ไฟล์ชื่อ+ขนาดเดียวกันอยู่ในคลังแล้ว (เช่นเคยอัปไว้) → ผูกกับดัชนีเฉยๆ ไม่ส่งไฟล์ใหม่ */
+      var have = objs.find(function(o){ return base(o.key) === file.name && o.size === file.size; });
+      if(have){ c.r2 = have.key; await FT.store.put(c); if(onProg) onProg(1); return have.key; }
       var key = folder(c.album) + "/" + file.name, clash = objs && objs.find(function(o){ return o.key === key && o.size !== file.size; });
       if(clash) key = folder(c.album) + "/" + file.name.replace(/(\.\w+)?$/, "_" + file.size + "$1"); /* ชื่อซ้ำแต่คนละไฟล์ → ต่อท้ายขนาด */
       await R2.put(key, file, onProg);
