@@ -14,6 +14,7 @@
   function sleep(ms){ return new Promise(function(r){ setTimeout(r, ms); }); }
 
   /* ---------- ค่าใช้จ่ายรายเดือน (mw_cost_v1) · g = จำนวนคำขอที่ใช้ Gemini ฟรี ---------- */
+  var LAST = "mw_gemini_last_v1"; /* เหตุผลล่าสุดที่ Gemini ตรงใช้ไม่ได้ (ไว้โชว์ในตั้งค่า) */
   var COST = "mw_cost_v1";
   function monthKey(){ var d = new Date(); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0"); }
   var spend = load(COST, {});
@@ -113,10 +114,11 @@
     }
     if(!res.ok){
       var st = res.status, why = (j.error && j.error.message) || ("HTTP " + st);
-      if(st === 429){ skip.all = Date.now() + 10 * 60e3; throw gemFail("โควตา Gemini ฟรีเต็ม", true); }
-      if(st === 404){ skip[model] = true; throw gemFail("Gemini ไม่รู้จักโมเดล " + short(model), true); }
-      if(st === 401 || st === 403 || /API key/i.test(why)){ skip.all = Date.now() + 60 * 60e3; throw gemFail("Gemini key ใช้ไม่ได้", true); }
-      if(st >= 500) throw gemFail("Gemini ล่มชั่วคราว", true);
+      var g = " [" + st + ": " + why.slice(0, 160) + "]"; /* ข้อความจริงจาก Google ไว้ดูสาเหตุ */
+      if(st === 429){ skip.all = Date.now() + 10 * 60e3; throw gemFail("โควตา Gemini ฟรีเต็ม/ไม่มีโควตาฟรี" + g, true); }
+      if(st === 404){ skip[model] = true; throw gemFail("Gemini ไม่รู้จักโมเดล " + short(model) + g, true); }
+      if(st === 401 || st === 403 || /API key/i.test(why)){ skip.all = Date.now() + 60 * 60e3; throw gemFail("Gemini key ใช้ไม่ได้" + g, true); }
+      if(st >= 500) throw gemFail("Gemini ล่มชั่วคราว" + g, true);
       throw gemFail("Gemini error " + st + " (" + why.slice(0, 120) + ")", true); /* คำขอที่ Gemini ตรงไม่รับ OpenRouter อาจยังทำได้ (เคยใช้ได้จริง) */
     }
     var cand = j.candidates && j.candidates[0];
@@ -142,7 +144,8 @@
       }catch(err){
         if(!err.fallback) throw err;
         if(!load(OR_KEY, "")) throw new Error(err.message + " และยังไม่ได้ใส่ OpenRouter key ให้ใช้แทน");
-        MW.toast(err.message + " → ใช้ OpenRouter แทน");
+        save(LAST, { at: Date.now(), msg: err.message }); /* เก็บเหตุผลไว้โชว์ในตั้งค่า (toast หายเร็ว) */
+        MW.toast(err.message.replace(/ \[.*$/, "") + " → ใช้ OpenRouter แทน (ดูเหตุผลในตั้งค่า)", false, 6000);
       }
     }
     return viaOpenRouter(messages, system, model, opt.think, opt.v);
@@ -151,7 +154,14 @@
   /* ปุ่ม "ทดสอบ Gemini" ในตั้งค่า: ยิงคำขอสั้นๆ ต่อโมเดล แล้วคืนผลดิบ (สถานะ + ข้อความจาก Google) ไว้ดูสาเหตุที่ถอยไป OpenRouter */
   async function testGemini(models, think){
     var key = load(GM_KEY, ""); if(!key) return ["ยังไม่ได้ใส่ Gemini key"];
-    var out = [];
+    var out = [], last = load(LAST, null);
+    if(last) out.push("ครั้งล่าสุดที่ถอยไป OpenRouter: " + last.msg);
+    try{ /* รายชื่อโมเดลที่คีย์นี้เรียกได้จริง ไว้เทียบชื่อ */
+      var lr = await fetch("https://generativelanguage.googleapis.com/v1beta/models?pageSize=200", { headers:{ "x-goog-api-key": key } });
+      var lj = await lr.json().catch(function(){ return {}; });
+      out.push(lr.ok ? "โมเดล Gemini ที่เรียกได้: " + (lj.models || []).filter(function(x){ return /gemini/i.test(x.name) && (x.supportedGenerationMethods || []).indexOf("generateContent") >= 0; })
+        .map(function(x){ return x.name.replace(/^models\//, ""); }).slice(0, 30).join(", ") : "ดึงรายชื่อโมเดลไม่ได้ HTTP " + lr.status + " " + ((lj.error && lj.error.message) || "").slice(0, 150));
+    }catch(err){ out.push("ดึงรายชื่อโมเดลไม่ได้ (" + err.message + ")"); }
     for(var i = 0; i < models.length; i++){
       var m = models[i], line = short(m) + " : ";
       try{

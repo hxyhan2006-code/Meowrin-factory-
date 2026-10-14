@@ -336,9 +336,9 @@
 
   /* ---------- toast ---------- */
   var toastT;
-  function toast(text, err){
+  function toast(text, err, ms){
     var t = $("toast"); t.textContent = text; t.classList.toggle("err", !!err); t.classList.add("on");
-    clearTimeout(toastT); toastT = setTimeout(function(){ t.classList.remove("on"); }, 2200);
+    clearTimeout(toastT); toastT = setTimeout(function(){ t.classList.remove("on"); }, ms || 2200);
   }
 
   /* ---------- channels ---------- */
