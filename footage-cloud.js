@@ -17,7 +17,7 @@
     upload:async function(c, file, onProg){
       if(!file) throw new Error("ไม่มีไฟล์ในเครื่องให้อัป");
       if(!objs) objs = await R2.list(); /* กันอัปซ้ำ: ไฟล์ชื่อ+ขนาดเดียวกันอยู่ในคลังแล้ว (เช่นเคยอัปไว้) → ผูกกับดัชนีเฉยๆ ไม่ส่งไฟล์ใหม่ */
-      var have = objs.find(function(o){ return base(o.key) === file.name && o.size === file.size; });
+      var same = objs.filter(function(o){ return o.size === file.size; }), have = same.find(function(o){ return base(o.key) === file.name; }) || (same.length === 1 ? same[0] : null);
       if(have){ c.r2 = have.key; await FT.store.put(c); if(onProg) onProg(1); return have.key; }
       var key = folder(c.album) + "/" + file.name, clash = objs && objs.find(function(o){ return o.key === key && o.size !== file.size; });
       if(clash) key = folder(c.album) + "/" + file.name.replace(/(\.\w+)?$/, "_" + file.size + "$1"); /* ชื่อซ้ำแต่คนละไฟล์ → ต่อท้ายขนาด */
@@ -80,8 +80,8 @@
     try{
       objs = await R2.list();
       /* จับคู่ดัชนีเดิม (ทำจากไฟล์ในเครื่อง) กับไฟล์ในคลังด้วยชื่อ+ขนาด → ต่อไปเล่นจากคลังได้เลย */
-      var link = [], m = {}; objs.forEach(function(o){ m[base(o.key) + "|" + o.size] = o.key; });
-      (await FT.store.all()).forEach(function(c){ var k = m[c.name + "|" + c.size]; if(k && c.r2 !== k){ c.r2 = k; link.push(c); } }); /* อ่านจากฐานจริง (ดัชนีในหน้าอาจยังโหลดไม่เสร็จ) */
+      var link = [], m = {}, bs = {}; objs.forEach(function(o){ m[base(o.key) + "|" + o.size] = o.key; bs[o.size] = bs[o.size] === undefined ? o.key : false; });
+      (await FT.store.all()).forEach(function(c){ var k = m[c.name + "|" + c.size] || (!c.r2 && bs[c.size]); if(k && c.r2 !== k){ c.r2 = k; link.push(c); } }); /* ชื่อ+ขนาด หรือขนาดอย่างเดียวถ้าในคลังมีไฟล์ขนาดนั้นไฟล์เดียว (ชื่อจากตัวเลือกรูปเป็นเลข ไม่ตรงชื่อจริง) */ /* อ่านจากฐานจริง (ดัชนีในหน้าอาจยังโหลดไม่เสร็จ) */
       if(link.length) await FT.store.putMany(link);
       var hh = new Date().toLocaleTimeString("th-TH");
       msg("cloudMsg", "อัปเดตรายการแล้ว " + hh + " · พบ " + objs.length + " ไฟล์ (" + ((Date.now() - t0) / 1000).toFixed(1) + " วิ)" + (link.length ? " · จับคู่ดัชนีกับไฟล์ในคลังได้ " + link.length + " คลิป (เล่น/ต่อฉากจากคลังได้แล้ว ไม่ต้องเลือกไฟล์)" : ""), "ok");

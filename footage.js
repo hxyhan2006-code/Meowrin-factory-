@@ -29,7 +29,11 @@
   function mmss(ms){ var s = Math.max(0, Math.round(ms / 1000)); return Math.floor(s / 60) + ":" + pad(s % 60); }
   function refreshLib(){ return FT.store.all().then(function(a){ lib = a || []; renderAll(); }); }
   function byId(id){ return lib.find(function(c){ return c.id === id; }); }
-  function findClip(f){ return byId(FT.clipId(f)) || lib.find(function(c){ return c.name === f.name && c.size === f.size; }); } /* แกลเลอรีมือถือบางเครื่องส่ง lastModified ไม่เหมือนเดิมทุกครั้ง → จับคู่ด้วยชื่อ+ขนาดด้วย */
+  function findClip(f){ /* แกลเลอรีมือถือส่ง lastModified ไม่เหมือนเดิม และตัวเลือกรูป (Google Photos) ส่งชื่อเป็นเลข เช่น 21347.mp4 แต่แอพไฟล์ส่งชื่อจริง
+                           → จับด้วยชื่อ+ขนาด แล้วถอยไปขนาดอย่างเดียว (ไบต์เท่ากันเป๊ะ = ไฟล์เดียวกันแทบแน่นอน) ถ้ามีคลิปขนาดนั้นตัวเดียว */
+    var c = byId(FT.clipId(f)) || lib.find(function(c){ return c.name === f.name && c.size === f.size; }); if(c) return c;
+    var same = lib.filter(function(c){ return c.size === f.size; }); return same.length === 1 ? same[0] : null;
+  }
 
   /* ---------- แท็บ ---------- */
   document.querySelector(".tabs").addEventListener("click", function(e){
@@ -479,10 +483,11 @@
   /* ---------- ลบคลิปซ้ำ: ชื่อไฟล์+ขนาดเดียวกัน เก็บตัวที่ทำล่าสุด ---------- */
   function findDupes(){ /* คืน { del:[id ที่จะลบ], fix:[รายการที่ต้องแก้อัลบั้ม] } */
     var g = {}, del = [], fix = [];
-    lib.forEach(function(c){ var k = c.name + "|" + c.size; (g[k] = g[k] || []).push(c); });
+    /* ซ้ำ = ขนาดไบต์เท่ากัน + ความยาวเท่ากัน (ไม่ดูชื่อ เพราะไฟล์เดียวกันได้ชื่อต่างกันตามตัวเลือกไฟล์ เช่น 21347.mp4 กับ Screenrecorder-....mp4) */
+    lib.forEach(function(c){ var k = c.size + "|" + Math.round((c.duration || 0) * 10); (g[k] = g[k] || []).push(c); });
     Object.keys(g).forEach(function(k){
       var a = g[k]; if(a.length < 2) return;
-      a.sort(function(x, y){ return (y.at || 0) - (x.at || 0); }); /* ตัวแรก = ทำล่าสุด (ผล AI ใหม่สุด) เก็บไว้ */
+      a.sort(function(x, y){ return (y.r2 ? 1 : 0) - (x.r2 ? 1 : 0) || (y.at || 0) - (x.at || 0); }); /* ตัวแรก = อยู่ในคลังแล้ว (เล่นได้) ถ้าเท่ากันเอาที่ทำล่าสุด → เก็บไว้ */
       var real = a.find(function(c){ return c.album && c.album !== "ไม่ระบุ"; }); /* อัลบั้มจริงของตัวไหนก็ได้ ดีกว่า "ไม่ระบุ" */
       if(real && a[0].album !== real.album){ a[0].album = real.album; fix.push(a[0]); }
       a.slice(1).forEach(function(c){ del.push(c.id); });
@@ -492,7 +497,7 @@
   function mergeDupes(d){ return FT.store.putMany(d.fix).then(function(){ return FT.store.del(d.del); }).then(refreshLib); }
   $("dupBtn").addEventListener("click", function(){
     var d = findDupes();
-    if(!d.del.length){ msg("dupMsg", "ไม่เจอคลิปซ้ำ (" + lib.length + " คลิป ชื่อไฟล์+ขนาดไม่ซ้ำกันเลย)", "ok"); return; }
+    if(!d.del.length){ msg("dupMsg", "ไม่เจอคลิปซ้ำ (" + lib.length + " คลิป ขนาดไฟล์+ความยาวไม่ซ้ำกันเลย)", "ok"); return; }
     if(!window.confirm("เจอคลิปซ้ำ " + d.del.length + " รายการ จะลบตัวที่ซ้ำและเก็บตัวที่ทำล่าสุดไว้ ตกลงไหม?")) return;
     mergeDupes(d).then(function(){ msg("dupMsg", "ลบคลิปซ้ำแล้ว " + d.del.length + " รายการ เหลือ " + lib.length + " คลิป", "ok"); })
       .catch(function(err){ msg("dupMsg", "ลบไม่ได้: " + err.message, "err"); });
