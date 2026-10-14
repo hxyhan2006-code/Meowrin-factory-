@@ -140,9 +140,16 @@
     try{ await FT.store.put(c); q.status = "done"; q.p = 1; q.mode = ""; }catch(err){ q.status = "error"; q.err = err.message || String(err); }
     renderAll();
   }
+  async function alsoUpload(q){ /* แก้อัลบั้ม/อัปเกรดรูปเสร็จแล้ว ถ้าติ๊กอัปขึ้นคลังไว้และยังไม่อยู่ในคลัง → อัปต่อในรอบเดียวกัน */
+    var c = byId(q.id); if(q.status !== "done" || !q.toCloud || !q.file || !c || c.r2) return;
+    q.status = "run"; q.stage = "อัปขึ้นคลัง..."; renderQueue();
+    try{ await FT.cloud.upload(c, q.file, function(p){ q.stage = "อัปขึ้นคลัง " + Math.round(p * 100) + "%"; renderQueue(); }); }
+    catch(err){ q.err = "อัปขึ้นคลังไม่ได้: " + (err.message || err); }
+    q.status = "done"; renderAll();
+  }
   async function processClip(q){
-    if(q.mode === "label") return labelClip(q);
-    if(q.mode === "up") return upgradeClip(q);
+    if(q.mode === "label") return labelClip(q).then(function(){ return alsoUpload(q); });
+    if(q.mode === "up") return upgradeClip(q).then(function(){ return alsoUpload(q); });
     if(q.mode === "cloud") return cloudClip(q);
     var t0 = Date.now(), cost = 0, tin = 0, tout = 0, raw = [];
     q.status = "run"; q.p = 0; q.err = ""; q.t0 = t0; renderQueue();
