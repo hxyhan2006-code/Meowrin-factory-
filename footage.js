@@ -205,7 +205,7 @@
       var fr = await FT.deepFrames($("vid"), src, c, function(p){ q.p = p * 0.4; q.stage = "จับเฟรมต้น/กลาง/ท้าย " + Math.round(p * 100) + "%"; renderQueue(); });
       var scenes = c.scenes.map(function(sc, i){ return { n:i + 1, s:sc.s, e:sc.e, aiImg:fr[i].img, nf:fr[i].n }; });
       var r = await describeAll(scenes, c.album, c.duration, q, 0.4);
-      scenes.forEach(function(x, i){ if(x.ai) c.scenes[i].ai = x.ai; });
+      scenes.forEach(function(x, i){ var o = c.scenes[i].ai; if(x.ai){ if(o && o.fixed){ x.ai.characters = o.characters; x.ai.characters_th = o.characters_th; x.ai.fixed = true; } c.scenes[i].ai = x.ai; } }); /* ตัวละครที่ Han แก้เองไว้ไม่ถูกทับ */
       if(r.sums) c.summary_th = r.sums;
       c.aiV = FT.AI_V; c.cost = (c.cost || 0) + r.cost; c.raw = r.raw; c.deepAt = Date.now(); c.model = cfg.model;
       await FT.store.put(c); q.status = "done"; q.p = 1; q.mode = "";

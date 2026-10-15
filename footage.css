@@ -131,3 +131,4 @@ pre{white-space:pre-wrap;word-break:break-word;font-size:11px;margin:6px 0 0;col
 [hidden]{display:none!important}
 .pl .ln small.dur{color:var(--muted);font-weight:400;font-size:12px}
 .card .meta{color:var(--muted);font-size:12px}
+.big .chips{max-width:560px;justify-content:center;max-height:22vh;overflow-y:auto}.big #bigCharsHint{color:var(--muted);font-size:12px;text-align:center}

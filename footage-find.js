@@ -196,8 +196,24 @@
     if(c && c.r2 && FT.cloud && FT.cloud.ready()) return { url:await R2.url(c.r2), cloud:true, done:function(){} };
     return null;
   }
+  /* ---------- แก้ตัวละครของฉากเอง (AI ติดป้ายพลาด/ขาด) · แตะชิป = เพิ่ม/เอาออก · เก็บ ai.fixed ไว้ ไม่ให้การอัปเกรดดัชนีทับ ---------- */
+  function renderBigChars(){
+    var el = $("bigChars"); el.hidden = !(bigCur && bigCur.sc); $("bigCharsHint").hidden = el.hidden; if(el.hidden) return;
+    var cur = sceneChars(bigCur.sc), keys = cur.concat(NAMEX.map(function(n){ return n.key; }).filter(function(k){ return cur.indexOf(k) < 0; }));
+    el.innerHTML = keys.map(function(k){ return '<button class="chip' + (cur.indexOf(k) >= 0 ? " on" : "") + '" data-bc="' + esc(k) + '">' + esc(labelOf[k] || k) + "</button>"; }).join("");
+  }
+  $("bigChars").addEventListener("click", async function(e){
+    var b = e.target.closest("[data-bc]"); if(!b || !bigCur) return; var k = b.dataset.bc, sc = bigCur.sc, a = sc.ai = sc.ai || {}, nx = NAMEX.find(function(n){ return n.key === k; });
+    var en = (a.characters || []).slice(), th = (a.characters_th || []).slice(), has = sceneChars(sc).indexOf(k) >= 0;
+    var keep = function(arr){ return arr.filter(function(n){ return charKey(n) !== k; }); };
+    if(has){ en = keep(en); th = keep(th); }
+    else { en.push(nx ? nx.key.replace(/(^| )\w/g, function(m){ return m.toUpperCase(); }) : k); th.push(labelOf[k] || k); }
+    a.characters = en; a.characters_th = th; a.fixed = true; chipCache.delete(sc);
+    try{ await FT.store.put(bigCur.c); }catch(err){ window.alert("บันทึกไม่ได้: " + err.message); }
+    renderBigChars(); search();
+  });
   function openBig(c, sc, src, text){
-    bigCur = { c:c, sc:sc }; stopPlay();
+    bigCur = { c:c, sc:sc }; stopPlay(); renderBigChars();
     $("bigImg").src = src; $("bigTxt").textContent = text; $("playMsg").textContent = ""; $("big").hidden = false; renderPlayBtn();
   }
   function renderPlayBtn(){ var has = bigCur && hasSrc(bigCur.c); $("playBtn").textContent = has ? "▶ ดูฉากนี้" : "▶ ดูฉากนี้ (เลือกไฟล์)"; $("loopSc").parentNode.hidden = !(bigCur && bigCur.sc); }

@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600&family=Mitr:wght@500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="footage.css?v=20261017c">
+<link rel="stylesheet" href="footage.css?v=20261017d">
 </head>
 <body>
 <header>
@@ -194,6 +194,8 @@
   <img id="bigImg" alt="">
   <video id="bigVid" controls playsinline hidden></video>
   <p id="bigTxt"></p>
+  <p class="hint" id="bigCharsHint" hidden style="margin:0">ตัวละครในฉากนี้ (แตะเพื่อเพิ่ม/เอาออก · ที่แก้เองจะไม่ถูกทับตอนอัปเกรดดัชนี)</p>
+  <div class="chips wrap" id="bigChars" hidden></div>
   <div class="bigact">
     <button class="btn" id="playBtn">▶ ดูฉากนี้</button>
     <label class="chk"><input type="checkbox" id="loopSc" checked> วนซ้ำฉากนี้</label>
@@ -204,6 +206,6 @@
 <input id="pickDocs" type="file" multiple hidden><!-- ไม่ใส่ accept → Android เปิดแอพไฟล์ (เข้าโฟลเดอร์ + เลือกทั้งหมดได้) แทนตัวเลือกรูป -->
 <video id="vid" muted playsinline preload="auto" style="position:fixed;left:-9999px;width:2px;height:2px"></video>
 
-<script src="store.js?v=20261017c" data-boot="budget.js?v=20261017c footage-core.js?v=20261017c r2.js?v=20261017c footage.js?v=20261017c footage-find.js?v=20261017c footage-audit.js?v=20261017c footage-cloud.js?v=20261017c mp4fix.js?v=20261017c footage-stitch.js?v=20261017c voicestore.js?v=20261017c footage-plan.js?v=20261017c gdrive.js?v=20261017c"></script>
+<script src="store.js?v=20261017d" data-boot="budget.js?v=20261017d footage-core.js?v=20261017d r2.js?v=20261017d footage.js?v=20261017d footage-find.js?v=20261017d footage-audit.js?v=20261017d footage-cloud.js?v=20261017d mp4fix.js?v=20261017d footage-stitch.js?v=20261017d voicestore.js?v=20261017d footage-plan.js?v=20261017d gdrive.js?v=20261017d"></script>
 </body>
 </html>
