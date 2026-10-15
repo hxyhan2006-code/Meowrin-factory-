@@ -51,6 +51,11 @@
     $("pickHint").hidden = !mode; if(U.search) U.search();
   });
 
+  U.pickOn = function(){ return mode; }; /* footage-find.js: โหมดเลือกเปิดอยู่ → แสดงเป็นฉากทั้งหมดให้ติ๊กได้ */
+  function clearAll(){
+    if(!sel.length || !window.confirm("ล้างฉากที่เลือกไว้ทั้งหมด " + sel.length + " ฉาก?")) return;
+    sel = []; save(); if(out){ URL.revokeObjectURL(out.url); out = null; } bar(); if(!$("pickSheet").hidden) sheet(); if(mode && U.search) U.search();
+  }
   function bar(){
     var l = resolve(); $("pickBar").hidden = !l.length; document.body.classList.toggle("hasbar", !!l.length);
     $("pickInfo").textContent = "🎬 เลือกแล้ว " + l.length + " ฉาก · ≈ " + Math.round(secs(l)) + " วิ";
@@ -77,7 +82,12 @@
   var say = function(t, k){ U.msg("pickMsg", t, k); };
   $("pickOpen").addEventListener("click", function(){ sheet(); });
   $("pickX").addEventListener("click", function(){ $("pickSheet").hidden = true; });
-  $("pickClear").addEventListener("click", function(){ if(!window.confirm("ล้างฉากที่เลือกทั้งหมด?")) return; sel = []; save(); if(out){ URL.revokeObjectURL(out.url); out = null; } bar(); sheet(); if(mode && U.search) U.search(); });
+  $("pickClear").addEventListener("click", clearAll);
+  $("pickClearBar").addEventListener("click", clearAll);
+  document.addEventListener("ft:lib", function(){ /* ดัชนีโหลดเสร็จ/เปลี่ยน → ตัดฉากของคลิปที่หายไป (เช่นรวมคลิปซ้ำ) แล้ววาดแถบที่เลือกไว้ใหม่ */
+    var lib = U.lib(); if(lib.length){ var n = sel.length; sel = sel.filter(function(x){ var c = lib.find(function(y){ return y.id === x.id; }); return c && c.scenes[x.si]; }); if(sel.length !== n) save(); }
+    bar(); if(!$("pickSheet").hidden) sheet();
+  });
   $("pickFiles").addEventListener("click", function(){ U.openFiles(true); });
   document.addEventListener("ft:files", function(){ if(!$("pickSheet").hidden) sheet(); }); /* เลือกไฟล์เพิ่มแล้ว ตรวจใหม่ว่าฉากไหนพร้อม */
   $("pickList").addEventListener("click", function(e){

@@ -27,7 +27,7 @@
     etaBase = mbDone > 1 ? ms / mbDone * mbLeft : ms / dn.length * rest.length; etaAt = Date.now();
   }
   function mmss(ms){ var s = Math.max(0, Math.round(ms / 1000)); return Math.floor(s / 60) + ":" + pad(s % 60); }
-  function refreshLib(){ return FT.store.all().then(function(a){ lib = a || []; renderAll(); }); }
+  function refreshLib(){ return FT.store.all().then(function(a){ lib = a || []; renderAll(); document.dispatchEvent(new Event("ft:lib")); }); } /* ft:lib = ดัชนีโหลด/เปลี่ยนแล้ว (ให้ footage-pick.js วาดแถบที่เลือกไว้ใหม่) */
   function byId(id){ return lib.find(function(c){ return c.id === id; }); }
   function findClip(f){ /* แกลเลอรีมือถือส่ง lastModified ไม่เหมือนเดิม และตัวเลือกรูป (Google Photos) ส่งชื่อเป็นเลข เช่น 21347.mp4 แต่แอพไฟล์ส่งชื่อจริง
                            → จับด้วยชื่อ+ขนาด แล้วถอยไปขนาดอย่างเดียว (ไบต์เท่ากันเป๊ะ = ไฟล์เดียวกันแทบแน่นอน) ถ้ามีคลิปขนาดนั้นตัวเดียว */
