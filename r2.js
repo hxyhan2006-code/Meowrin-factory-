@@ -88,8 +88,9 @@
       await req("POST", key, { uploadId:id }, body, { "Content-Type":"application/xml" });
     }catch(err){ req("DELETE", key, { uploadId:id }).catch(function(){}); throw err; }
   }
+  async function del(key){ await req("DELETE", key); } /* ลบไฟล์เดียว (ใช้กับเสียงพากย์ voice/) */
   async function test(){ var q = { "list-type":"2", "max-keys":"1" }; await req("GET", "", q); return true; }
 
   window.R2 = { ready:ready, cfg:function(){ return cfg; }, setCfg:function(c){ cfg = c; MWStore.set(KEY, c); },
-                list:list, url:url, get:get, put:put, test:test, presign:presign };
+                list:list, url:url, get:get, put:put, del:del, test:test, presign:presign };
 })();

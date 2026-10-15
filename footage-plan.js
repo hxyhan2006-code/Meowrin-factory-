@@ -21,11 +21,12 @@
   async function refreshVoices(){
     var on = $("plMode").value === "fast"; $("plVoiceRow").hidden = !on; if(!on || !window.MWVoice) return;
     try{ voices = await MWVoice.list(); }catch(err){ voices = []; }
+    var cl = []; if(MWVoice.cloudOn()){ try{ cl = (await MWVoice.cloudList()).filter(function(c){ return !voices.some(function(v){ return v.id === c.id; }); }); }catch(err){} } /* เสียงที่อยู่ในคลังแต่ยังไม่ได้ดึงมาเครื่องนี้ */
     var t = norm($("plText").value), keep = $("plVoice").value;
     var match = function(v){ var x = norm(v.text); return t && x && (x === t || x.indexOf(t) >= 0 || t.indexOf(x) >= 0); };
     $("plVoice").innerHTML = '<option value="">— ไม่ใส่เสียง (ประมาณเวลาจากตัวอักษร) —</option>' + voices.map(function(v){
-      return '<option value="' + v.id + '">' + (match(v) ? "✓ ตรงกับบทนี้ · " : "") + U.esc(v.name || "เสียง") + " · " + new Date(v.id).toLocaleTimeString("th-TH", { hour:"2-digit", minute:"2-digit" }) + (v.align ? " · มีเวลาคำพูด" : " · ไม่มีเวลาคำพูด (ประมาณตามตัวอักษร)") + "</option>"; }).join("");
-    var m = voices.find(match); $("plVoice").value = voices.some(function(v){ return String(v.id) === keep; }) ? keep : (m ? String(m.id) : "");
+      return '<option value="' + v.id + '">' + (match(v) ? "✓ ตรงกับบทนี้ · " : "") + U.esc(v.name || "เสียง") + " · " + new Date(v.id).toLocaleTimeString("th-TH", { hour:"2-digit", minute:"2-digit" }) + (v.align ? " · มีเวลาคำพูด" : " · ไม่มีเวลาคำพูด (ประมาณตามตัวอักษร)") + "</option>"; }).join("") + cl.map(function(c){ return '<option value="' + c.id + '">☁ ในคลัง · ' + new Date(c.id).toLocaleString("th-TH", { day:"numeric", month:"short", hour:"2-digit", minute:"2-digit" }) + " (ดึงมาให้ตอนกำกับ)</option>"; }).join("");
+    var m = voices.find(match); $("plVoice").value = voices.concat(cl).some(function(v){ return String(v.id) === keep; }) ? keep : (m ? String(m.id) : "");
     $("plVoiceInfo").textContent = voices.length ? "" : "ยังไม่มีเสียง · สร้างเสียงในแอพหลัก (แท็บ เสียง) ก่อน แล้วกลับมาเลือกที่นี่";
   }
   $("plMode").addEventListener("change", refreshVoices);
@@ -96,7 +97,7 @@
     busy = true; this.disabled = true; var cost = 0, t0 = Date.now(), errs = 0;
     try{
       U.msg("plMsg", "AI กำลังแบ่งบทเป็นช็อต...");
-      var mode = $("plMode").value === "fast" ? "fast" : "long", voice = mode === "fast" && $("plVoice").value && window.MWVoice ? await MWVoice.get(+$("plVoice").value) : null;
+      var mode = $("plMode").value === "fast" ? "fast" : "long", voice = mode === "fast" && $("plVoice").value && window.MWVoice ? (await MWVoice.get(+$("plVoice").value) || await MWVoice.pull(+$("plVoice").value)) : null;
       var b = await FT.beats(script, mode); cost += b.cost;
       if(!b.shots.length) throw new Error("AI แบ่งช็อตไม่ได้ ลองใหม่อีกครั้ง");
       var vdur = voice ? (await audioDur(voice.blob) || (voice.align ? voice.align.en[voice.align.en.length - 1] : 0)) : 0;

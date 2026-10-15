@@ -209,32 +209,54 @@
       take.url = URL.createObjectURL(take.blob);
       take.rawUrl = take.blob !== take.raw ? URL.createObjectURL(take.raw) : "";
       a.takes.push(take); a.sel = a.takes.length - 1;
-      if(window.MWVoice) MWVoice.put({ text:text, name:take.name, blob:take.blob, align:take.align }).then(function(){ if($("vSaved").open) renderSaved(); else MWVoice.list().then(function(l){ $("vSavedN").textContent = "(" + l.length + ")"; }); }).catch(function(){}); /* ให้แท็บผู้กำกับของหน้าฟุตเทจใช้เสียงนี้ต่อ */
+      if(window.MWVoice){ /* เก็บในเครื่อง 10 เทค + สำรองขึ้นคลัง R2 (ถ้าตั้งค่าไว้) ให้หน้าฟุตเทจใช้ต่อ */
+        var vrec = { id:Date.now(), text:text, name:take.name, blob:take.blob, align:take.align };
+        MWVoice.put(vrec).then(function(){ return MWVoice.cloudPut(vrec).catch(function(err){ MW.toast("สำรองเสียงขึ้นคลังไม่ได้: " + err.message); }); })
+          .then(function(){ if($("vSaved").open) renderSaved(); else MWVoice.list().then(function(l){ $("vSavedN").textContent = "(" + l.length + ")"; }); }).catch(function(){});
+      }
       MW.toast(a.takes.length > 1 ? "ได้เทค " + a.takes.length + " แล้ว" : "สร้างเสียงแล้ว");
       setTimeout(function(){ $("ttsOut").scrollIntoView({ behavior:"smooth", block:"center" }); }, 50); /* เลื่อนไปที่ตัวเล่นให้เห็นเลย */
     }catch(err){ note(err.message, true); }
     busy = false; sync();
   }
-  /* ---------- เสียงที่เก็บไว้ (MWVoice: 10 เทคล่าสุด ค้างอยู่แม้ปิดแอพ · หน้าฟุตเทจใช้ต่อได้) ---------- */
-  var savedUrls = [];
+  /* ---------- เสียงที่เก็บไว้ (MWVoice: 10 เทคล่าสุดในเครื่อง + สำรองบนคลัง R2 ถ้าตั้งค่าไว้ · หน้าฟุตเทจใช้ต่อได้) ---------- */
+  var savedUrls = [], dateOf = function(id){ return new Date(id).toLocaleString("th-TH", { day:"numeric", month:"short", hour:"2-digit", minute:"2-digit" }); };
   async function renderSaved(){
     if(!window.MWVoice) return;
-    var box = $("vSavedList"), list = [];
+    var box = $("vSavedList"), list = [], cloud = null, on = MWVoice.cloudOn();
     try{ list = await MWVoice.list(); }catch(err){ box.innerHTML = '<p class="empty">เปิดที่เก็บเสียงไม่ได้</p>'; return; }
     savedUrls.forEach(function(u){ URL.revokeObjectURL(u); }); savedUrls = [];
-    $("vSavedN").textContent = list.length ? "(" + list.length + ")" : "";
-    box.innerHTML = list.length ? list.map(function(r){
-      var u = URL.createObjectURL(r.blob); savedUrls.push(u);
-      return '<div class="vsaved"><div class="vsh"><b>' + MW.esc(new Date(r.id).toLocaleString("th-TH", { day:"numeric", month:"short", hour:"2-digit", minute:"2-digit" })) + '</b> · ' + (r.blob.size / 1048576).toFixed(1) + ' MB · ' + (r.text || "").length.toLocaleString() + ' ตัวอักษร</div>'
-        + '<p class="vstxt">' + MW.esc((r.text || "").replace(/\s+/g, " ").slice(0, 60)) + '...</p><audio controls preload="none" src="' + u + '"></audio>'
-        + '<div class="row"><a class="btn ghost small" href="' + u + '" download="' + MW.esc(r.name || "meowrin.mp3") + '" style="flex:1">ดาวน์โหลด</a><button class="btn ghost small" data-vdel="' + r.id + '" style="flex:1">ลบ</button></div></div>';
-    }).join("") : '<p class="empty">ยังไม่มีเสียงที่เก็บไว้ · สร้างเสียงแล้วจะเก็บให้อัตโนมัติ (10 เทคล่าสุด)</p>';
+    var draw = function(){
+      var only = cloud ? cloud.filter(function(c){ return !list.some(function(r){ return r.id === c.id; }); }) : [];
+      $("vSavedN").textContent = list.length || only.length ? "(" + list.length + (only.length ? " + ☁ " + only.length : "") + ")" : "";
+      box.innerHTML = (list.map(function(r){
+        var u = URL.createObjectURL(r.blob); savedUrls.push(u);
+        return '<div class="vsaved"><div class="vsh"><b>' + MW.esc(dateOf(r.id)) + '</b> · ' + (r.blob.size / 1048576).toFixed(1) + ' MB · ' + (r.text || "").length.toLocaleString() + ' ตัวอักษร · ' + (r.cloud ? "☁ อยู่ในคลัง" : on ? "ยังไม่อยู่ในคลัง" : "เฉพาะเครื่องนี้") + '</div>'
+          + '<p class="vstxt">' + MW.esc((r.text || "").replace(/\s+/g, " ").slice(0, 60)) + '...</p><audio controls preload="none" src="' + u + '"></audio>'
+          + '<div class="row"><a class="btn ghost small" href="' + u + '" download="' + MW.esc(r.name || "meowrin.mp3") + '" style="flex:1">ดาวน์โหลด</a>'
+          + (on && !r.cloud ? '<button class="btn ghost small" data-vup="' + r.id + '" style="flex:1">☁ อัปขึ้นคลัง</button>' : "")
+          + '<button class="btn ghost small" data-vdel="' + r.id + '" style="flex:1">ลบ</button></div></div>';
+      }).join("") || '<p class="empty">ยังไม่มีเสียงที่เก็บไว้ · สร้างเสียงแล้วจะเก็บให้อัตโนมัติ (10 เทคล่าสุด' + (on ? " + สำรองบนคลัง" : "") + ')</p>')
+        + (only.length ? '<p class="hint" style="margin-top:12px">☁ อยู่ในคลังแต่ยังไม่ได้ดึงมาเครื่องนี้</p>' + only.map(function(c){
+          return '<div class="vsaved"><div class="vsh"><b>' + MW.esc(dateOf(c.id)) + '</b> · ' + (c.size / 1048576).toFixed(1) + ' MB · ☁ อยู่ในคลัง</div><div class="row"><button class="btn ghost small" data-vpull="' + c.id + '" style="flex:1">⬇ ดึงมาเครื่องนี้</button><button class="btn ghost small" data-vdelc="' + c.id + '" style="flex:1">ลบจากคลัง</button></div></div>'; }).join("") : "");
+    };
+    draw();
+    if(on){ try{ cloud = await MWVoice.cloudList(); draw(); }catch(err){ /* คลังไม่ตอบ = แสดงเฉพาะในเครื่อง */ } }
   }
   $("vSaved").addEventListener("toggle", function(){ if(this.open) renderSaved(); });
   if(window.MWVoice) MWVoice.list().then(function(l){ if(l.length) $("vSavedN").textContent = "(" + l.length + ")"; }).catch(function(){});
   $("vSavedList").addEventListener("click", async function(e){
-    var b = e.target.closest("[data-vdel]"); if(!b || !window.confirm("ลบเสียงนี้?")) return;
-    try{ await MWVoice.del(+b.dataset.vdel); }catch(err){} renderSaved();
+    var b = e.target.closest("button"); if(!b) return; var d = b.dataset;
+    try{
+      if(d.vup){ b.disabled = true; b.textContent = "กำลังอัป..."; var r = await MWVoice.get(+d.vup); await MWVoice.cloudPut(r); }
+      else if(d.vpull){ b.disabled = true; b.textContent = "กำลังดึง..."; await MWVoice.pull(+d.vpull); }
+      else if(d.vdel){ var rec = await MWVoice.get(+d.vdel), withCloud = rec && rec.cloud;
+        if(!window.confirm(withCloud ? "ลบเสียงนี้ทั้งในเครื่องและในคลัง?" : "ลบเสียงนี้?")) return;
+        await MWVoice.del(+d.vdel); if(withCloud) await MWVoice.cloudDel(+d.vdel); }
+      else if(d.vdelc){ if(!window.confirm("ลบเสียงนี้จากคลัง?")) return; await MWVoice.cloudDel(+d.vdelc); }
+      else return;
+    }catch(err){ MW.toast("ทำไม่ได้: " + err.message); }
+    renderSaved();
   });
 
   $("ttsBtn").addEventListener("click", generate);
