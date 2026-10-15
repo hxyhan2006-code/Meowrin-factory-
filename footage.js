@@ -1,4 +1,4 @@
-/* footage.js — หน้าจอของ "ดัชนีฟุตเทจ" (ทดสอบ): คิวทำดัชนี · ต้นทุน/เวลา · ค้นหา · ตั้งค่า/สำรอง/debug
+/* footage.js — หน้าจอของ "ดัชนีฟุตเทจ" (ทดสอบ): คิวทำดัชนี · ต้นทุน/เวลา · ตั้งค่า/สำรอง/debug (ค้นหาอยู่ใน footage-find.js)
    ใช้ window.FT จาก footage-core.js */
 (function(){
   "use strict";
@@ -10,7 +10,6 @@
   function pad(n){ return String(n).padStart(2, "0"); }
   function capDur(sec){ sec = Math.round(sec); return pad(Math.floor(sec / 60)) + ":" + pad(sec % 60); } /* แบบที่ CapCut โชว์บนปก เช่น 00:24 */
   function tm(sec){ sec = Math.round(sec); return Math.floor(sec / 60) + ":" + pad(sec % 60); }
-  function day(ms){ return new Date(ms).toLocaleDateString("th-TH", { day:"numeric", month:"short", year:"2-digit" }); }
 
   var sv = document.querySelector('script[src^="footage.js"]'), vm = sv && /v=(\w+)/.exec(sv.getAttribute("src"));
   if(vm) $("ver").textContent = "ทดสอบ · รุ่น " + vm[1]; /* ไว้เช็กว่าเบราว์เซอร์โหลดไฟล์ใหม่แล้ว (มือถือแคชไฟล์เก่า) */
@@ -41,7 +40,7 @@
     var b = e.target.closest("button[data-p]"); if(!b) return;
     document.querySelectorAll(".tabs button").forEach(function(x){ x.classList.toggle("on", x === b); });
     document.querySelectorAll(".page").forEach(function(p){ p.classList.toggle("on", p.id === "p-" + b.dataset.p); });
-    if(b.dataset.p === "find") search();
+    if(b.dataset.p === "find" && FT.ui.search) FT.ui.search(); /* footage-find.js */
     window.scrollTo(0, 0);
   });
 
@@ -263,207 +262,6 @@
       : "ยังประมาณไม่ได้ ทำคลิปแรกเสร็จแล้วจะคำนวณให้";
   }
 
-  /* ---------- ค้นหา (ในเครื่อง ไม่เรียก AI ยกเว้นติ๊กแปลคำค้น) ---------- */
-  var NAMES = [ /* ชื่อไทย/อังกฤษที่สะกดได้หลายแบบ — เจอในคำค้นจะใช้ทุกแบบค้น */
-    ["luffy","ลูฟี่","ลูฟี","ลูฟฟี่"],["zoro","โซโร","โซโล"],["nami","นามิ"],["usopp","อุซป","อุซปป์","อุซบ"],["sanji","ซันจิ"],
-    ["chopper","ช็อปเปอร์","ชอปเปอร์","ช๊อปเปอร์"],["robin","โรบิน"],["franky","แฟรงกี้","แฟรงค์กี้"],["brook","บรู๊ค","บรูค"],["jinbe","จินเบ","จินเบอิ"],
-    ["ace","เอส"],["sabo","ซาโบ้","ซาโบ"],["shanks","แชงคูส","แชงค์"],["garp","การ์ป"],["buggy","บากี้"],["hancock","ฮันค็อก","แฮนค็อก"],
-    ["law","ลอว์","ลอ"],["kid","คิด"],["yamato","ยามาโตะ"],["kaido","ไคโด"],["big mom","บิ๊กมัม"],["blackbeard","หนวดดำ","ทีช"],
-    ["whitebeard","หนวดขาว"],["vivi","วีวี่"],["shirahoshi","ชิราโฮชิ"],["mihawk","มิฮอว์ค"],["dragon","ดราก้อน"],["koby","โคบี้"],["smoker","สโมกเกอร์"]
-  ];
-  var SYN = [ /* อารมณ์/การกระทำที่ AI อาจใช้คำต่างกัน (ไทย+อังกฤษ) → ค้นคำไหนก็เจอทุกคำในกลุ่ม */
-    ["ตกใจ","ตกตะลึง","ช็อก","ช็อค","อึ้ง","สะดุ้ง","shock","surprise","startle","astonish"],["โกรธ","โมโห","เดือด","angry","anger","furious","rage"],
-    ["ร้องไห้","น้ำตา","เสียใจ","cry","sad","tear"],["หัวเราะ","ขำ","ตลก","laugh","funny","smile"],["งง","สับสน","confus","puzzl"],
-    ["กลัว","หวาดกลัว","scare","afraid","fear","terrif"],["ดีใจ","มีความสุข","ยินดี","happy","joy","excite"],["ต่อสู้","ต่อย","โจมตี","สู้","fight","battle","attack","punch"],
-    ["ฟันดาบ","ดาบ","sword","slash"],["กิน","อาหาร","หิว","eat","food","hungry"],["วิ่ง","หนี","run","flee","chase"],["เท่","เจ๋ง","cool","badass"]
-  ];
-  SYN.push(["พายเรือ","ล่องเรือ","แล่นเรือ","เรือ","พาย","boat","ship","row","sail","raft"],["ทะเล","มหาสมุทร","คลื่น","sea","ocean","wave"],["ป่า","ต้นไม้","forest","jungle"],
-    ["เมือง","หมู่บ้าน","ชาวบ้าน","town","village"],["นอน","หลับ","เตียง","sleep","bed"],["พูด","คุย","บอก","talk","speak","say"],["ร้อง","ตะโกน","scream","shout","yell"],["ร้องเพลง","เพลง","sing","song"],
-    ["ซ่อน","แอบ","hide","sneak"],["กอด","hug","embrace"],["วิ่ง","หนี","run","flee","chase"]);
-  var STOP = ["ฉาก","ฉากที่","ที่","ซึ่ง","อยู่","กับ","และ","ของ","ใน","ตอน","ตอนที่","แบบ","มี","เป็น","ให้","ไป","มา","คือ","หา","อยาก","ได้","เวลา","เจอ","ครับ","ค่ะ","หน่อย","ด้วย","แล้ว","จะ","ก็","ไหม","มั้ย","อะ","นะ","เมื่อ","กำลัง","แต่","หรือ","กัน","เรื่อง","ภาพ","คลิป","ช่วง","ที"];
-  var seg = null; try{ seg = new Intl.Segmenter("th", { granularity:"word" }); }catch(e){}
-  function terms(q){ /* คืนกลุ่มคำ [[คำที่ความหมายเดียวกัน...]] แต่ละกลุ่ม = 1 เงื่อนไขที่ต้องตรง */
-    var out = [], rest = q.toLowerCase();
-    NAMES.concat(SYN).forEach(function(v){ if(v.some(function(n){ return rest.indexOf(n) >= 0; })){ out.push(v); v.forEach(function(n){ rest = rest.split(n).join(" "); }); } });
-    rest.split(/[\s,]+/).filter(Boolean).forEach(function(p){
-      if(/[฀-๿]/.test(p) && seg){
-        var ws = Array.from(seg.segment(p)).filter(function(x){ return x.isWordLike && x.segment.length >= 2; }).map(function(x){ return x.segment; });
-        (ws.length ? ws : [p]).forEach(function(w){ if(STOP.indexOf(w) < 0) out.push([w]); });
-      } else if(p.length >= 2 && STOP.indexOf(p) < 0) out.push([p]);
-    });
-    return out;
-  }
-  function hay(c, sc){
-    var a = sc.ai || {};
-    return [ (a.characters || []).concat(a.characters_th || []).join(" ").toLowerCase(),
-             (a.tags_en || []).concat(a.tags_th || [], [a.action, a.emotion]).join(" ").toLowerCase(),
-             [a.summary_th, a.location].join(" ").toLowerCase() ]; /* ระดับฉากเท่านั้น: ไม่รวมสรุปทั้งคลิป (ไม่งั้นทุกฉากในคลิปที่มีลูฟี่ตรงหมด) และไม่รวมชื่ออัลบั้ม */
-  }
-  /* "ลูฟี่ตกใจ" ต้องหมายถึงลูฟี่เป็นคนตกใจ ไม่ใช่แค่มีลูฟี่อยู่ในฉากแล้วคนอื่นตกใจ → ดูว่าชื่อตัวละครตามด้วยคำอารมณ์ติดกันในสรุปของฉาก (ไม่เกิน NEAR ตัวอักษร) */
-  var NEAR = 24;
-  function near(sum, nameGrp, emoGrp){
-    return nameGrp.some(function(n){
-      for(var i = sum.indexOf(n); i >= 0; i = sum.indexOf(n, i + 1)){
-        var w = sum.slice(i + n.length, i + n.length + NEAR);
-        if(emoGrp.some(function(e){ return w.indexOf(e) >= 0; })) return true;
-      }
-      return false;
-    });
-  }
-  var aiTerms = {}, sT = 0, shown = [], lastQ = "", showPartial = false, lastHits = [], aiQ = ""; /* lastHits = ผลค้นในเครื่องล่าสุด (ผู้สมัครของ AI) · aiQ = คำค้นที่ AI เลือกให้อยู่ */ /* shown = รายการที่โชว์อยู่ (ให้ปุ่มดูรูปใหญ่อ้างถึง) */
-  $("q").addEventListener("input", function(){ clearTimeout(sT); sT = setTimeout(search, 250); });
-  $("albumFilter").addEventListener("change", search);
-  $("aiQuery").addEventListener("change", search);
-  async function search(){
-    var q = $("q").value.trim(), al = $("albumFilter").value;
-    var clips = lib.filter(function(c){ return c.status === "done" && (!al || c.album === al); });
-    if(!q){ return browse(clips); }
-    var extra = [];
-    if($("aiQuery").checked){
-      if(!aiTerms[q]){
-        $("findInfo").textContent = "กำลังให้ AI แปลคำค้น...";
-        try{ var r = await FT.expandQuery(q); aiTerms[q] = r.terms; runCost += r.cost; }catch(err){ aiTerms[q] = []; $("findInfo").textContent = "แปลคำค้นไม่ได้: " + err.message; }
-      }
-      extra = aiTerms[q];
-      if(q !== $("q").value.trim()) return; /* พิมพ์ต่อระหว่างรอ */
-    }
-    var ts = terms(q), hits = [];
-    var soft = extra.map(function(x){ return String(x).toLowerCase().trim(); }).filter(Boolean); /* คำที่ AI แปลให้ = ช่วยจัดอันดับ ไม่บังคับต้องตรง */
-    var names = ts.filter(function(v){ return NAMES.indexOf(v) >= 0; }), emos = ts.filter(function(v){ return SYN.indexOf(v) >= 0; });
-    clips.forEach(function(c){ c.scenes.forEach(function(sc){
-      var h = hay(c, sc), hit = 0, score = 0;
-      ts.forEach(function(v){
-        var w = [4, 2, 1].find(function(_, k){ return v.some(function(n){ return h[k].indexOf(n) >= 0; }); });
-        if(w){ hit++; score += w; }
-      });
-      soft.forEach(function(n){ if(h.some(function(t){ return t.indexOf(n) >= 0; })) score += 1; });
-      var exact = false, sm = (sc.ai && sc.ai.summary_th || "").toLowerCase();
-      names.forEach(function(ng){ emos.forEach(function(eg){ if(near(sm, ng, eg)) exact = true; }); });
-      if(exact) score += 20;
-      if(hit) hits.push({ c:c, sc:sc, hit:hit, score:score, exact:exact });
-    }); });
-    hits.sort(function(a, b){ return b.hit - a.hit || b.score - a.score; }); /* ตรงเป๊ะ (ตัวละครเป็นคนมีอารมณ์นั้น) ได้คะแนนพิเศษ จึงขึ้นก่อน */
-    lastHits = hits;
-    if(q !== aiQ) $("aiRes").innerHTML = ""; /* เปลี่ยนคำค้น = ล้างผลที่ AI เลือกให้ของคำเก่า */
-    var full = hits.filter(function(h){ return h.hit === ts.length; }), part = hits.filter(function(h){ return h.hit < ts.length; });
-    if(q !== lastQ){ lastQ = q; showPartial = !full.length; } /* คำค้นใหม่ = ซ่อนที่ตรงบางส่วนไว้ก่อน (ถ้ามีตรงครบ) */
-    var list = full.slice(0, 60), html = full.length ? '<p class="hint">ตรงครบทุกคำ ' + full.length + " ฉาก" + (full.length > 60 ? " (โชว์ 60 อันดับแรก)" : "") + "</p>" : "";
-    var out = list.map(function(h){ return card(h.c, h.sc, h.exact); }).join("");
-    if(part.length){
-      if(showPartial) out += '<p class="hint">ตรงบางส่วน (มีแค่บางคำ) ' + part.length + " ฉาก</p>" + part.slice(0, 40).map(function(h){ return card(h.c, h.sc, false); }).join("");
-      out += '<button class="btn ghost small" id="partialBtn" style="width:100%">' + (showPartial ? "ซ่อน" : "ดู") + "ที่ตรงบางส่วน (" + part.length + ")</button>";
-    }
-    $("findInfo").textContent = "คำค้น: " + ts.map(function(v){ return v[0]; }).join(" + ") + " · ตรงครบ " + full.length + " ฉาก · ตรงบางส่วน " + part.length + " ฉาก";
-    $("results").innerHTML = (html + out) || '<p class="empty">ไม่เจอฉากที่ตรง ลองคำอื่น หรือติ๊กให้ AI แปลคำค้น</p>';
-  }
-  $("results").addEventListener("click", function(e){ if(e.target.closest("#partialBtn")){ showPartial = !showPartial; search(); } });
-  function browse(clips){ /* ไม่พิมพ์คำค้น = โชว์ทุกคลิปพร้อมสรุป (แก้ปัญหาเห็นแค่ปก) */
-    lastHits = [];
-    clips = clips.slice().sort(function(a, b){ return a.album.localeCompare(b.album) || b.lastModified - a.lastModified; });
-    $("findInfo").textContent = clips.length + " คลิปในดัชนี · พิมพ์คำค้นเพื่อหาฉาก";
-    $("results").innerHTML = clips.length ? clips.map(function(c){ return card(c, null); }).join("") : '<p class="empty">ยังไม่มีคลิปในดัชนี ไปที่แท็บ ทำดัชนี ก่อน</p>';
-  }
-  function strip(c){
-    return '<div class="strip">' + c.scenes.map(function(s){
-      var k = shown.push({ c:c, sc:s }) - 1;
-      return '<div class="st" data-k="' + k + '"><img src="' + s.thumb + '" alt="ฉาก"><em>' + tm(s.s) + "</em></div>";
-    }).join("") + "</div>";
-  }
-  function card(c, sc, exact, why){
-    var a = sc && sc.ai || {}, who = (a.characters_th && a.characters_th.length ? a.characters_th : a.characters || []).join(", ");
-    var kc = shown.push({ c:c, cover:true }) - 1, k = sc ? shown.push({ c:c, sc:sc }) - 1 : kc; /* แตะปก = ดูปกใหญ่ · แตะรูปฉาก = ดูรูปฉากใหญ่ */
-    return '<div class="card"><div class="shots"><div class="cover" data-k="' + kc + '"><img src="' + (c.cover || "") + '" alt="ปกคลิป"><em>' + capDur(c.duration) + "</em></div>"
-      + (sc ? '<img class="scene" src="' + sc.thumb + '" alt="ฉาก" data-k="' + k + '">' : "") + '</div><div class="t">'
-      + "<b>" + esc(c.album) + "</b>" + (sc ? ' · <span class="when">ฉาก ' + tm(sc.s) + "–" + tm(sc.e) + "</span>" : " · " + c.scenes.length + " ฉาก")
-      + "<p>" + (exact ? '<span class="tag ok">★ ตรงเป๊ะ</span> ' : "") + (why ? '<span class="tag run">AI: ' + esc(why) + "</span> " : "") + esc(sc ? (a.summary_th || "(AI ไม่ได้อธิบายฉากนี้)") : (c.summary_th || "")) + "</p>"
-      + (who ? "<p>👤 " + esc(who) + "</p>" : "")
-      + (sc ? "" : strip(c)) /* โหมดดูทั้งคลิป: แถบรูปทุกฉาก แตะดูรูปใหญ่ + คำอธิบายฉากนั้น */
-      + '<p>' + day(c.lastModified) + '</p><div class="fname">' + esc(c.name) + ' <button class="editbtn" data-e="' + k + '" aria-label="แก้ชื่ออัลบั้มของคลิปนี้">✎ แก้อัลบั้ม</button></div></div></div>';
-  }
-  document.querySelector("main").addEventListener("click", function(e){ /* การ์ดในทุกหน้า (ค้นหา/ผลที่ AI เลือก/วางแผนฉาก) */
-    var el = e.target.closest("[data-k]"), h = el && shown[+el.dataset.k], c = h && h.c, sc = h && h.sc;
-    if(h && h.cover){ openBig(c, null, c.cover, c.album + " · ปกคลิป (เฟรมแรก) · " + capDur(c.duration)); return; }
-    if(!sc) return;
-    openBig(c, sc, sc.img || sc.thumb, c.album + " · " + capDur(c.duration) + " · ฉาก " + tm(sc.s) + "–" + tm(sc.e) + (sc.ai && sc.ai.summary_th ? " · " + sc.ai.summary_th : ""));
-  });
-  /* ---------- ดูฉากนี้ (เล่นจากไฟล์จริงในเครื่อง ไม่อัปโหลด) ---------- */
-  var pf = {}, bySize = {}, bigCur = null; /* pf = ไฟล์ที่เปิดไว้ในรอบนี้ (ชื่อ|ขนาด → File) หายเมื่อปิดหน้า · bySize = สำรองจับด้วยขนาดอย่างเดียว (แอพไฟล์กับแกลเลอรีอาจตั้งชื่อไม่ตรงกัน) false = ขนาดชนกัน · bigCur = ฉากที่เปิดอยู่ */
-  function pfKey(name, size){ return name + "|" + size; }
-  function fileOf(c){ return c && (pf[pfKey(c.name, c.size)] || bySize[c.size]) || null; }
-  function hasSrc(c){ return !!fileOf(c) || !!(c && c.r2 && FT.cloud && FT.cloud.ready()); } /* ไฟล์ที่เปิดไว้ในเครื่อง หรืออยู่ในคลัง */
-  async function srcUrl(c){ /* { url, done() } · ในเครื่องก่อน (เร็ว ไม่เปลืองเน็ต) ไม่มีค่อยสตรีมจากคลัง */
-    var f = fileOf(c); if(f){ var u = URL.createObjectURL(f); return { url:u, cloud:false, done:function(){ URL.revokeObjectURL(u); } }; }
-    if(c && c.r2 && FT.cloud && FT.cloud.ready()) return { url:await R2.url(c.r2), cloud:true, done:function(){} };
-    return null;
-  }
-  function openBig(c, sc, src, text){
-    bigCur = { c:c, sc:sc }; stopPlay();
-    $("bigImg").src = src; $("bigTxt").textContent = text; $("playMsg").textContent = ""; $("big").hidden = false; renderPlayBtn();
-  }
-  function renderPlayBtn(){ var has = bigCur && hasSrc(bigCur.c); $("playBtn").textContent = has ? "▶ ดูฉากนี้" : "▶ ดูฉากนี้ (เลือกไฟล์)"; $("loopSc").parentNode.hidden = !(bigCur && bigCur.sc); }
-  var playDone = null;
-  function stopPlay(){ var v = $("bigVid"); v.pause(); if(playDone){ playDone(); playDone = null; } if(v.src){ v.removeAttribute("src"); v.load(); } v.hidden = true; $("bigImg").hidden = false; v.ontimeupdate = v.onloadedmetadata = null; }
-  async function playScene(){
-    if(!bigCur || !hasSrc(bigCur.c)){ $("playFiles").click(); return; } /* ไม่มีในเครื่องและไม่อยู่ในคลัง → ให้เลือกไฟล์ (ต้องเรียกตอนแตะ ก่อน await) */
-    var cur = bigCur, v = $("bigVid"), s = cur.sc ? cur.sc.s : 0, e = cur.sc ? cur.sc.e : Infinity;
-    stopPlay(); $("playMsg").textContent = "กำลังเปิด...";
-    var src; try{ src = await srcUrl(cur.c); }catch(err){ $("playMsg").textContent = err.message; return; }
-    if(bigCur !== cur){ src.done(); return; } /* ปิด/เปลี่ยนฉากไประหว่างรอ */
-    playDone = src.done; v.src = src.url; v.hidden = false; $("bigImg").hidden = true; $("playMsg").textContent = src.cloud ? "เล่นจากคลัง" : "";
-    v.onloadedmetadata = function(){ v.currentTime = Math.min(s, Math.max(0, v.duration - 0.1)); v.play().catch(function(){ $("playMsg").textContent = "กดปุ่มเล่นที่ตัวเล่นเพื่อเริ่ม"; }); };
-    v.ontimeupdate = function(){ if(v.currentTime >= e - 0.05){ if($("loopSc").checked && bigCur.sc) v.currentTime = s; else v.pause(); } }; /* ฉากนี้เท่านั้น ไม่เล่นเลยไปฉากอื่น */
-    v.onerror = function(){ $("playMsg").textContent = "เบราว์เซอร์เล่นไฟล์นี้ไม่ได้ (รูปแบบไฟล์ไม่รองรับ?)"; };
-  }
-  function addPlayFiles(files){
-    var sizes = {}; lib.forEach(function(c){ sizes[c.size] = 1; }); /* เก็บเฉพาะไฟล์ที่ขนาดตรงกับคลิปในดัชนี (เลือกทั้งโฟลเดอร์มาเป็นร้อยก็ไม่เปลือง) */
-    Array.prototype.forEach.call(files, function(f){
-      if(!sizes[f.size]) return;
-      pf[pfKey(f.name, f.size)] = f;
-      var o = bySize[f.size]; bySize[f.size] = o === undefined || (o && o.name === f.name) ? f : false;
-    });
-    var n = lib.filter(fileOf).length;
-    if(FT.onFiles) FT.onFiles(files.length); /* หน้าวางแผนฉากอัปเดตสถานะไฟล์ที่พร้อมแชร์ */
-    $("openFilesInfo").textContent = "เปิดไฟล์ไว้ตรงกับดัชนี " + n + " คลิป (หายเมื่อปิดหน้านี้) · แตะรูปฉาก แล้วกด ▶ ดูฉากนี้";
-    if(!$("big").hidden && bigCur){
-      renderPlayBtn();
-      if(fileOf(bigCur.c)) playScene(); else $("playMsg").textContent = "ไม่เจอไฟล์ " + bigCur.c.name + " ในที่เลือก (ชื่อและขนาดไฟล์ต้องตรงกับตอนทำดัชนี) ลองเลือกไฟล์จากอัลบั้ม “" + bigCur.c.album + "”";
-    }
-  }
-  $("playBtn").addEventListener("click", playScene);
-  $("openFilesBtn").addEventListener("click", function(){ $("playFiles").click(); });
-  $("playFiles").addEventListener("change", function(){ addPlayFiles(this.files); this.value = ""; });
-  $("pickDocs").addEventListener("change", function(){ addPlayFiles(this.files); this.value = ""; });
-  $("bigX").addEventListener("click", closeBig);
-  $("big").addEventListener("click", function(e){ if(e.target === this) closeBig(); }); /* แตะพื้นหลังปิด ไม่ปิดเมื่อแตะวิดีโอ/ปุ่ม */
-  function closeBig(){ stopPlay(); $("big").hidden = true; bigCur = null; }
-
-  /* ---------- ให้ AI เลือกฉากจากคำขอแบบประโยค ---------- */
-  function aiOptLabel(){ var n = ($("aiQuery").checked ? 1 : 0) + ($("aiRank").checked ? 1 : 0); $("aiOpt").textContent = "⚙ ตัวเลือก AI" + (n ? " · เปิดอยู่ " + n : "") + ($("aiOptBox").hidden ? "" : " (ซ่อน)"); }
-  $("aiQuery").checked = !!cfg.aiQuery; $("aiRank").checked = !!cfg.aiRank; $("aiGo").hidden = !cfg.aiRank; aiOptLabel();
-  $("aiOpt").addEventListener("click", function(){ $("aiOptBox").hidden = !$("aiOptBox").hidden; aiOptLabel(); }); /* ซ่อนสวิตช์ไว้ ต้องกดปุ่มก่อนถึงจะเห็น */
-  $("aiQuery").addEventListener("change", function(){ cfg.aiQuery = this.checked; FT.saveCfg(); aiOptLabel(); });
-  $("aiRank").addEventListener("change", function(){ cfg.aiRank = this.checked; FT.saveCfg(); $("aiGo").hidden = !this.checked; aiOptLabel(); });
-  $("q").addEventListener("keydown", function(e){ if(e.key === "Enter" && $("aiRank").checked){ e.preventDefault(); aiSearch(); } });
-  $("aiGo").addEventListener("click", function(){ aiSearch(); });
-  async function aiSearch(){
-    var q = $("q").value.trim();
-    if(!q){ msg("aiRes", "พิมพ์ฉากที่อยากหาก่อน เช่น ฉากที่ลูฟี่พายเรืออยู่กับโซโล", "err"); return; }
-    if(!FT.orKey()){ msg("aiRes", "ยังไม่มี OpenRouter key ในเบราว์เซอร์นี้", "err"); return; }
-    await search(); /* ให้ผลค้นในเครื่องล่าสุดพร้อมก่อน */
-    var pool = lastHits.slice(0, 80);
-    if(!pool.length){ msg("aiRes", "คำค้นไม่ตรงกับฉากไหนเลย ให้ AI เลือกไม่ได้ ลองใส่ชื่อตัวละครหรือคำสำคัญ", "err"); return; }
-    var items = pool.map(function(h, i){ var a = h.sc.ai || {};
-      return { i:i + 1, who:(a.characters_th && a.characters_th.length ? a.characters_th : a.characters || []).join(","), sum:a.summary_th || "", tags:(a.tags_th || []).join(","), loc:a.location || "" }; });
-    $("aiGo").disabled = true; $("aiGo").textContent = "AI กำลังเลือก..."; msg("aiRes", "");
-    var t0 = Date.now();
-    try{
-      var r = await FT.rank(q, items); runCost += r.cost; aiQ = q;
-      var picks = r.picks.filter(function(p){ return p.i <= pool.length; });
-      $("aiRes").innerHTML = '<p class="hint">AI เลือกจาก ' + pool.length + " ฉาก · ได้ " + picks.length + " ฉาก · ใช้ " + money(r.cost) + " · " + ((Date.now() - t0) / 1000).toFixed(1) + " วิ</p>"
-        + (picks.length ? picks.map(function(p){ var h = pool[p.i - 1]; return card(h.c, h.sc, h.exact, p.why || "ตรง"); }).join("") : '<p class="empty">AI ไม่เจอฉากที่ตรงในกลุ่มนี้ ลองอธิบายใหม่ หรือดูผลค้นด้านล่าง</p>');
-    }catch(err){ msg("aiRes", "ให้ AI เลือกไม่ได้: " + err.message, "err"); }
-    $("aiGo").disabled = false; $("aiGo").textContent = "ถาม AI เลือกฉากให้"; renderStats();
-  }
 
   /* ---------- ตั้งค่า ---------- */
   $("model").value = cfg.model; $("budget").value = cfg.budget; $("par").value = cfg.par; $("thr").value = cfg.thr; $("maxScenes").value = cfg.maxScenes;
@@ -567,18 +365,11 @@
     rename(hit, to).then(function(){ $("renNew").value = ""; msg("renMsg", "เปลี่ยน “" + from + "” → “" + to + "” แล้ว " + hit.length + " คลิป", "ok"); })
       .catch(function(err){ msg("renMsg", "เปลี่ยนไม่ได้: " + err.message, "err"); });
   });
-  document.querySelector("main").addEventListener("click", function(e){ /* ✎ แก้ = เปลี่ยนอัลบั้มเฉพาะคลิปนี้ */
-    var b = e.target.closest("[data-e]"), h = b && shown[+b.dataset.e]; if(!h) return;
-    var to = window.prompt("ชื่ออัลบั้มของคลิปนี้ (" + h.c.name + ")", h.c.album);
-    if(to && to.trim() && to.trim() !== h.c.album) rename([h.c], to.trim()).catch(function(err){ window.alert("เปลี่ยนไม่ได้: " + err.message); });
-  });
-  /* ให้ footage-plan.js ใช้ร่วม (ค้น/การ์ด/ไฟล์ที่เปิดไว้) */
-  FT.ui = { lib:function(){ return lib; }, terms:terms, hay:hay, card:card, esc:esc, msg:msg, money:money, tm:tm, capDur:capDur,
-            fileFor:fileOf, hasSrc:hasSrc, srcUrl:srcUrl, refresh:refreshLib,
+  /* ให้ไฟล์อื่นใช้ร่วม · footage-find.js เติม terms/hay/card/hasSrc/srcUrl/openFiles/search */
+  FT.ui = { lib:function(){ return lib; }, esc:esc, msg:msg, money:money, tm:tm, capDur:capDur, refresh:refreshLib, rename:rename,
             addQueue:function(items){ queue = queue.filter(function(q){ return q.status !== "skip"; }).concat(items.filter(function(a){ return !queue.some(function(q){ return q.id === a.id; }); })); renderQueue(); },
-            openFiles:function(docs){ $(docs ? "pickDocs" : "playFiles").click(); },
             addCost:function(x){ runCost += x; renderStats(); }, wake:wake };
-  function renderAll(){ renderQueue(); renderStats(); renderDb(); renderAlbums(); renderDebug(); if($("p-find").classList.contains("on")) search(); }
+  function renderAll(){ renderQueue(); renderStats(); renderDb(); renderAlbums(); renderDebug(); if($("p-find").classList.contains("on") && FT.ui.search) FT.ui.search(); }
 
   refreshLib().then(function(){ /* เปิดหน้าครั้งไหน ถ้ามีรายการซ้ำเก่าค้าง รวมให้เองเลย (ลบแค่รายการดัชนีที่ซ้ำ ไม่แตะไฟล์วิดีโอ) */
     var d = findDupes(); if(!d.del.length) return;
