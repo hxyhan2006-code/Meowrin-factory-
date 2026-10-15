@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600&family=Mitr:wght@500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="footage.css?v=20261016a">
+<link rel="stylesheet" href="footage.css?v=20261016b">
 </head>
 <body>
 <header>
@@ -73,9 +73,14 @@
   <section class="page" id="p-plan">
     <div class="panel">
       <h2>ผู้กำกับ AI</h2>
-      <p class="hint" style="margin-top:0">ใส่บท → AI แบ่งเป็นช็อตสั้นๆ แล้วดูภาพในคลังจริงเพื่อเลือกฉากที่เข้ากับแต่ละประโยค → ได้วิดีโอยาวไฟล์เดียว คั่นทุกช็อตด้วยจอเขียว + เสียงตื๊ด ไปตัดต่อต่อใน CapCut · ราว $0.05–0.15 ต่อบท</p>
+      <p class="hint" style="margin-top:0">ใส่บท → AI แบ่งช็อต แล้วดูภาพในคลังจริงเพื่อเลือกฉากที่เข้ากับแต่ละประโยค → ได้วิดีโอไฟล์เดียวไปทำต่อใน CapCut · แบบ 1 ได้คลิปยาวเผื่อเลือก คั่นจอเขียว · แบบ 2 สับไวพร้อมใช้ · ราว $0.05–0.15 ต่อบท</p>
       <label for="plSrc">บทจากประวัติ</label>
       <select id="plSrc"></select>
+      <label for="plMode">แบบ</label>
+      <select id="plMode">
+        <option value="long">แบบ 1: ไปตัดเอง — ช็อตละประโยค คลิปละ ≤10 วิ คั่นจอเขียว + ตื๊ด</option>
+        <option value="fast">แบบ 2: AI ตัดให้ — สับไว 1–3 วิ ตามวลี ต่อกันเลย</option>
+      </select>
       <label for="plText">บท (วางทั้งก้อนได้ AI แบ่งช็อตเอง)</label>
       <textarea id="plText" rows="8" placeholder="วางบทพากย์ที่นี่"></textarea>
       <button class="btn" id="plGo" style="width:100%;margin-top:12px">🎬 ให้ AI กำกับ</button>
@@ -187,6 +192,6 @@
 <input id="pickDocs" type="file" multiple hidden><!-- ไม่ใส่ accept → Android เปิดแอพไฟล์ (เข้าโฟลเดอร์ + เลือกทั้งหมดได้) แทนตัวเลือกรูป -->
 <video id="vid" muted playsinline preload="auto" style="position:fixed;left:-9999px;width:2px;height:2px"></video>
 
-<script src="store.js?v=20261016a" data-boot="budget.js?v=20261016a footage-core.js?v=20261016a r2.js?v=20261016a footage.js?v=20261016a footage-find.js?v=20261016a footage-audit.js?v=20261016a footage-cloud.js?v=20261016a mp4fix.js?v=20261016a footage-stitch.js?v=20261016a footage-plan.js?v=20261016a gdrive.js?v=20261016a"></script>
+<script src="store.js?v=20261016b" data-boot="budget.js?v=20261016b footage-core.js?v=20261016b r2.js?v=20261016b footage.js?v=20261016b footage-find.js?v=20261016b footage-audit.js?v=20261016b footage-cloud.js?v=20261016b mp4fix.js?v=20261016b footage-stitch.js?v=20261016b footage-plan.js?v=20261016b gdrive.js?v=20261016b"></script>
 </body>
 </html>

@@ -190,16 +190,19 @@
   /* ---------- ผู้กำกับ AI ----------
      1) beats: แบ่งบทเป็นช็อตสั้นๆ (ประโยคย่อย ~1-3 วิ) ตามสไตล์ช่อง: เอ่ยชื่อใคร/อะไร ภาพต้องเป็นสิ่งนั้น (ข้อความล้วน)
      2) direct: ส่งรูปผู้สมัครของแต่ละช็อต (ค้นจากดัชนีในเครื่องแล้ว) ให้ AI ดูภาพจริงแล้วเลือก ทีละชุดหลายช็อต (เห็นบทเต็มเพื่อความต่อเนื่อง) */
-  var BEATS = [
-    "You are the director of a Thai One Piece YouTube Shorts channel. House style: an easy, pleasant-to-watch edit with a new shot every 1-3 seconds of narration; whenever the narration names a character, place or thing, that shot shows exactly it.",
-    "Split the Thai narration below into shots.",
-    "Rules: keep the original words in the original order; every word goes into exactly one shot (no rewriting, no skipping, no adding). Each shot is about 6-30 Thai characters (1-3 seconds spoken), split at natural pauses; a list of names becomes one shot per name.",
+  var BEATS = {
+    long: "Split the Thai narration below into shots, one shot per sentence or natural clause (about 2-8 seconds spoken, roughly 15-80 Thai characters). The editor will cut these shots themselves, so each shot needs one clear footage idea that fits the whole sentence.",
+    fast: "House style: an easy, pleasant-to-watch edit with a new shot every 1-3 seconds of narration; whenever the narration names a character, place or thing, that shot shows exactly it. Split the Thai narration below into short shots of about 6-30 Thai characters (1-3 seconds spoken), split at natural pauses; a list of names becomes one shot per name."
+  };
+  var BEATS_RULES = [
+    "Rules: keep the original words in the original order; every word goes into exactly one shot (no rewriting, no skipping, no adding).",
     "For each shot describe the ideal anime footage for that exact moment (who is on screen, doing what, with what emotion). Prefer recognizable canon One Piece moments. Never output episode numbers.",
     "Return ONLY JSON: {\"shots\":[{\"t\":\"exact Thai text of this shot\",\"want\":\"Thai: who + action + emotion (+ place)\",\"chars\":[\"English names that must be on screen\"],\"keys\":[\"2-5 short Thai keywords: emotion, action, place\"],\"shot\":\"close|medium|wide|any\"}]}",
     "Narration:"
   ].join("\n");
-  async function beats(script){
-    var body = { model:cfg.model, usage:{ include:true }, messages:[{ role:"user", content:BEATS + "\n" + script }] };
+  async function beats(script, mode){ /* mode: long = ช็อตละประโยค (แบบตัดเอง) · fast = สับไว 1-3 วิ (แบบ AI ตัดให้) */
+    var head = "You are the director of a Thai One Piece YouTube Shorts channel.\n" + (BEATS[mode] || BEATS.long) + "\n" + BEATS_RULES;
+    var body = { model:cfg.model, usage:{ include:true }, messages:[{ role:"user", content:head + "\n" + script }] };
     if(/^google\//.test(cfg.model)) body.reasoning = { effort:"low" };
     var r = await post(body), j;
     try{ j = parseJSON(r.text); }catch(err){ err.cost = r.cost; throw err; }

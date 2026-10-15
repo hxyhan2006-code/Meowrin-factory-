@@ -1,15 +1,18 @@
-/* footage-plan.js — แท็บ "ผู้กำกับ": บท → AI แบ่งเป็นช็อตสั้นๆ (FT.beats) → หาผู้สมัครในดัชนีในเครื่อง → AI ดูรูปจริงแล้วเลือก (FT.direct)
-   → ตารางช็อต (แตะสลับตัวสำรอง/ติ๊กไม่ใช้) → วิดีโอยาวไฟล์เดียว คั่นทุกช็อตด้วยจอเขียว + เสียงตื๊ด (FT.stitch) → บันทึกไปตัดต่อใน CapCut
-   ความยาวช็อต = ประมาณจากจำนวนตัวอักษรของประโยค (RATE ตัว/วิ) ไม่เกิน 10 วิ · ตารางล่าสุดเก็บที่ MWStore key mw_footage_direct_v1 (อ้างคลิปด้วย id + ลำดับฉาก ไม่เก็บรูป) */
+/* footage-plan.js — แท็บ "ผู้กำกับ" 2 แบบ:
+   long (ไปตัดเอง) = ช็อตละประโยค ตัดคลิปยาว LONG วิ (เผื่อเลือก) คั่นทุกช็อตด้วยจอเขียว + เสียงตื๊ด SEP วิ
+   fast (AI ตัดให้) = สับไว ช็อตละวลี 1-3 วิ ยาวตามจำนวนตัวอักษร (RATE ตัว/วิ) ต่อกันเลยไม่คั่น แบบคลิปตัวอย่างของช่อง
+   บท → AI แบ่งช็อต (FT.beats) → ผู้สมัครในดัชนีในเครื่อง → AI ดูรูปจริงแล้วเลือก (FT.direct) → ตารางช็อต (แตะสลับ/ติ๊กไม่ใช้) → วิดีโอไฟล์เดียว (FT.stitch) → บันทึกไป CapCut · ตารางล่าสุดเก็บที่ MWStore key mw_footage_direct_v1 (อ้างคลิปด้วย id + ลำดับฉาก ไม่เก็บรูป) */
 (function(){
   "use strict";
   var FT = window.FT, U = FT && FT.ui; if(!U || !FT.stitch) return;
   var $ = function(id){ return document.getElementById(id); };
-  var KEY = "mw_footage_direct_v1", CAND = 6, PER_CLIP = 2, CHUNK = 6, RATE = 13, MIN_DUR = 1, MAX_DUR = 10, SEP = 2, MAX_CHARS = 3000;
+  var KEY = "mw_footage_direct_v1", CAND = 6, PER_CLIP = 2, CHUNK = 6, RATE = 13, MIN_DUR = 1, MAX_DUR = 10, LONG = 10, LEAD = 1, SEP = 2, MAX_CHARS = 3000;
   function load(k, d){ return MWStore.get(k, d); } /* store.js: IndexedDB + แคช */
   function save(k, v){ return MWStore.set(k, v); }
-  var plan = load(KEY, null); /* { at, cost, ms, script, shots:[{ t, want, chars, keys, shot, dur, cands:[{ id, si }], why, use }] } (cands[0] = ที่ใช้อยู่) */
+  var plan = load(KEY, null); /* { mode, at, cost, ms, script, shots:[{ t, want, chars, keys, shot, dur, cands:[{ id, si }], why, use }] } (cands[0] = ที่ใช้อยู่) */
   var say = function(t, k){ U.msg("plShareMsg", t, k); };
+  function isLong(){ return !plan || plan.mode !== "fast"; }
+  if(plan && plan.mode) $("plMode").value = plan.mode;
 
   /* ---------- บทจากประวัติของแอพหลัก (mw_history_v1) ---------- */
   function part2(t){ var m = /^[^\n]*PART\s*2[^\n]*$/im.exec(t || ""); return (m ? t.slice(m.index + m[0].length) : (t || "")).trim(); }
@@ -57,7 +60,8 @@
     busy = true; this.disabled = true; var cost = 0, t0 = Date.now(), errs = 0;
     try{
       U.msg("plMsg", "AI กำลังแบ่งบทเป็นช็อต...");
-      var b = await FT.beats(script); cost += b.cost;
+      var mode = $("plMode").value === "fast" ? "fast" : "long";
+      var b = await FT.beats(script, mode); cost += b.cost;
       if(!b.shots.length) throw new Error("AI แบ่งช็อตไม่ได้ ลองใหม่อีกครั้ง");
       var used = {}, shots = b.shots.map(function(x){
         x.dur = durOf(x.t);
@@ -86,7 +90,7 @@
         var p = k && shots[k - 1].pool[0], a = x.pool[0];
         if(p && a && p.c.id === a.c.id && p.si === a.si && x.pool.length > 1) x.pool.push(x.pool.shift());
       });
-      plan = { at:Date.now(), cost:cost, ms:Date.now() - t0, script:script, shots:shots.map(function(x){
+      plan = { mode:mode, at:Date.now(), cost:cost, ms:Date.now() - t0, script:script, shots:shots.map(function(x){
         return { t:x.t, want:x.want, chars:x.chars, keys:x.keys, shot:x.shot, dur:x.dur, why:x.why, use:true, cands:x.pool.map(function(p){ return { id:p.c.id, si:p.si }; }) }; }) };
       save(KEY, plan);
       U.msg("plMsg", errs ? "เสร็จ แต่มี " + errs + " ชุดที่ AI เลือกไม่ได้ ใช้ผลค้นในเครื่องแทน (กดใหม่ได้)" : "", errs ? "err" : "");
@@ -97,7 +101,8 @@
 
   /* ---------- ตารางช็อต ---------- */
   function chosen(x){ var cd = x.cands[0], c = cd && clip(cd.id), sc = c && c.scenes[cd.si]; return sc ? { c:c, sc:sc, si:cd.si } : null; }
-  function cut(x, ch){ /* ช่วงที่ตัดจากฉาก: ยาวเท่าประโยค ถ้าฉากสั้นกว่าใช้ทั้งฉาก */
+  function cut(x, ch){ /* long: คลิปยาว LONG วิ เริ่มก่อนฉาก LEAD วิ (เผื่อเลือกตอนตัดเอง) · fast: ยาวเท่าประโยค ถ้าฉากสั้นกว่าใช้ทั้งฉาก */
+    if(isLong()){ var f = Math.max(0, ch.sc.s - LEAD), end = ch.c.duration || ch.sc.e; return { from:f, to:Math.max(ch.sc.e, Math.min(end, f + LONG)) }; }
     var len = ch.sc.e - ch.sc.s; if(len <= x.dur) return { from:ch.sc.s, to:ch.sc.e };
     var from = ch.sc.s + Math.min(0.2, len - x.dur); return { from:from, to:from + x.dur };
   }
@@ -105,12 +110,12 @@
     if(!plan || !plan.shots || !plan.shots.length){ $("plOut").hidden = true; $("plRows").innerHTML = ""; return; }
     var found = plan.shots.filter(function(x){ return chosen(x); }).length, secs = plan.shots.reduce(function(t, x){ return t + x.dur; }, 0);
     $("plOut").hidden = false;
-    $("plInfo").textContent = plan.shots.length + " ช็อต (เจอฉาก " + found + ") · เสียงยาวราว " + Math.round(secs) + " วิ · ใช้ไป " + U.money(plan.cost || 0) + " · " + ((plan.ms || 0) / 1000).toFixed(0) + " วิ · แตะรูปเล็กเพื่อสลับฉาก";
+    $("plInfo").textContent = (isLong() ? "แบบ 1 ไปตัดเอง · " : "แบบ 2 AI ตัดให้ · ") + plan.shots.length + " ช็อต (เจอฉาก " + found + ") · เสียงยาวราว " + Math.round(secs) + " วิ · ใช้ไป " + U.money(plan.cost || 0) + " · " + ((plan.ms || 0) / 1000).toFixed(0) + " วิ · แตะรูปเล็กเพื่อสลับฉาก";
     $("plRows").innerHTML = plan.shots.map(function(x, k){
       var ch = chosen(x), r = ch && cut(x, ch);
       return '<div class="pl' + (x.use ? "" : " off") + '"><div class="ln"><i>' + (k + 1) + "</i>" + U.esc(x.t) + ' <small class="dur">' + x.dur.toFixed(1) + " วิ</small></div>"
         + '<div class="want">🎬 ' + U.esc(x.want || "-") + "</div>"
-        + (ch ? U.card(ch.c, ch.sc, false, x.why) + '<p class="hint" style="margin:4px 0 0">ตัดช่วง ' + U.tm(r.from) + "–" + U.tm(r.to) + " (" + (r.to - r.from).toFixed(1) + " วิ)" + (r.to - r.from < x.dur - 0.3 ? " · ฉากสั้นกว่าประโยค ยืดใน CapCut" : "") + "</p>"
+        + (ch ? U.card(ch.c, ch.sc, false, x.why) + '<p class="hint" style="margin:4px 0 0">ตัดช่วง ' + U.tm(r.from) + "–" + U.tm(r.to) + " (" + (r.to - r.from).toFixed(1) + " วิ)" + (!isLong() && r.to - r.from < x.dur - 0.3 ? " · ฉากสั้นกว่าประโยค ยืดใน CapCut" : "") + "</p>"
               : '<div class="none">ไม่มีฉากที่ตรงในคลัง (อัปฟุตเทจเพิ่ม หรือหาเองตามคำอธิบายด้านบน)</div>')
         + (x.cands.length > 1 ? '<div class="alts">' + x.cands.map(function(cd, j){ var c = clip(cd.id), s = c && c.scenes[cd.si];
             return s ? '<button class="alt' + (j ? "" : " on") + '" data-alt="' + k + "|" + j + '" aria-label="ใช้ตัวเลือกนี้"><img src="' + s.thumb + '" alt=""></button>' : ""; }).join("") + "</div>" : "")
@@ -143,20 +148,20 @@
     if(!ok){ $("plBatches").innerHTML = ""; return; }
     $("plBatches").innerHTML = '<video class="plvid" src="' + cuts.url + '" controls playsinline></video>'
       + '<button class="btn" id="plSave" style="width:100%;margin-top:10px">💾 บันทึกไฟล์ลงเครื่อง (' + (cuts.file.size / 1048576).toFixed(1) + " MB)</button>"
-      + '<p class="hint">จากนั้นเปิด CapCut → โปรเจกต์ใหม่ → เลือกวิดีโอจากแกลเลอรี (อัลบั้ม Download หรือ ล่าสุด) · จอเขียว + เสียงตื๊ด = จุดเปลี่ยนช็อต ตัดทิ้งแล้ววางเสียงพากย์ทับ</p>'
+      + '<p class="hint">จากนั้นเปิด CapCut → โปรเจกต์ใหม่ → เลือกวิดีโอจากแกลเลอรี (อัลบั้ม Download หรือ ล่าสุด) · ' + (isLong() ? "จอเขียว + เสียงตื๊ด = จุดเปลี่ยนช็อต เลือกช่วงที่ชอบแล้วตัดจอเขียวทิ้ง" : "ปิดเสียงฉากแล้ววางเสียงพากย์ทับ ปรับจังหวะให้ตรงคำ") + "</p>"
       + '<p class="hint">เวลาเริ่มของแต่ละช็อตในไฟล์:</p><ol class="marks">'
       + cuts.marks.map(function(m){ return "<li><b>" + m.at.toFixed(1) + " วิ</b> · ช็อต " + (m.x.k + 1) + " · " + U.esc(m.x.t) + " (" + m.len.toFixed(1) + " วิ)</li>"; }).join("") + "</ol>";
   }
   function renderShare(){
     var list = picked(), miss = list.filter(function(x){ return !U.hasSrc(x.c); }), done = cuts && cuts.sig === sig(list);
-    var secs = list.reduce(function(t, x){ return t + (x.to - x.from); }, 0) + Math.max(0, list.length - 1) * SEP;
-    $("plShare").textContent = done ? "✂ ทำใหม่อีกรอบ" : "✂ สร้างวิดีโอยาว " + list.length + " ช็อต";
+    var sep = isLong() ? SEP : 0, secs = list.reduce(function(t, x){ return t + (x.to - x.from); }, 0) + Math.max(0, list.length - 1) * sep;
+    $("plShare").textContent = done ? "✂ ทำใหม่อีกรอบ" : (isLong() ? "✂ สร้างวิดีโอยาว " : "✂ ให้ AI ตัดต่อ ") + list.length + " ช็อต";
     $("plShare").disabled = cutting || !list.length || miss.length > 0 || !FT.stitch.ok();
     $("plNeed").hidden = !miss.length;
     $("plNeedTxt").textContent = "ยังไม่มีไฟล์ " + miss.length + "/" + list.length + " ช็อต (ไม่อยู่ในคลังคลาวด์ และยังไม่ได้เปิดไฟล์ในเครื่อง) · กดปุ่มด้านล่าง → เข้าโฟลเดอร์อัลบั้ม → เลือกทั้งหมด แอพเก็บเฉพาะคลิปที่ใช้เอง";
     if(!cutting) say(!list.length ? "" : miss.length ? lastPick
       : done ? "สร้างไว้แล้ว ดูตัวอย่างด้านล่างก่อนบันทึกได้"
-      : "กด ✂ แล้วแอพจะเล่นเฉพาะช่วงที่ตัดเรียงตามบท คั่นด้วยจอเขียว + เสียงตื๊ด " + SEP + " วิ (ใช้เวลา ≈ " + Math.round(secs) + " วิ · เปิดหน้าค้างไว้ ห้ามสลับแอพ)", done ? "ok" : "");
+      : "กด ✂ แล้วแอพจะเล่นเฉพาะช่วงที่ตัดเรียงตามบท" + (sep ? " คั่นด้วยจอเขียว + เสียงตื๊ด " + sep + " วิ" : " ต่อกันเลย") + " (ใช้เวลา ≈ " + Math.round(secs) + " วิ · เปิดหน้าค้างไว้ ห้ามสลับแอพ)", done ? "ok" : "");
     renderResult();
   }
   document.addEventListener("ft:files", function(e){ /* footage-find.js ส่งมาหลังเลือกไฟล์ */
@@ -175,7 +180,7 @@
       var r = await FT.stitch.make(list, function(i, x){
         say("กำลังอัดช็อต " + (i + 1) + "/" + list.length + " · " + x.t + " · อย่าสลับแอพ");
         $("plBar").style.width = (i / list.length * 100) + "%";
-      }, say, { sep:SEP });
+      }, say, { sep:isLong() ? SEP : 0 });
       cuts = { sig:sig(list), file:r.file, url:URL.createObjectURL(r.file), marks:r.marks };
       cutting = false; renderShare();
       say("เสร็จแล้ว " + r.marks.length + " ช็อต · " + (r.file.size / 1048576).toFixed(1) + " MB · ดูตัวอย่างด้านล่าง แล้วกด 💾 บันทึก", "ok");
