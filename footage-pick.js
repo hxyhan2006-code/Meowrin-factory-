@@ -27,10 +27,10 @@
     return '<hr><h2 style="font-size:16px">หรือ: หาเองใน CapCut (ไม่ใช้เน็ต)</h2><p class="hint" style="margin-top:0">' + o.length + " คลิป · เปิด CapCut เลือกคลิปจากแกลเลอรีที่รูปปกและความยาวตรงกับด้านล่าง แล้วตัดตามช่วงเวลา · ได้ไฟล์ต้นฉบับเต็มคุณภาพ ไม่ต้องรออัด</p>"
       + o.map(function(x){ return '<div class="pkrow"><div class="cvr"><img src="' + (x.c.cover || "") + '" alt="ปก"><em>' + U.capDur(x.c.duration) + '</em></div><div class="t"><b>' + esc(x.c.name) + "</b><span>" + esc(x.c.album) + " · ตัดช่วง " + ranges(x) + "</span></div></div>"; }).join("")
       + '<button class="btn ghost small" id="pickOCopy" style="width:100%;margin-top:10px">คัดลอกรายการช่วงเวลา</button>'
-      + '<p class="hint" style="margin-top:14px">หรือส่งไฟล์ต้นฉบับให้เลย · ' + (net ? "⚠ ต้องโหลดจากคลัง ≈ " + mb(net) + " MB (แนะนำต่อ Wi-Fi)" : "ไฟล์อยู่ในเครื่องแล้ว ไม่ต้องโหลด") + " · รวม " + mb(total) + " MB</p>"
-      + '<button class="btn ghost" id="pickOShare" style="width:100%"' + (fit ? dis : " disabled") + ">" + (fit ? (ready ? "📤 แชร์คลิปต้นฉบับไป CapCut" : "⬇ โหลดจากคลังให้พร้อมแชร์ (" + mb(total) + " MB)") : "📤 แชร์ไม่ได้ (ลิมิตแชร์ ≤10 คลิป รวม ≤50 MB)") + "</button>"
-      + '<button class="btn ghost" id="pickOSave" style="width:100%;margin-top:8px"' + dis + ">💾 บันทึกคลิปต้นฉบับลงเครื่อง (ไม่จำกัดจำนวน/ขนาด)</button>"
-      + (fit ? "" : '<p class="hint">ปุ่มแชร์ของเบราว์เซอร์มือถือจำกัด ≤10 ไฟล์ รวม ≤50 MB ต่อครั้ง แก้ไม่ได้จากในแอพ · ใช้ 💾 บันทึกลงเครื่อง หรือเลือกจากแกลเลอรีใน CapCut ตามรายการด้านบน (บันทึกหลายไฟล์ เบราว์เซอร์อาจถามขออนุญาต กดอนุญาต)</p>');
+      + '<p class="hint" style="margin-top:14px">หรือเอาไฟล์ต้นฉบับลงเครื่อง · ' + (net ? "⚠ ต้องโหลดจากคลัง ≈ " + mb(net) + " MB (แนะนำต่อ Wi-Fi)" : "ไฟล์อยู่ในเครื่องแล้ว ไม่ต้องโหลด") + " · รวม " + mb(total) + " MB</p>"
+      + '<button class="btn" id="pickOSave" style="width:100%"' + dis + ">💾 บันทึกคลิปต้นฉบับลงเครื่อง (ใช้ทางนี้ ไม่จำกัดจำนวน/ขนาด)</button>"
+      + '<details class="dbg"><summary>ลองแชร์ตรง (ใน Brave มักใช้กับ CapCut ไม่ได้)</summary><button class="btn ghost" id="pickOShare" style="width:100%;margin-top:8px"' + (fit ? dis : " disabled") + ">" + (fit ? (ready ? "📤 แชร์คลิปต้นฉบับไป CapCut" : "⬇ โหลดจากคลังให้พร้อมแชร์ (" + mb(total) + " MB)") : "📤 แชร์ไม่ได้ (ลิมิตแชร์ ≤10 คลิป รวม ≤50 MB)") + "</button></details>"
+      + '<p class="hint">บันทึกหลายไฟล์ เบราว์เซอร์อาจถามขออนุญาตดาวน์โหลดหลายไฟล์ กดอนุญาต · ปุ่มแชร์ของเบราว์เซอร์จำกัด ≤10 ไฟล์ รวม ≤50 MB และ CapCut มักไม่รับไฟล์ที่แชร์จาก Brave</p>';
   }
   function sig(l){ return l.map(function(x){ return x.c.id + "#" + x.si; }).join(","); }
   function secs(l){ return l.reduce(function(t, x){ return t + (x.sc.e - x.sc.s); }, 0); }
@@ -80,8 +80,9 @@
     $("pickMake").textContent = ok ? "✂ ทำใหม่อีกรอบ" : "✂ ต่อ " + l.length + " ฉากเป็นวิดีโอเดียว"; $("pickMake").disabled = making || miss.length > 0 || !FT.stitch.ok();
     $("pickNeed").hidden = !miss.length; $("pickNeedTxt").textContent = "ยังไม่มีไฟล์ " + miss.length + " ฉาก (ไม่อยู่ในคลังคลาวด์ และยังไม่ได้เปิดไฟล์ในเครื่อง)";
     $("pickOut").innerHTML = ok ? '<video class="plvid" src="' + out.url + '" controls playsinline></video>'
-      + '<button class="btn" id="pickSend" style="width:100%;margin-top:10px">แชร์ไป CapCut (1 ไฟล์ · ' + (out.file.size / 1048576).toFixed(1) + " MB)</button>"
-      + '<button class="btn ghost" id="pickSave" style="width:100%;margin-top:8px">💾 บันทึกไฟล์ลงเครื่อง</button>'
+      + '<button class="btn" id="pickSave" style="width:100%;margin-top:10px">💾 บันทึกไฟล์ลงเครื่อง (ใช้ทางนี้)</button>'
+      + '<p class="hint">จากนั้นเปิด CapCut → โปรเจกต์ใหม่ → เลือกวิดีโอจากแกลเลอรี (อัลบั้ม Download หรือ ล่าสุด)</p>'
+      + '<details class="dbg"><summary>ลองแชร์ตรง (ใน Brave มักใช้กับ CapCut ไม่ได้)</summary><button class="btn ghost" id="pickSend" style="width:100%;margin-top:8px">แชร์ไป CapCut (1 ไฟล์ · ' + (out.file.size / 1048576).toFixed(1) + " MB)</button></details>"
       + '<p class="hint">จุดเริ่มของแต่ละฉากในไฟล์ (แยกคลิปใน CapCut ตรงเวลาเหล่านี้):</p><ol class="marks">'
       + out.marks.map(function(m){ return "<li><b>" + m.at.toFixed(1) + " วิ</b> · ฉาก " + m.lines.join(",") + " · " + esc(m.c.album) + " " + tm(m.sc.s) + " (" + m.len.toFixed(1) + " วิ)</li>"; }).join("") + "</ol>" : "";
     $("pickOrig").innerHTML = origHtml(l);

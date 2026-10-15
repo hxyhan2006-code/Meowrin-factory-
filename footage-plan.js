@@ -122,8 +122,9 @@
     var list = picked(), ok = cuts && cuts.sig === sig(list);
     if(!ok){ $("plBatches").innerHTML = ""; return; }
     $("plBatches").innerHTML = '<video class="plvid" src="' + cuts.url + '" controls playsinline></video>'
-      + '<button class="btn" id="plSend" style="width:100%;margin-top:10px">แชร์ไป CapCut (1 ไฟล์ · ' + (cuts.file.size / 1048576).toFixed(1) + " MB)</button>"
-      + '<button class="btn" id="plSave" style="width:100%;margin-top:8px">💾 บันทึกไฟล์ลงเครื่อง (ไว้ทดสอบเปิดใน CapCut)</button>'
+      + '<button class="btn" id="plSave" style="width:100%;margin-top:10px">💾 บันทึกไฟล์ลงเครื่อง (ใช้ทางนี้)</button>'
+      + '<p class="hint">จากนั้นเปิด CapCut → โปรเจกต์ใหม่ → เลือกวิดีโอจากแกลเลอรี (อัลบั้ม Download หรือ ล่าสุด)</p>'
+      + '<details class="dbg"><summary>ลองแชร์ตรง (ใน Brave มักใช้กับ CapCut ไม่ได้)</summary><button class="btn ghost" id="plSend" style="width:100%;margin-top:8px">แชร์ไป CapCut (1 ไฟล์ · ' + (cuts.file.size / 1048576).toFixed(1) + " MB)</button></details>"
       + '<p class="hint">จุดเริ่มของแต่ละบรรทัดในไฟล์ (แยกคลิปใน CapCut ตรงเวลาเหล่านี้):</p><ol class="marks">'
       + cuts.marks.map(function(m){ return "<li><b>" + m.at.toFixed(1) + " วิ</b> · บรรทัด " + m.lines.join(",") + " · " + U.esc(m.c.album) + " " + U.tm(m.sc.s) + " (" + m.len.toFixed(1) + " วิ)</li>"; }).join("") + "</ol>";
   }
