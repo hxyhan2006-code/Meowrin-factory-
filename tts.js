@@ -209,12 +209,34 @@
       take.url = URL.createObjectURL(take.blob);
       take.rawUrl = take.blob !== take.raw ? URL.createObjectURL(take.raw) : "";
       a.takes.push(take); a.sel = a.takes.length - 1;
-      if(window.MWVoice) MWVoice.put({ text:text, name:take.name, blob:take.blob, align:take.align }).catch(function(){}); /* ให้แท็บผู้กำกับของหน้าฟุตเทจใช้เสียงนี้ต่อ */
+      if(window.MWVoice) MWVoice.put({ text:text, name:take.name, blob:take.blob, align:take.align }).then(function(){ if($("vSaved").open) renderSaved(); else MWVoice.list().then(function(l){ $("vSavedN").textContent = "(" + l.length + ")"; }); }).catch(function(){}); /* ให้แท็บผู้กำกับของหน้าฟุตเทจใช้เสียงนี้ต่อ */
       MW.toast(a.takes.length > 1 ? "ได้เทค " + a.takes.length + " แล้ว" : "สร้างเสียงแล้ว");
       setTimeout(function(){ $("ttsOut").scrollIntoView({ behavior:"smooth", block:"center" }); }, 50); /* เลื่อนไปที่ตัวเล่นให้เห็นเลย */
     }catch(err){ note(err.message, true); }
     busy = false; sync();
   }
+  /* ---------- เสียงที่เก็บไว้ (MWVoice: 10 เทคล่าสุด ค้างอยู่แม้ปิดแอพ · หน้าฟุตเทจใช้ต่อได้) ---------- */
+  var savedUrls = [];
+  async function renderSaved(){
+    if(!window.MWVoice) return;
+    var box = $("vSavedList"), list = [];
+    try{ list = await MWVoice.list(); }catch(err){ box.innerHTML = '<p class="empty">เปิดที่เก็บเสียงไม่ได้</p>'; return; }
+    savedUrls.forEach(function(u){ URL.revokeObjectURL(u); }); savedUrls = [];
+    $("vSavedN").textContent = list.length ? "(" + list.length + ")" : "";
+    box.innerHTML = list.length ? list.map(function(r){
+      var u = URL.createObjectURL(r.blob); savedUrls.push(u);
+      return '<div class="vsaved"><div class="vsh"><b>' + MW.esc(new Date(r.id).toLocaleString("th-TH", { day:"numeric", month:"short", hour:"2-digit", minute:"2-digit" })) + '</b> · ' + (r.blob.size / 1048576).toFixed(1) + ' MB · ' + (r.text || "").length.toLocaleString() + ' ตัวอักษร</div>'
+        + '<p class="vstxt">' + MW.esc((r.text || "").replace(/\s+/g, " ").slice(0, 60)) + '...</p><audio controls preload="none" src="' + u + '"></audio>'
+        + '<div class="row"><a class="btn ghost small" href="' + u + '" download="' + MW.esc(r.name || "meowrin.mp3") + '" style="flex:1">ดาวน์โหลด</a><button class="btn ghost small" data-vdel="' + r.id + '" style="flex:1">ลบ</button></div></div>';
+    }).join("") : '<p class="empty">ยังไม่มีเสียงที่เก็บไว้ · สร้างเสียงแล้วจะเก็บให้อัตโนมัติ (10 เทคล่าสุด)</p>';
+  }
+  $("vSaved").addEventListener("toggle", function(){ if(this.open) renderSaved(); });
+  if(window.MWVoice) MWVoice.list().then(function(l){ if(l.length) $("vSavedN").textContent = "(" + l.length + ")"; }).catch(function(){});
+  $("vSavedList").addEventListener("click", async function(e){
+    var b = e.target.closest("[data-vdel]"); if(!b || !window.confirm("ลบเสียงนี้?")) return;
+    try{ await MWVoice.del(+b.dataset.vdel); }catch(err){} renderSaved();
+  });
+
   $("ttsBtn").addEventListener("click", generate);
   $("ttsMore").addEventListener("click", generate); /* อีกเทค = เสียเครดิตอีกรอบ */
 

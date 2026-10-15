@@ -3,7 +3,7 @@
    record = { id, at, text, name, blob (mp3), align?:{ chars, st[], en[] } } · align = เวลาเริ่ม/จบของทุกตัวอักษร (ไม่รวมช่องว่าง) ของ "บท" เทียบกับต้นไฟล์ blob */
 (function(){
   "use strict";
-  var DB = "mw_voice_v1", ST = "takes", KEEP = 6, dbp = null;
+  var DB = "mw_voice_v1", ST = "takes", KEEP = 10, dbp = null;
   function open(){
     if(!dbp) dbp = new Promise(function(ok, no){
       var r = indexedDB.open(DB, 1);
@@ -26,5 +26,6 @@
       return run("readwrite", function(s){ a.slice(KEEP).forEach(function(r){ s.delete(r.id); }); return null; });
     }).then(function(){ return rec.id; });
   }
-  window.MWVoice = { list:list, get:get, put:put };
+  function del(id){ return run("readwrite", function(s){ return s.delete(id); }); }
+  window.MWVoice = { list:list, get:get, put:put, del:del };
 })();
