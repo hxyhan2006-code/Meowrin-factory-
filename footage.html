@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600&family=Mitr:wght@500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="footage.css?v=20261017a">
+<link rel="stylesheet" href="footage.css?v=20261017b">
 </head>
 <body>
 <header>
@@ -67,6 +67,7 @@
   <section class="page on" id="p-find">
     <div class="panel">
       <input id="q" type="search" enterkeyhint="search" placeholder="เช่น ลูฟี่ตกใจ, โซโร ฟันดาบ" autocomplete="off">
+      <div class="chips" id="albums"></div>
       <div class="chips" id="chips"></div>
       <div class="chips" id="sizes"></div>
       <label class="chk" id="onlyRow" hidden><input type="checkbox" id="onlySel"> เฉพาะคนที่เลือกเท่านั้น (ไม่มีตัวละครอื่นในฉาก)</label>
@@ -203,6 +204,6 @@
 <input id="pickDocs" type="file" multiple hidden><!-- ไม่ใส่ accept → Android เปิดแอพไฟล์ (เข้าโฟลเดอร์ + เลือกทั้งหมดได้) แทนตัวเลือกรูป -->
 <video id="vid" muted playsinline preload="auto" style="position:fixed;left:-9999px;width:2px;height:2px"></video>
 
-<script src="store.js?v=20261017a" data-boot="budget.js?v=20261017a footage-core.js?v=20261017a r2.js?v=20261017a footage.js?v=20261017a footage-find.js?v=20261017a footage-audit.js?v=20261017a footage-cloud.js?v=20261017a mp4fix.js?v=20261017a footage-stitch.js?v=20261017a voicestore.js?v=20261017a footage-plan.js?v=20261017a gdrive.js?v=20261017a"></script>
+<script src="store.js?v=20261017b" data-boot="budget.js?v=20261017b footage-core.js?v=20261017b r2.js?v=20261017b footage.js?v=20261017b footage-find.js?v=20261017b footage-audit.js?v=20261017b footage-cloud.js?v=20261017b mp4fix.js?v=20261017b footage-stitch.js?v=20261017b voicestore.js?v=20261017b footage-plan.js?v=20261017b gdrive.js?v=20261017b"></script>
 </body>
 </html>
