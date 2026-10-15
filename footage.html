@@ -8,27 +8,22 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600&family=Mitr:wght@500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="footage.css?v=20261015z">
+<link rel="stylesheet" href="footage.css?v=20261016a">
 </head>
 <body>
 <header>
   <div class="wrap"><h1>ดัชนีฟุตเทจ <span class="tag" id="ver">ทดสอบ</span></h1><a href="./">← กลับแอพ</a></div>
-  <nav class="tabs"><button data-p="find" class="on">คลัง</button><button data-p="idx">ทำดัชนี</button><button data-p="plan">วางแผน</button><button data-p="set">ตั้งค่า</button></nav>
+  <nav class="tabs"><button data-p="find" class="on">คลัง</button><button data-p="idx">อัปโหลด</button><button data-p="plan">ผู้กำกับ</button><button data-p="set">ตั้งค่า</button></nav>
 </header>
 
 <main class="wrap">
-  <!-- ทำดัชนี (เพิ่มฟุตเทจ + คลังคลาวด์ + ต้นทุน + คิว) -->
+  <!-- อัปโหลด (เพิ่มฟุตเทจ → ทำดัชนี + อัปคลัง · คลังคลาวด์ · ต้นทุน · คิว) -->
   <section class="page" id="p-idx">
     <div class="panel">
       <h2>เพิ่มฟุตเทจเข้าคลัง</h2>
       <button class="btn" id="filesDocsBtn" type="button" style="width:100%">📁 เลือกจากแอพไฟล์ (เลือกทั้งโฟลเดอร์ได้)</button>
       <input id="filesDocs" type="file" multiple hidden><!-- ไม่ใส่ accept → Android เปิดแอพไฟล์ เข้า Pictures/Gallery/owner/<อัลบั้ม> แล้วเลือกทั้งหมดได้ -->
-      <p class="hint" style="margin-top:6px">เลือกทั้งโฟลเดอร์มั่วๆ ได้เลย (Pictures → Gallery → owner → ชื่ออัลบั้ม · กดค้างไฟล์แรก → เลือกทั้งหมด) · คลิปที่ทำแล้วข้ามเอง · ถ้าตั้งค่าคลังไว้ จะอัปไฟล์ขึ้นคลังให้อัตโนมัติ · AI จัดหมวดตัวละครให้เอง</p>
-      <details class="dbg"><summary>ขั้นสูง: ตั้งชื่ออัลบั้ม</summary>
-        <label for="album">ชื่ออัลบั้ม (ไม่บังคับ · เลือกคลิปเดิมซ้ำพร้อมพิมพ์ชื่อใหม่ = แก้ชื่อให้ ไม่เสียค่า AI)</label>
-        <input id="album" type="text" list="albumList" placeholder="เช่น luffy" autocomplete="off">
-        <datalist id="albumList"></datalist>
-      </details>
+      <p class="hint" style="margin-top:6px">เลือกทั้งโฟลเดอร์มั่วๆ ได้เลย (Pictures → Gallery → owner → ชื่ออัลบั้ม · กดค้างไฟล์แรก → เลือกทั้งหมด) · คลิปที่ทำแล้วข้ามเอง · ถ้าตั้งค่าคลังไว้ จะอัปไฟล์ขึ้นคลังให้อัตโนมัติ · AI ดูและจัดหมวดตัวละครให้เอง</p>
       <div class="row" style="margin-top:12px">
         <button class="btn" id="startBtn" disabled>เริ่มทำดัชนี</button>
         <button class="btn ghost" id="pauseBtn" hidden>พัก</button>
@@ -62,49 +57,42 @@
     </div>
   </section>
 
-  <!-- คลัง (ค้นหา + อัลบั้มอัตโนมัติ + ตรวจความแม่น) -->
+  <!-- คลัง (ค้นหา + ชิปตัวละคร/จำนวนคน) -->
   <section class="page on" id="p-find">
-    <details class="panel fold" id="auditFold"><summary><span>🎯 ตรวจความแม่นของ AI</span><em class="state idle" id="auditTag">...</em></summary><div class="fbody"><div id="auditBox"></div></div></details>
     <div class="panel">
       <input id="q" type="search" enterkeyhint="search" placeholder="เช่น ลูฟี่ตกใจ, โซโร ฟันดาบ" autocomplete="off">
       <div class="chips" id="chips"></div>
       <div class="chips" id="sizes"></div>
       <label class="chk" id="onlyRow" hidden><input type="checkbox" id="onlySel"> เฉพาะคนที่เลือกเท่านั้น (ไม่มีตัวละครอื่นในฉาก)</label>
-      <button class="btn" id="aiGo" hidden style="width:100%;margin-top:10px">ถาม AI เลือกฉากให้</button>
-      <button class="btn ghost" id="pickMode" style="width:100%;margin-top:10px">☑ เลือกฉากไปทำวิดีโอ</button>
-      <p class="hint" id="pickHint" hidden>แตะรูปย่อของฉากในแต่ละคลิปเพื่อเลือก (ขึ้นเครื่องหมาย ✓ ส้ม) · ปุ่ม 🔍 ที่รูปย่อ = ดูรูปใหญ่/เล่นฉาก · ผลค้นหาหรือชิปจะมีช่อง "เลือกฉากนี้" · ที่เลือกไว้ค้างอยู่แม้ค้นหาใหม่หรือปิดหน้า · ดู/ล้างได้ที่แถบด้านล่าง
       <p class="hint" id="findInfo"></p>
     </div>
-    <div class="res" id="aiRes"></div>
     <div class="res" id="results"></div>
   </section>
 
-  <!-- วางแผนฉากตามบท -->
+  <!-- ผู้กำกับ AI: บท → ตารางช็อต → วิดีโอยาวคั่นจอเขียว -->
   <section class="page" id="p-plan">
     <div class="panel">
-      <h2>วางแผนฉากตามบท</h2>
-      <p class="hint" style="margin-top:0">เลือกบทจากประวัติในแอพหลัก (หรือวาง/แก้เอง) → AI คิดฉากทีละบรรทัด แล้วหาคลิปที่ตรงจากดัชนีของคุณ → แชร์คลิปที่เลือกเรียงตามบทไป CapCut · ราว $0.03-0.05 ต่อบท</p>
+      <h2>ผู้กำกับ AI</h2>
+      <p class="hint" style="margin-top:0">ใส่บท → AI แบ่งเป็นช็อตสั้นๆ แล้วดูภาพในคลังจริงเพื่อเลือกฉากที่เข้ากับแต่ละประโยค → ได้วิดีโอยาวไฟล์เดียว คั่นทุกช็อตด้วยจอเขียว + เสียงตื๊ด ไปตัดต่อต่อใน CapCut · ราว $0.05–0.15 ต่อบท</p>
       <label for="plSrc">บทจากประวัติ</label>
       <select id="plSrc"></select>
-      <label for="plText">บท (1 บรรทัด = 1 ช็อต)</label>
-      <textarea id="plText" rows="8" placeholder="วางบทพากย์ที่นี่ บรรทัดละช่วง"></textarea>
-      <button class="btn" id="plGo" style="width:100%;margin-top:12px">วางแผนฉาก</button>
+      <label for="plText">บท (วางทั้งก้อนได้ AI แบ่งช็อตเอง)</label>
+      <textarea id="plText" rows="8" placeholder="วางบทพากย์ที่นี่"></textarea>
+      <button class="btn" id="plGo" style="width:100%;margin-top:12px">🎬 ให้ AI กำกับ</button>
       <div id="plMsg"></div>
     </div>
     <div class="panel" id="plOut" hidden>
       <p class="hint" id="plInfo" style="margin-top:0"></p>
       <div class="row" style="margin-top:10px">
-        <button class="btn" id="plShare">✂ ต่อฉากเป็นวิดีโอเดียว</button>
-        <button class="btn ghost" id="plCopy">คัดลอกรายการ</button>
+        <button class="btn" id="plShare">✂ สร้างวิดีโอยาว</button>
+        <button class="btn ghost" id="plCopy">คัดลอกตาราง</button>
       </div>
-      <button class="btn ghost" id="plToPick" style="width:100%;margin-top:8px">➕ ส่งฉากเข้าถาดเลือกฉาก (บันทึกต้นฉบับ/ตัดเองใน CapCut)</button>
       <div id="plShareMsg"></div>
       <div class="prog" id="plProg" hidden><i id="plBar"></i></div>
       <div id="plBatches"></div>
       <div id="plNeed" hidden>
         <p class="hint" id="plNeedTxt"></p>
         <button class="btn" id="plDocs" style="width:100%;margin-top:10px">📁 เลือกจากแอพไฟล์ (ทั้งโฟลเดอร์)</button>
-        <button class="btn ghost small" id="plGal" style="width:100%;margin-top:8px">🖼 เลือกจากแกลเลอรีแทน</button>
       </div>
     </div>
     <div id="plRows"></div>
@@ -173,10 +161,6 @@
       <label for="par">ส่งพร้อมกันกี่คำขอ</label>
       <input id="par" type="number" min="1" max="4" step="1">
     </div></details>
-    <details class="panel fold"><summary><span>ค้นหาด้วย AI</span><em class="state idle" id="tagFind"></em></summary><div class="fbody">
-      <label class="sw"><span>ให้ AI แปลคำค้นไทยเป็นแท็กอังกฤษ<small>เสียเงินนิดหน่อยต่อครั้ง ปกติไม่ต้องเปิด</small></span><input type="checkbox" id="aiQuery"><i class="knob"></i></label>
-      <label class="sw"><span>ให้ AI ช่วยเลือกฉากที่ตรงที่สุด<small>เข้าใจประโยคยาวๆ · ราว $0.002 ต่อครั้ง · จะมีปุ่ม ถาม AI เลือกฉากให้ ที่แท็บคลัง</small></span><input type="checkbox" id="aiRank"><i class="knob"></i></label>
-    </div></details>
     <details class="panel fold"><summary><span>ตัดฉาก</span><em class="state idle" id="tagCut"></em></summary><div class="fbody">
       <label for="thr">ความไวจุดตัดฉาก: <b id="thrVal"></b> (น้อย = ตัดถี่)</label>
       <input id="thr" type="range" min="0.04" max="0.5" step="0.01">
@@ -184,42 +168,10 @@
       <input id="maxScenes" type="number" min="1" max="60" step="1">
       <p class="hint">สุ่มเฟรมทุก 1 วินาที · ฉากที่ต่างกันน้อยที่สุดจะถูกรวมจนเหลือไม่เกินเพดาน</p>
     </div></details>
-    <details class="panel fold"><summary><span>คลิปซ้ำ</span></summary><div class="fbody">
-      <p class="hint" style="margin-top:0">รายการซ้ำ (ไฟล์ขนาดเท่ากันเป๊ะและความยาวเท่ากัน แม้ชื่อต่างกัน) ระบบรวมให้เองทุกครั้งที่เปิดหน้า เก็บตัวที่อยู่ในคลัง (เล่นได้) หรือที่ทำล่าสุดไว้ตัวเดียว · ปุ่มนี้ไว้ตรวจเองหรือสั่งรวมทันที</p>
-      <button class="btn ghost" id="dupBtn" style="width:100%">ตรวจหาและลบคลิปซ้ำ</button>
-      <div id="dupMsg"></div>
-    </div></details>
-    <details class="panel fold"><summary><span>เปลี่ยนชื่ออัลบั้ม</span></summary><div class="fbody">
-      <p class="hint" style="margin-top:0">เปลี่ยนทั้งอัลบั้มพร้อมกัน (ทุกคลิปที่ใช้ชื่อนี้) · อยากเปลี่ยนแค่บางคลิป กด “✎ แก้” ที่การ์ดในแท็บคลัง</p>
-      <label for="renOld">อัลบั้มที่จะเปลี่ยน</label>
-      <select id="renOld"></select>
-      <label for="renNew">ชื่อใหม่</label>
-      <input id="renNew" type="text" placeholder="เช่น luffy" autocomplete="off">
-      <button class="btn" id="renBtn" style="width:100%;margin-top:12px">เปลี่ยนชื่อ</button>
-      <div id="renMsg"></div>
-    </div></details>
-    <details class="panel fold"><summary><span>Debug</span></summary><div class="fbody">
-      <p class="hint">ข้อมูลไฟล์จากตัวเลือกไฟล์ และคำตอบดิบของ AI ต่อคลิป</p>
-      <div id="debug"><p class="empty">ยังไม่มีข้อมูล</p></div>
-    </div></details>
+    <details class="panel fold" id="auditFold"><summary><span>🎯 ตรวจความแม่นของ AI</span><em class="state idle" id="auditTag">...</em></summary><div class="fbody"><div id="auditBox"></div></div></details>
   </section>
 </main>
 
-<div class="pickbar" id="pickBar" hidden><span id="pickInfo"></span><button class="btn ghost" id="pickClearBar">ล้าง</button><button class="btn" id="pickOpen">ดู / ต่อวิดีโอ</button></div>
-<div class="pksheet" id="pickSheet" hidden>
-  <div class="wrap">
-    <div class="pkhead"><h2>ฉากที่เลือก</h2><button class="btn ghost small" id="pickX">ปิด ✕</button></div>
-    <p class="hint" id="pickTotal" style="margin-top:0"></p>
-    <div id="pickList"></div>
-    <div id="pickNeed" hidden><p class="hint" id="pickNeedTxt"></p><button class="btn" id="pickFiles" style="width:100%">📁 เลือกไฟล์จากแอพไฟล์ (ทั้งโฟลเดอร์)</button></div>
-    <button class="btn" id="pickMake" style="width:100%;margin-top:12px">✂ ต่อเป็นวิดีโอเดียว</button>
-    <div class="prog" id="pickProg" hidden><i id="pickBarP"></i></div>
-    <div id="pickMsg"></div>
-    <div id="pickOut"></div>
-    <div id="pickOrig"></div>
-    <button class="btn ghost small" id="pickClear" style="width:100%;margin-top:14px">ล้างที่เลือกทั้งหมด</button>
-  </div>
-</div>
 <div class="big" id="big" hidden>
   <button class="bigx" id="bigX" aria-label="ปิด">✕</button>
   <img id="bigImg" alt="">
@@ -235,6 +187,6 @@
 <input id="pickDocs" type="file" multiple hidden><!-- ไม่ใส่ accept → Android เปิดแอพไฟล์ (เข้าโฟลเดอร์ + เลือกทั้งหมดได้) แทนตัวเลือกรูป -->
 <video id="vid" muted playsinline preload="auto" style="position:fixed;left:-9999px;width:2px;height:2px"></video>
 
-<script src="store.js?v=20261015z" data-boot="budget.js?v=20261015z footage-core.js?v=20261015z r2.js?v=20261015z footage.js?v=20261015z footage-find.js?v=20261015z footage-audit.js?v=20261015z footage-cloud.js?v=20261015z mp4fix.js?v=20261015z footage-stitch.js?v=20261015z footage-plan.js?v=20261015z footage-pick.js?v=20261015z gdrive.js?v=20261015z"></script>
+<script src="store.js?v=20261016a" data-boot="budget.js?v=20261016a footage-core.js?v=20261016a r2.js?v=20261016a footage.js?v=20261016a footage-find.js?v=20261016a footage-audit.js?v=20261016a footage-cloud.js?v=20261016a mp4fix.js?v=20261016a footage-stitch.js?v=20261016a footage-plan.js?v=20261016a gdrive.js?v=20261016a"></script>
 </body>
 </html>

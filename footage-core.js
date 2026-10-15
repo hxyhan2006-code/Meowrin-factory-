@@ -187,46 +187,50 @@
     try{ j = parseJSON(r.text); }catch(err){ err.raw = r.text; err.cost = r.cost; throw err; }
     r.json = j; return r;
   }
-  /* ให้ AI เลือกฉากที่ตรงกับคำขอแบบประโยคจากรายการผู้สมัคร (ข้อความล้วน ไม่มีรูป) items:[{i,who,sum,tags,loc}] → picks:[{i,why}] */
-  async function rank(q, items){
-    var lines = items.map(function(it){ return "#" + it.i + " | " + it.who + " | " + it.sum + (it.tags ? " | " + it.tags : "") + (it.loc ? " | " + it.loc : ""); }).join("\n");
-    var body = { model:cfg.model, usage:{ include:true }, messages:[{ role:"user", content:
-      "A Thai One Piece fan and video editor describes a scene they want: \"" + q + "\"\n" +
-      "Candidate scenes (index | characters | description | tags | place), from an automatic index that can be imperfect:\n" + lines + "\n\n" +
-      "Pick up to 10 candidates that best match the request, best first. Think about meaning, not just exact words (e.g. rowing a boat ~ on a boat at sea). Only include scenes that really fit; fewer is fine; none is fine.\n" +
-      "Return ONLY JSON: {\"picks\":[{\"i\":<candidate number>,\"why\":\"one short Thai phrase why it fits\"}]}" }] };
-    if(/^google\//.test(cfg.model)) body.reasoning = { effort:"low" };
-    var r = await post(body), j;
-    try{ j = parseJSON(r.text); }catch(err){ err.cost = r.cost; throw err; }
-    r.picks = (Array.isArray(j.picks) ? j.picks : []).map(function(p){ return { i:Number(p.i), why:String(p.why || "") }; }).filter(function(p){ return p.i > 0; });
-    return r;
-  }
-  /* วางแผนฉากตามบท: บรรทัดละ 1 ฉากที่อยากได้ + สำรอง (ข้อความล้วน) → items:[{n,scene,backup,chars,keys}] */
-  var PLAN = [
-    "You are a One Piece visual director and canon expert helping a Thai YouTube Shorts editor pick anime footage.",
-    "For EACH numbered script line below, describe the footage that best fits it.",
-    "Rules: match the emotion and meaning, not the literal words. For lines 1-2 (the hook) choose the most scroll-stopping visual that matches the hook's energy.",
-    "Prefer real, recognizable canon One Piece moments, described visually (who, doing what, emotion, place). Never output episode or chapter numbers.",
-    "Do not reuse the same scene idea on consecutive lines. The backup must be a different moment with the same emotional weight. No editing advice.",
-    "Return ONLY JSON: {\"lines\":[{\"n\":<line number>,\"scene\":\"Thai, concrete visual: who + action + emotion + place\",\"backup\":\"Thai, a different moment with the same feeling\",\"chars\":[\"English names of characters on screen\"],\"keys\":[\"3-6 short Thai keywords: emotion, action, place\"]}]}",
-    "Script lines:"
+  /* ---------- ผู้กำกับ AI ----------
+     1) beats: แบ่งบทเป็นช็อตสั้นๆ (ประโยคย่อย ~1-3 วิ) ตามสไตล์ช่อง: เอ่ยชื่อใคร/อะไร ภาพต้องเป็นสิ่งนั้น (ข้อความล้วน)
+     2) direct: ส่งรูปผู้สมัครของแต่ละช็อต (ค้นจากดัชนีในเครื่องแล้ว) ให้ AI ดูภาพจริงแล้วเลือก ทีละชุดหลายช็อต (เห็นบทเต็มเพื่อความต่อเนื่อง) */
+  var BEATS = [
+    "You are the director of a Thai One Piece YouTube Shorts channel. House style: an easy, pleasant-to-watch edit with a new shot every 1-3 seconds of narration; whenever the narration names a character, place or thing, that shot shows exactly it.",
+    "Split the Thai narration below into shots.",
+    "Rules: keep the original words in the original order; every word goes into exactly one shot (no rewriting, no skipping, no adding). Each shot is about 6-30 Thai characters (1-3 seconds spoken), split at natural pauses; a list of names becomes one shot per name.",
+    "For each shot describe the ideal anime footage for that exact moment (who is on screen, doing what, with what emotion). Prefer recognizable canon One Piece moments. Never output episode numbers.",
+    "Return ONLY JSON: {\"shots\":[{\"t\":\"exact Thai text of this shot\",\"want\":\"Thai: who + action + emotion (+ place)\",\"chars\":[\"English names that must be on screen\"],\"keys\":[\"2-5 short Thai keywords: emotion, action, place\"],\"shot\":\"close|medium|wide|any\"}]}",
+    "Narration:"
   ].join("\n");
-  async function plan(lines){
-    var body = { model:cfg.model, usage:{ include:true }, messages:[{ role:"user", content: PLAN + "\n" + lines.map(function(l, i){ return (i + 1) + ". " + l; }).join("\n") }] };
+  async function beats(script){
+    var body = { model:cfg.model, usage:{ include:true }, messages:[{ role:"user", content:BEATS + "\n" + script }] };
     if(/^google\//.test(cfg.model)) body.reasoning = { effort:"low" };
     var r = await post(body), j;
     try{ j = parseJSON(r.text); }catch(err){ err.cost = r.cost; throw err; }
-    var arr = Array.isArray(j.lines) ? j.lines : [], str = function(x){ return Array.isArray(x) ? x.map(String).filter(Boolean).slice(0, 8) : []; };
-    r.items = lines.map(function(l, i){ var it = arr.find(function(x){ return Number(x.n) === i + 1; }) || {};
-      return { line:l, scene:String(it.scene || ""), backup:String(it.backup || ""), chars:str(it.chars), keys:str(it.keys) }; });
+    var str = function(x){ return Array.isArray(x) ? x.map(String).filter(Boolean).slice(0, 8) : []; };
+    r.shots = (Array.isArray(j.shots) ? j.shots : []).map(function(x){ return { t:String(x.t || "").trim(), want:String(x.want || ""), chars:str(x.chars), keys:str(x.keys), shot:String(x.shot || "any") }; }).filter(function(x){ return x.t; });
     return r;
   }
-  /* แปลคำค้นไทย → คำค้นอังกฤษ/ชื่อตัวละคร (ข้อความล้วน เล็กมาก) */
-  async function expandQuery(q){
-    var r = await post({ model:cfg.model, usage:{ include:true }, messages:[{ role:"user", content:
-      "Search query from a Thai One Piece video editor: \"" + q + "\"\nReturn ONLY JSON {\"terms\":[...]} with English character names and 2-6 short lowercase English tags that match it." }] });
-    var j = parseJSON(r.text); r.terms = Array.isArray(j.terms) ? j.terms.map(String) : []; return r;
+  var DIRECT = [
+    "You are a strict film editor picking anime footage for a Thai One Piece YouTube Short (fast, pleasant cuts; the picture must match what the narration says at that moment).",
+    "Full narration for context: \"{script}\"",
+    "For each shot below you get its narration, the wanted footage, and lettered candidate frames from the editor's own library (each with an automatic description that can be imperfect; trust the image).",
+    "Choose the best candidate per shot: 1) the right character(s) clearly on screen, 2) matching emotion/action, 3) a clear, striking frame. Do not pick the same frame as the previous shot; vary close-ups and wide shots across the sequence. If nothing fits well, pick the closest anyway.",
+    "Return ONLY JSON: {\"picks\":[{\"s\":<shot number>,\"best\":\"<candidate id e.g. 3b>\",\"alts\":[\"<id>\",\"<id>\"],\"why\":\"short Thai reason\"}]}"
+  ].join("\n");
+  /* items:[{ n, t, want, chars, cands:[{ id, who, sum, img }] }] → picks:[{ s, best, alts, why }] */
+  async function direct(script, items, prev){
+    var content = [{ type:"text", text:DIRECT.replace("{script}", script.replace(/\s+/g, " ").slice(0, 2500)) + (prev ? "\nPrevious shot used: " + prev : "") }];
+    items.forEach(function(it){
+      content.push({ type:"text", text:"\nShot " + it.n + ": \"" + it.t + "\" | want: " + it.want + (it.chars.length ? " | must show: " + it.chars.join(", ") : "") });
+      it.cands.forEach(function(cd){
+        content.push({ type:"text", text:cd.id + " — " + cd.who + " · " + cd.sum });
+        content.push({ type:"image_url", image_url:{ url:cd.img } });
+      });
+    });
+    var body = { model:cfg.model, usage:{ include:true }, messages:[{ role:"user", content:content }] };
+    if(/^google\//.test(cfg.model)) body.reasoning = { effort:"low" };
+    var r = await post(body), j;
+    try{ j = parseJSON(r.text); }catch(err){ err.cost = r.cost; throw err; }
+    r.picks = (Array.isArray(j.picks) ? j.picks : []).map(function(p){ return { s:Number(p.s), best:String(p.best || ""), alts:Array.isArray(p.alts) ? p.alts.map(String) : [], why:String(p.why || "") }; });
+    return r;
   }
 
-  window.FT = { cfg:cfg, saveCfg:saveCfg, orKey:orKey, store:store, clipId:clipId, scan:scan, refreshImages:refreshImages, IMG_V:IMG.v, describe:describe, expandQuery:expandQuery, rank:rank, plan:plan };
+  window.FT = { cfg:cfg, saveCfg:saveCfg, orKey:orKey, store:store, clipId:clipId, scan:scan, refreshImages:refreshImages, IMG_V:IMG.v, describe:describe, beats:beats, direct:direct };
 })();

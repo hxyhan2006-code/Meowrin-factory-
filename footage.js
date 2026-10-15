@@ -1,4 +1,4 @@
-/* footage.js — หน้าจอของ "ดัชนีฟุตเทจ" (ทดสอบ): คิวทำดัชนี · ต้นทุน/เวลา · ตั้งค่า/สำรอง/debug (ค้นหาอยู่ใน footage-find.js)
+/* footage.js — หน้าฟุตเทจ: แท็บอัปโหลด (คิวทำดัชนี + อัปคลัง) · ต้นทุน/เวลา · ตั้งค่า/สำรอง · รวมคลิปซ้ำเองตอนเปิดหน้า (ค้นหาอยู่ใน footage-find.js)
    ใช้ window.FT จาก footage-core.js */
 (function(){
   "use strict";
@@ -27,7 +27,7 @@
     etaBase = mbDone > 1 ? ms / mbDone * mbLeft : ms / dn.length * rest.length; etaAt = Date.now();
   }
   function mmss(ms){ var s = Math.max(0, Math.round(ms / 1000)); return Math.floor(s / 60) + ":" + pad(s % 60); }
-  function refreshLib(){ return FT.store.all().then(function(a){ lib = a || []; renderAll(); document.dispatchEvent(new Event("ft:lib")); }); } /* ft:lib = ดัชนีโหลด/เปลี่ยนแล้ว (ให้ footage-pick.js วาดแถบที่เลือกไว้ใหม่) */
+  function refreshLib(){ return FT.store.all().then(function(a){ lib = a || []; renderAll(); }); }
   function byId(id){ return lib.find(function(c){ return c.id === id; }); }
   function findClip(f){ /* แกลเลอรีมือถือส่ง lastModified ไม่เหมือนเดิม และตัวเลือกรูป (Google Photos) ส่งชื่อเป็นเลข เช่น 21347.mp4 แต่แอพไฟล์ส่งชื่อจริง
                            → จับด้วยชื่อ+ขนาด แล้วถอยไปขนาดอย่างเดียว (ไบต์เท่ากันเป๊ะ = ไฟล์เดียวกันแทบแน่นอน) ถ้ามีคลิปขนาดนั้นตัวเดียว */
@@ -47,36 +47,32 @@
   /* ---------- เลือกไฟล์ → คิว ---------- */
   var VIDEO = /\.(mp4|m4v|mov|webm|mkv|3gp)$/i;
   function addFiles(list){
-    var typed = $("album").value.trim(), album = typed || "ไม่ระบุ", picked = Date.now(), up = FT.cloud && FT.cloud.ready(); /* ตั้งค่าคลังไว้ = อัปขึ้นคลังอัตโนมัติ */
+    var album = "ไม่ระบุ", picked = Date.now(), up = FT.cloud && FT.cloud.ready(); /* ตั้งค่าคลังไว้ = อัปขึ้นคลังอัตโนมัติ */
     var files = Array.prototype.filter.call(list, function(f){ return /^video\//.test(f.type) || VIDEO.test(f.name); }), other = list.length - files.length; /* แอพไฟล์เลือกทั้งโฟลเดอร์ได้ → ตัดรูป/ไฟล์อื่นทิ้ง */
     var add = files.map(function(f){
       var done = findClip(f), id = done ? done.id : FT.clipId(f), fin = done && done.status === "done";
       var old = fin && (done.imgV || 1) < FT.IMG_V; /* รูปรุ่นเก่า (เล็ก/เบลอ) → วาดใหม่ฟรี */
-      var relabel = fin && !!typed && done.album !== typed; /* เลือกคลิปเดิมซ้ำพร้อมพิมพ์อัลบั้มใหม่ → แก้ชื่ออัลบั้มให้ (ไม่เรียก AI) */
       var cloud = up && fin && !done.r2; /* ทำดัชนีแล้วแต่ยังไม่อยู่ในคลัง → อัปอย่างเดียว */
-      var mode = old ? "up" : relabel ? "label" : cloud ? "cloud" : "";
+      var mode = old ? "up" : cloud ? "cloud" : "";
       return { file:f, id:id, album:album, mode:mode, toCloud:up, status: fin && !mode ? "skip" : "wait", err:"", p:0,
                info:{ name:f.name, type:f.type, size:f.size, lastModified:f.lastModified, picked:picked } };
     });
     queue = queue.filter(function(q){ return q.status === "run"; }).concat(add.filter(function(a){ return !queue.some(function(q){ return q.id === a.id && q.status === "run"; }); }));
     /* สรุปให้รู้ก่อนกดเริ่ม: อะไรเสียค่า AI อะไรอัปอย่างเดียว อะไรข้าม (เลือกทั้งอัลบั้มซ้ำได้ ไม่ทำซ้ำ) */
     var n = function(fn){ return add.filter(fn).length; };
-    var nNew = n(function(q){ return q.status === "wait" && !q.mode; }), nUp = n(function(q){ return q.mode === "cloud"; }), nFix = n(function(q){ return q.mode === "up" || q.mode === "label"; }), nSkip = n(function(q){ return q.status === "skip"; });
-    msg("runMsg", "เลือกมา " + add.length + " คลิป" + (other ? " (ตัดไฟล์ที่ไม่ใช่วิดีโอ " + other + ")" : "") + " · ใหม่ทำดัชนี " + nNew + (nNew ? " (เสียค่า AI ≈ " + money(nNew * avgCost()) + ")" : "") + " · อัปขึ้นคลังอย่างเดียว " + nUp + " · แก้รูป/อัลบั้ม " + nFix + " · มีครบแล้ว ข้าม " + nSkip, nNew ? "" : "ok");
-    renderQueue(); renderDebug();
+    var nNew = n(function(q){ return q.status === "wait" && !q.mode; }), nUp = n(function(q){ return q.mode === "cloud"; }), nFix = n(function(q){ return q.mode === "up"; }), nSkip = n(function(q){ return q.status === "skip"; });
+    msg("runMsg", "เลือกมา " + add.length + " คลิป" + (other ? " (ตัดไฟล์ที่ไม่ใช่วิดีโอ " + other + ")" : "") + " · ใหม่ทำดัชนี " + nNew + (nNew ? " (เสียค่า AI ≈ " + money(nNew * avgCost()) + ")" : "") + " · อัปขึ้นคลังอย่างเดียว " + nUp + " · วาดรูปใหม่ " + nFix + " · มีครบแล้ว ข้าม " + nSkip, nNew ? "" : "ok");
+    renderQueue();
   }
   function avgCost(){ var d = lib.filter(function(c){ return c.status === "done" && c.cost; }); return d.length ? d.reduce(function(t, c){ return t + c.cost; }, 0) / d.length : 0.014; }
   $("filesDocs").addEventListener("change", function(){ addFiles(this.files); this.value = ""; });
   $("filesDocsBtn").addEventListener("click", function(){ $("filesDocs").click(); });
-  $("album").addEventListener("input", function(){ /* เปลี่ยนชื่ออัลบั้มก่อนกดเริ่ม = ใช้กับคลิปที่ยังรออยู่ */
-    var a = this.value.trim() || "ไม่ระบุ"; queue.forEach(function(q){ if(q.status === "wait") q.album = a; }); renderQueue();
-  });
 
   function renderQueue(){
     if(!queue.length){ $("queue").innerHTML = '<li class="empty">ยังไม่ได้เลือกไฟล์</li>'; }
     else $("queue").innerHTML = queue.map(function(q){
-      var c = byId(q.id), tag = { wait:[q.mode === "up" ? "รออัปเกรดรูป" : q.mode === "label" ? "รอแก้อัลบั้ม" : q.mode === "cloud" ? "รออัปขึ้นคลัง" : q.key ? "รอ (จากคลัง)" : "รอ",""], run:["กำลังทำ " + Math.round(q.p * 100) + "%","run"], done:["เสร็จ","ok"], error:["error","err"], skip:["ทำแล้ว (ข้าม)","ok"] }[q.status];
-      var sub = q.status === "run" ? esc((q.stage || "เริ่ม...") + " · " + mmss(Date.now() - q.t0)) : q.mode === "cloud" && q.status === "wait" ? "ทำดัชนีแล้ว · จะอัปไฟล์ขึ้นคลัง (ไม่เรียก AI)" : q.mode === "label" && q.status === "wait" ? "จะเปลี่ยนอัลบั้ม “" + esc(c.album) + "” → “" + esc(q.album) + "” (ไม่เรียก AI)" : q.mode === "up" && q.status === "wait" ? "รูปรุ่นเก่า (เบลอ) · จะวาดรูปใหม่ ไม่เรียก AI" + (q.album !== "ไม่ระบุ" && q.album !== c.album ? " + เปลี่ยนอัลบั้มเป็น “" + esc(q.album) + "”" : "") : c && c.status === "done" ? c.scenes.length + " ฉาก · " + money(c.cost || 0) + " · " + ((c.ms || 0) / 1000).toFixed(0) + " วิ · " + capDur(c.duration) : esc(q.album || "ไม่ระบุอัลบั้ม");
+      var c = byId(q.id), tag = { wait:[q.mode === "up" ? "รออัปเกรดรูป" : q.mode === "cloud" ? "รออัปขึ้นคลัง" : q.key ? "รอ (จากคลัง)" : "รอ",""], run:["กำลังทำ " + Math.round(q.p * 100) + "%","run"], done:["เสร็จ","ok"], error:["error","err"], skip:["ทำแล้ว (ข้าม)","ok"] }[q.status];
+      var sub = q.status === "run" ? esc((q.stage || "เริ่ม...") + " · " + mmss(Date.now() - q.t0)) : q.mode === "cloud" && q.status === "wait" ? "ทำดัชนีแล้ว · จะอัปไฟล์ขึ้นคลัง (ไม่เรียก AI)" : q.mode === "up" && q.status === "wait" ? "รูปรุ่นเก่า (เบลอ) · จะวาดรูปใหม่ ไม่เรียก AI" : c && c.status === "done" ? c.scenes.length + " ฉาก · " + money(c.cost || 0) + " · " + ((c.ms || 0) / 1000).toFixed(0) + " วิ · " + capDur(c.duration) : esc(q.album || "ไม่ระบุอัลบั้ม");
       return '<li><img ' + (c && c.cover ? 'src="' + c.cover + '" ' : "") + 'alt=""><div class="t"><b>' + esc(q.info.name) + "</b><span>" + sub + "</span>"
         + (q.err ? '<br><span style="color:var(--err)">' + esc(q.err) + "</span>" : "") + '</div><span class="tag ' + tag[1] + '">' + tag[0] + "</span></li>";
     }).join("");
@@ -156,7 +152,6 @@
     var c = byId(q.id); q.status = "run"; q.p = 0; q.err = ""; q.t0 = Date.now(); q.stage = "วาดรูปใหม่ให้คมขึ้น..."; renderQueue();
     try{
       var r = await FT.refreshImages($("vid"), q.file, c, function(p){ q.p = p; renderQueue(); });
-      if(q.album && q.album !== "ไม่ระบุ") c.album = q.album;
       c.cover = r.cover; c.scenes.forEach(function(sc, i){ sc.img = r.imgs[i].img; sc.thumb = r.imgs[i].thumb; }); c.imgV = FT.IMG_V;
       await FT.store.put(c); q.status = "done"; q.p = 1; q.mode = "";
     }catch(err){ if(document.hidden){ q.status = "wait"; q.p = 0; } else { q.status = "error"; q.err = err.message || String(err); } }
@@ -168,11 +163,6 @@
     catch(err){ if(document.hidden || err.budget){ q.status = "wait"; q.p = 0; if(err.budget){ paused = true; capMsg = err.message; } } else { q.status = "error"; q.err = err.message || String(err); } }
     renderAll();
   }
-  async function labelClip(q){
-    var c = byId(q.id); c.album = q.album; q.status = "run"; renderQueue();
-    try{ await FT.store.put(c); q.status = "done"; q.p = 1; q.mode = ""; }catch(err){ q.status = "error"; q.err = err.message || String(err); }
-    renderAll();
-  }
   async function alsoUpload(q){ /* แก้อัลบั้ม/อัปเกรดรูปเสร็จแล้ว ถ้าติ๊กอัปขึ้นคลังไว้และยังไม่อยู่ในคลัง → อัปต่อในรอบเดียวกัน */
     var c = byId(q.id); if(q.status !== "done" || !q.toCloud || !q.file || !c || c.r2) return;
     q.status = "run"; q.stage = "อัปขึ้นคลัง..."; renderQueue();
@@ -181,7 +171,6 @@
     q.status = "done"; renderAll();
   }
   async function processClip(q){
-    if(q.mode === "label") return labelClip(q).then(function(){ return alsoUpload(q); });
     if(q.mode === "up") return upgradeClip(q).then(function(){ return alsoUpload(q); });
     if(q.mode === "cloud") return cloudClip(q);
     var t0 = Date.now(), cost = 0, tin = 0, tout = 0, raw = [];
@@ -195,7 +184,7 @@
       var m = await FT.scan($("vid"), q.file, function(p){ q.p = p * 0.5; q.stage = p < 0.7 ? "อ่านเฟรมหาจุดตัดฉาก..." : "จับภาพตัวแทนแต่ละฉาก..."; renderQueue(); });
       var msScan = Date.now() - t0; /* เวลาอ่านเฟรม+ตัดฉาก (ยังไม่นับ AI) */
       q.stage = "ฉากทั้งหมด " + m.scenes.length + " · ส่งให้ AI ดู...";
-      q.info.duration = m.duration; q.info.w = m.w; q.info.h = m.h; renderDebug();
+      q.info.duration = m.duration; q.info.w = m.w; q.info.h = m.h;
       m.scenes.forEach(function(sc, i){ sc.n = i + 1; });
       var chunks = []; for(var i = 0; i < m.scenes.length; i += CHUNK) chunks.push(m.scenes.slice(i, i + CHUNK));
       var sums = [], doneChunks = 0;
@@ -294,13 +283,6 @@
     return { del:del, fix:fix };
   }
   function mergeDupes(d){ return FT.store.putMany(d.fix).then(function(){ return FT.store.del(d.del); }).then(refreshLib); }
-  $("dupBtn").addEventListener("click", function(){
-    var d = findDupes();
-    if(!d.del.length){ msg("dupMsg", "ไม่เจอคลิปซ้ำ (" + lib.length + " คลิป ขนาดไฟล์+ความยาวไม่ซ้ำกันเลย)", "ok"); return; }
-    if(!window.confirm("เจอคลิปซ้ำ " + d.del.length + " รายการ จะลบตัวที่ซ้ำและเก็บตัวที่ทำล่าสุดไว้ ตกลงไหม?")) return;
-    mergeDupes(d).then(function(){ msg("dupMsg", "ลบคลิปซ้ำแล้ว " + d.del.length + " รายการ เหลือ " + lib.length + " คลิป", "ok"); })
-      .catch(function(err){ msg("dupMsg", "ลบไม่ได้: " + err.message, "err"); });
-  });
 
   /* ---------- สำรอง/กู้คืน ---------- */
   $("exportBtn").addEventListener("click", function(){
@@ -326,46 +308,11 @@
     $("dbInfo").textContent = n + " คลิป · " + s + " ฉาก · ขนาดราว " + mb.toFixed(1) + " MB (รวมรูป)";
   }
 
-  /* ---------- debug ---------- */
-  function renderDebug(){
-    var items = queue.slice(-20);
-    if(!items.length){ $("debug").innerHTML = '<p class="empty">ยังไม่มีข้อมูล (เลือกไฟล์ในแท็บ ทำดัชนี)</p>'; return; }
-    $("debug").innerHTML = items.map(function(q){
-      var i = q.info, c = byId(q.id), raw = (c && c.raw) || q.raw || [];
-      var near = Math.abs(i.picked - i.lastModified) < 10 * 60e3, generic = /^(\d{6,}|video|vid|image|msf:|document)/i.test(i.name);
-      return '<details class="dbg"><summary>' + esc(i.name) + "</summary><pre>"
-        + esc(["file.name: " + i.name + (generic ? "  ⚠ ชื่อดูเป็นเลขที่ระบบตั้งให้ ไม่ใช่ชื่อจริง" : "  ✓ ดูเป็นชื่อจริง"),
-               "lastModified: " + new Date(i.lastModified).toLocaleString("th-TH") + (near ? "  ⚠ ใกล้เวลาที่เลือกไฟล์ น่าจะไม่ใช่วันที่จริง" : "  ✓"),
-               "type: " + (i.type || "(ว่าง)") + " · size: " + (i.size / 1048576).toFixed(1) + " MB",
-               "duration: " + (i.duration || c ? (i.duration || c.duration).toFixed(2) + " วิ · " + (i.w || c.w) + "×" + (i.h || c.h) : "(ยังไม่ได้อ่าน)"),
-               "id: " + q.id].join("\n"))
-        + "</pre>" + raw.map(function(r){ return "<pre>— คำตอบดิบ AI ชุดที่ " + r.chunk + " —\n" + esc(r.text) + "</pre>"; }).join("") + "</details>";
-    }).join("");
-  }
-
-  function renderAlbums(){
-    var as = lib.map(function(c){ return c.album; }).filter(function(a, i, s){ return a && s.indexOf(a) === i; }).sort();
-    $("albumList").innerHTML = as.map(function(a){ return '<option value="' + esc(a) + '">'; }).join("");
-    var ro = $("renOld").value;
-    $("renOld").innerHTML = as.length ? as.map(function(a){ return '<option value="' + esc(a) + '">' + esc(a) + " (" + lib.filter(function(c){ return c.album === a; }).length + " คลิป)</option>"; }).join("") : '<option value="">ยังไม่มีอัลบั้ม</option>';
-    if(as.indexOf(ro) >= 0) $("renOld").value = ro;
-  }
-  async function rename(clips, name){ /* เปลี่ยนอัลบั้มของคลิปที่ส่งมา แล้วบันทึกลงฐานข้อมูล */
-    clips.forEach(function(c){ c.album = name; });
-    await FT.store.putMany(clips); renderAll();
-  }
-  $("renBtn").addEventListener("click", function(){
-    var from = $("renOld").value, to = $("renNew").value.trim();
-    if(!from || !to){ msg("renMsg", "เลือกอัลบั้มเดิมและพิมพ์ชื่อใหม่ก่อน", "err"); return; }
-    var hit = lib.filter(function(c){ return c.album === from; });
-    rename(hit, to).then(function(){ $("renNew").value = ""; msg("renMsg", "เปลี่ยน “" + from + "” → “" + to + "” แล้ว " + hit.length + " คลิป", "ok"); })
-      .catch(function(err){ msg("renMsg", "เปลี่ยนไม่ได้: " + err.message, "err"); });
-  });
-  /* ให้ไฟล์อื่นใช้ร่วม · footage-find.js เติม terms/hay/card/hasSrc/srcUrl/openFiles/search */
-  FT.ui = { lib:function(){ return lib; }, esc:esc, msg:msg, money:money, tm:tm, capDur:capDur, refresh:refreshLib, rename:rename,
+  /* ให้ไฟล์อื่นใช้ร่วม · footage-find.js เติม terms/hay/card/chars/hasSrc/srcUrl/openFiles/search */
+  FT.ui = { lib:function(){ return lib; }, esc:esc, msg:msg, money:money, tm:tm, capDur:capDur, refresh:refreshLib,
             addQueue:function(items){ queue = queue.filter(function(q){ return q.status !== "skip"; }).concat(items.filter(function(a){ return !queue.some(function(q){ return q.id === a.id; }); })); renderQueue(); },
             addCost:function(x){ runCost += x; renderStats(); }, wake:wake };
-  function renderAll(){ renderQueue(); renderStats(); renderDb(); renderAlbums(); renderDebug(); if($("p-find").classList.contains("on") && FT.ui.search) FT.ui.search(); }
+  function renderAll(){ renderQueue(); renderStats(); renderDb(); if($("p-find").classList.contains("on") && FT.ui.search) FT.ui.search(); }
 
   refreshLib().then(function(){ /* เปิดหน้าครั้งไหน ถ้ามีรายการซ้ำเก่าค้าง รวมให้เองเลย (ลบแค่รายการดัชนีที่ซ้ำ ไม่แตะไฟล์วิดีโอ) */
     var d = findDupes(); if(!d.del.length) return;
