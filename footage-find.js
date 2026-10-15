@@ -154,7 +154,7 @@
     if(e.target.closest("#moreBtn")){ chipMax += 40; search(); }
   });
   function browse(clips){ /* ไม่พิมพ์คำค้น = โชว์ทุกคลิปพร้อมสรุป · เลือกชิป = โชว์ฉากที่ตรงทุกชิป (ใหม่สุดก่อน) */
-    lastHits = []; shown = [];
+    lastHits = [];
     if(filtering()){
       var sc = []; clips.forEach(function(c){ c.scenes.forEach(function(s){ if(passSc(s)) sc.push({ c:c, sc:s }); }); });
       sc.sort(function(a, b){ return (b.c.lastModified || 0) - (a.c.lastModified || 0) || a.sc.s - b.sc.s; });
@@ -274,7 +274,7 @@
     if(to && to.trim() && to.trim() !== h.c.album) U.rename([h.c], to.trim()).catch(function(err){ window.alert("เปลี่ยนไม่ได้: " + err.message); });
   });
 
-  Object.assign(U, { terms:terms, hay:hay, card:card, fileFor:fileOf, hasSrc:hasSrc, srcUrl:srcUrl, search:search,
+  Object.assign(U, { show:function(c, sc){ return shown.push({ c:c, sc:sc }) - 1; }, terms:terms, hay:hay, card:card, fileFor:fileOf, hasSrc:hasSrc, srcUrl:srcUrl, search:search,
                      openFiles:function(docs){ $(docs ? "pickDocs" : "playFiles").click(); } });
   if($("p-find").classList.contains("on")) search();
 })();

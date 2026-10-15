@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600&family=Mitr:wght@500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="footage.css?v=20261015o">
+<link rel="stylesheet" href="footage.css?v=20261015p">
 </head>
 <body>
 <header>
@@ -67,6 +67,7 @@
       <p class="hint" id="wakeInfo" hidden></p>
       <p class="hint">⚠ เปิดหน้านี้ค้างไว้ระหว่างทำ ถ้าสลับแอพ เบราว์เซอร์จะหยุดอ่านวิดีโอ (กลับมาแล้วกด เริ่ม/ทำต่อ ได้)</p>
     </div></details>
+    <details class="panel fold" id="auditFold"><summary><span>🎯 ตรวจความแม่นของ AI</span><em class="state idle" id="auditTag">...</em></summary><div class="fbody"><div id="auditBox"></div></div></details>
     <div class="panel">
       <input id="q" type="search" enterkeyhint="search" placeholder="เช่น ลูฟี่ตกใจ, โซโร ฟันดาบ" autocomplete="off">
       <div class="chips" id="chips"></div>
@@ -224,6 +225,6 @@
 <input id="pickDocs" type="file" multiple hidden><!-- ไม่ใส่ accept → Android เปิดแอพไฟล์ (เข้าโฟลเดอร์ + เลือกทั้งหมดได้) แทนตัวเลือกรูป -->
 <video id="vid" muted playsinline preload="auto" style="position:fixed;left:-9999px;width:2px;height:2px"></video>
 
-<script src="store.js?v=20261015o" data-boot="budget.js?v=20261015o footage-core.js?v=20261015o r2.js?v=20261015o footage.js?v=20261015o footage-find.js?v=20261015o footage-cloud.js?v=20261015o mp4fix.js?v=20261015o footage-plan.js?v=20261015o gdrive.js?v=20261015o"></script>
+<script src="store.js?v=20261015p" data-boot="budget.js?v=20261015p footage-core.js?v=20261015p r2.js?v=20261015p footage.js?v=20261015p footage-find.js?v=20261015p footage-audit.js?v=20261015p footage-cloud.js?v=20261015p mp4fix.js?v=20261015p footage-plan.js?v=20261015p gdrive.js?v=20261015p"></script>
 </body>
 </html>
