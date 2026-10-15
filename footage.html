@@ -8,42 +8,17 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600&family=Mitr:wght@500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="footage.css?v=20261015m">
+<link rel="stylesheet" href="footage.css?v=20261015n">
 </head>
 <body>
 <header>
   <div class="wrap"><h1>ดัชนีฟุตเทจ <span class="tag" id="ver">ทดสอบ</span></h1><a href="./">← กลับแอพ</a></div>
-  <nav class="tabs"><button data-p="idx" class="on">ทำดัชนี</button><button data-p="find">ค้นหา</button><button data-p="plan">วางแผน</button><button data-p="set">ตั้งค่า</button></nav>
+  <nav class="tabs"><button data-p="find" class="on">คลัง</button><button data-p="idx">ทำดัชนี</button><button data-p="plan">วางแผน</button><button data-p="set">ตั้งค่า</button></nav>
 </header>
 
 <main class="wrap">
-  <!-- ทำดัชนี -->
-  <section class="page on" id="p-idx">
-    <div class="panel">
-      <h2>เลือกคลิป</h2>
-      <label for="album">ชื่ออัลบั้มในแกลเลอรี/CapCut ของคลิปชุดนี้ (ไม่บังคับ) เช่น luffy, zoro, strawhat gang</label>
-      <input id="album" type="text" list="albumList" placeholder="เช่น luffy" autocomplete="off">
-      <datalist id="albumList"></datalist>
-      <label for="files">ไฟล์วิดีโอ (เลือกได้หลายไฟล์)</label>
-      <button class="btn" id="filesDocsBtn" type="button" style="width:100%">📁 เลือกจากแอพไฟล์ (เลือกทั้งอัลบั้มได้)</button>
-      <input id="filesDocs" type="file" multiple hidden><!-- ไม่ใส่ accept → Android เปิดแอพไฟล์ เข้า Pictures/Gallery/owner/<อัลบั้ม> แล้วเลือกทั้งหมดได้ -->
-      <p class="hint" style="margin-top:6px">อัลบั้มของแกลเลอรีอยู่ที่ Pictures → Gallery → owner → ชื่ออัลบั้ม · กดค้างไฟล์แรก → เลือกทั้งหมด · เลือกซ้ำได้ คลิปที่ทำ/อัปแล้วจะถูกข้ามเอง</p>
-      <label for="files" style="margin-top:10px">หรือเลือกจากแกลเลอรี</label>
-      <input id="files" type="file" accept="video/*" multiple>
-      <p class="hint">เลือกทีละอัลบั้ม แล้วพิมพ์ชื่ออัลบั้มนั้น (ไม่ใช่คำอธิบายฉาก AI ดูเนื้อหาเองอยู่แล้ว) · เลือกคลิปที่เคยทำไว้ซ้ำพร้อมพิมพ์ชื่อใหม่ = แก้ชื่ออัลบั้มให้ ไม่เสียค่า AI · วิดีโอไม่ถูกอัปโหลด</p>
-      <label class="chk" id="toCloudRow" hidden><input type="checkbox" id="toCloud" checked> อัปไฟล์ขึ้นคลังด้วย (ต่อไปไม่ต้องเลือกไฟล์อีก · เลือกคลิปที่ทำดัชนีแล้วซ้ำ = อัปอย่างเดียว ไม่เรียก AI)</label>
-      <label class="chk"><input type="checkbox" id="upImg" checked> อัปเกรดรูปคลิปที่เคยทำไว้ให้คมขึ้น (เลือกไฟล์เดิมซ้ำ · ไม่เรียก AI ไม่เสียค่า)</label>
-      <div class="row" style="margin-top:12px">
-        <button class="btn" id="startBtn" disabled>เริ่มทำดัชนี</button>
-        <button class="btn ghost" id="pauseBtn" hidden>พัก</button>
-      </div>
-      <button class="btn ghost small" id="retryBtn" hidden style="margin-top:8px;width:100%">ลองใหม่คลิปที่ error</button>
-      <div id="runMsg"></div>
-      <div class="prog"><i id="progBar"></i></div>
-      <p class="hint" id="progTxt"></p>
-      <p class="hint" id="wakeInfo" hidden></p>
-      <p class="hint">⚠ เปิดหน้านี้ค้างไว้ระหว่างทำ ถ้าสลับแอพ เบราว์เซอร์จะหยุดอ่านวิดีโอ (กลับมาแล้วกด เริ่ม/ทำต่อ ได้)</p>
-    </div>
+  <!-- ทำดัชนี (คลังคลาวด์ + ต้นทุน + คิว) -->
+  <section class="page" id="p-idx">
     <div class="panel">
       <h2>คลังบนคลาวด์</h2>
       <p class="hint" id="cloudOff" style="margin-top:0">ยังไม่ได้ตั้งค่าคลัง (แท็บ ตั้งค่า → คลังวิดีโอ) · ตั้งแล้วฟุตเทจทั้งหมดอยู่บนคลาวด์ ไม่ต้องเลือกไฟล์ทุกครั้ง</p>
@@ -66,11 +41,36 @@
     </div>
   </section>
 
-  <!-- ค้นหา -->
-  <section class="page" id="p-find">
+  <!-- คลัง (ค้นหา + อัลบั้มอัตโนมัติ + เพิ่มฟุตเทจ) -->
+  <section class="page on" id="p-find">
+    <details class="panel fold" id="addFold"><summary><span>⬆ เพิ่มฟุตเทจเข้าคลัง</span><em class="state idle">เลือกไฟล์ → ทำดัชนี</em></summary><div class="fbody">
+      <label for="album">ชื่ออัลบั้ม (ไม่บังคับ ปล่อยว่างได้ AI จัดหมวดตัวละครให้เองอยู่แล้ว)</label>
+      <input id="album" type="text" list="albumList" placeholder="เช่น luffy" autocomplete="off">
+      <datalist id="albumList"></datalist>
+      <label for="files">ไฟล์วิดีโอ (เลือกได้หลายไฟล์)</label>
+      <button class="btn" id="filesDocsBtn" type="button" style="width:100%">📁 เลือกจากแอพไฟล์ (เลือกทั้งอัลบั้มได้)</button>
+      <input id="filesDocs" type="file" multiple hidden><!-- ไม่ใส่ accept → Android เปิดแอพไฟล์ เข้า Pictures/Gallery/owner/<อัลบั้ม> แล้วเลือกทั้งหมดได้ -->
+      <p class="hint" style="margin-top:6px">อัลบั้มของแกลเลอรีอยู่ที่ Pictures → Gallery → owner → ชื่ออัลบั้ม · กดค้างไฟล์แรก → เลือกทั้งหมด · เลือกซ้ำได้ คลิปที่ทำ/อัปแล้วจะถูกข้ามเอง</p>
+      <label for="files" style="margin-top:10px">หรือเลือกจากแกลเลอรี</label>
+      <input id="files" type="file" accept="video/*" multiple>
+      <p class="hint">เลือกทั้งโฟลเดอร์มั่วๆ ได้เลย · เลือกคลิปที่เคยทำไว้ซ้ำพร้อมพิมพ์ชื่อใหม่ = แก้ชื่ออัลบั้มให้ ไม่เสียค่า AI · วิดีโอไม่ถูกอัปโหลด</p>
+      <label class="chk" id="toCloudRow" hidden><input type="checkbox" id="toCloud" checked> อัปไฟล์ขึ้นคลังด้วย (ต่อไปไม่ต้องเลือกไฟล์อีก · เลือกคลิปที่ทำดัชนีแล้วซ้ำ = อัปอย่างเดียว ไม่เรียก AI)</label>
+      <label class="chk"><input type="checkbox" id="upImg" checked> อัปเกรดรูปคลิปที่เคยทำไว้ให้คมขึ้น (เลือกไฟล์เดิมซ้ำ · ไม่เรียก AI ไม่เสียค่า)</label>
+      <div class="row" style="margin-top:12px">
+        <button class="btn" id="startBtn" disabled>เริ่มทำดัชนี</button>
+        <button class="btn ghost" id="pauseBtn" hidden>พัก</button>
+      </div>
+      <button class="btn ghost small" id="retryBtn" hidden style="margin-top:8px;width:100%">ลองใหม่คลิปที่ error</button>
+      <div id="runMsg"></div>
+      <div class="prog"><i id="progBar"></i></div>
+      <p class="hint" id="progTxt"></p>
+      <p class="hint" id="wakeInfo" hidden></p>
+      <p class="hint">⚠ เปิดหน้านี้ค้างไว้ระหว่างทำ ถ้าสลับแอพ เบราว์เซอร์จะหยุดอ่านวิดีโอ (กลับมาแล้วกด เริ่ม/ทำต่อ ได้)</p>
+    </div></details>
     <div class="panel">
       <input id="q" type="search" enterkeyhint="search" placeholder="เช่น ลูฟี่ตกใจ, โซโร ฟันดาบ" autocomplete="off">
-      <label for="albumFilter">อัลบั้ม</label>
+      <div class="chips" id="chips"></div>
+      <label for="albumFilter">อัลบั้มที่จัดเอง (ตัวกรองรอง)</label>
       <select id="albumFilter"><option value="">ทุกอัลบั้ม</option></select>
       <button class="btn ghost small" id="openFilesBtn" style="margin-top:12px;width:100%">📂 เปิดไฟล์ฟุตเทจให้เล่นดูฉากได้</button>
       <p class="hint" id="openFilesInfo" style="margin-top:6px">ยังไม่ได้เปิดไฟล์ (เลือกไฟล์ของอัลบั้มที่จะใช้ครั้งเดียว แล้วกด ▶ ดูฉากนี้ ได้ทันที · ไฟล์ไม่ถูกอัปโหลด)</p>
@@ -192,7 +192,7 @@
       <div id="dupMsg"></div>
     </div></details>
     <details class="panel fold"><summary><span>เปลี่ยนชื่ออัลบั้ม</span></summary><div class="fbody">
-      <p class="hint" style="margin-top:0">เปลี่ยนทั้งอัลบั้มพร้อมกัน (ทุกคลิปที่ใช้ชื่อนี้) · อยากเปลี่ยนแค่บางคลิป กด “✎ แก้” ที่การ์ดในแท็บค้นหา</p>
+      <p class="hint" style="margin-top:0">เปลี่ยนทั้งอัลบั้มพร้อมกัน (ทุกคลิปที่ใช้ชื่อนี้) · อยากเปลี่ยนแค่บางคลิป กด “✎ แก้” ที่การ์ดในแท็บคลัง</p>
       <label for="renOld">อัลบั้มที่จะเปลี่ยน</label>
       <select id="renOld"></select>
       <label for="renNew">ชื่อใหม่</label>
@@ -222,6 +222,6 @@
 <input id="pickDocs" type="file" multiple hidden><!-- ไม่ใส่ accept → Android เปิดแอพไฟล์ (เข้าโฟลเดอร์ + เลือกทั้งหมดได้) แทนตัวเลือกรูป -->
 <video id="vid" muted playsinline preload="auto" style="position:fixed;left:-9999px;width:2px;height:2px"></video>
 
-<script src="store.js?v=20261015m" data-boot="budget.js?v=20261015m footage-core.js?v=20261015m r2.js?v=20261015m footage.js?v=20261015m footage-find.js?v=20261015m footage-cloud.js?v=20261015m mp4fix.js?v=20261015m footage-plan.js?v=20261015m gdrive.js?v=20261015m"></script>
+<script src="store.js?v=20261015n" data-boot="budget.js?v=20261015n footage-core.js?v=20261015n r2.js?v=20261015n footage.js?v=20261015n footage-find.js?v=20261015n footage-cloud.js?v=20261015n mp4fix.js?v=20261015n footage-plan.js?v=20261015n gdrive.js?v=20261015n"></script>
 </body>
 </html>

@@ -124,3 +124,6 @@ pre{white-space:pre-wrap;word-break:break-word;font-size:11px;margin:6px 0 0;col
 .bigx{position:absolute;top:12px;right:12px;width:44px;height:44px;border-radius:50%;border:1px solid var(--line-strong);background:var(--field);color:var(--text);font-size:18px;cursor:pointer}
 .bigact{display:flex;align-items:center;gap:14px;flex-wrap:wrap;justify-content:center}
 .empty{color:var(--muted);text-align:center;padding:30px 10px}
+.chips{display:flex;gap:6px;overflow-x:auto;padding:10px 0 2px;margin:0 -2px;scrollbar-width:none}.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;min-height:34px;padding:0 12px;border-radius:999px;border:1px solid var(--line-strong);background:var(--field);color:var(--muted);font:inherit;font-size:13px;white-space:nowrap}
+.chip i{font-style:normal;opacity:.7;margin-left:2px}.chip.on{background:var(--accent-soft);border-color:rgba(245,158,11,.55);color:var(--accent)}
