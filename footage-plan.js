@@ -1,6 +1,7 @@
 /* footage-plan.js — แท็บ "ผู้กำกับ" 2 แบบ:
    long (ไปตัดเอง) = ช็อตละประโยค ตัดคลิปยาว LONG วิ (เผื่อเลือก) คั่นทุกช็อตด้วยจอเขียว + เสียงตื๊ด SEP วิ
-   fast (AI ตัดให้) = สับไว ช็อตละวลี 1-3 วิ ยาวตามจำนวนตัวอักษร (RATE ตัว/วิ) ต่อกันเลยไม่คั่น แบบคลิปตัวอย่างของช่อง
+   fast (AI ตัดให้) = สับไว ช็อตละวลี 1-3 วิ ต่อกันเลยไม่คั่น แบบคลิปตัวอย่างของช่อง · เลือกเสียงพากย์ (MWVoice จากแท็บเสียงของแอพหลัก) → ตัดภาพตามเวลาคำพูดจริง + ใส่เสียงให้ในไฟล์ ·
+   ไม่เลือกเสียง = ประมาณความยาวช็อตจากจำนวนตัวอักษร (RATE ตัว/วิ)
    บท → AI แบ่งช็อต (FT.beats) → ผู้สมัครในดัชนีในเครื่อง → AI ดูรูปจริงแล้วเลือก (FT.direct) → ตารางช็อต (แตะสลับ/ติ๊กไม่ใช้) → วิดีโอไฟล์เดียว (FT.stitch) → บันทึกไป CapCut · ตารางล่าสุดเก็บที่ MWStore key mw_footage_direct_v1 (อ้างคลิปด้วย id + ลำดับฉาก ไม่เก็บรูป) */
 (function(){
   "use strict";
@@ -13,6 +14,41 @@
   var say = function(t, k){ U.msg("plShareMsg", t, k); };
   function isLong(){ return !plan || plan.mode !== "fast"; }
   if(plan && plan.mode) $("plMode").value = plan.mode;
+
+  /* ---------- เสียงพากย์ (เทคล่าสุดจากแท็บเสียงของแอพหลัก เก็บใน MWVoice) ---------- */
+  function norm(s){ return String(s || "").replace(/\s+/g, ""); }
+  var voices = [];
+  async function refreshVoices(){
+    var on = $("plMode").value === "fast"; $("plVoiceRow").hidden = !on; if(!on || !window.MWVoice) return;
+    try{ voices = await MWVoice.list(); }catch(err){ voices = []; }
+    var t = norm($("plText").value), keep = $("plVoice").value;
+    var match = function(v){ var x = norm(v.text); return t && x && (x === t || x.indexOf(t) >= 0 || t.indexOf(x) >= 0); };
+    $("plVoice").innerHTML = '<option value="">— ไม่ใส่เสียง (ประมาณเวลาจากตัวอักษร) —</option>' + voices.map(function(v){
+      return '<option value="' + v.id + '">' + (match(v) ? "✓ ตรงกับบทนี้ · " : "") + U.esc(v.name || "เสียง") + " · " + new Date(v.id).toLocaleTimeString("th-TH", { hour:"2-digit", minute:"2-digit" }) + (v.align ? " · มีเวลาคำพูด" : " · ไม่มีเวลาคำพูด (ประมาณตามตัวอักษร)") + "</option>"; }).join("");
+    var m = voices.find(match); $("plVoice").value = voices.some(function(v){ return String(v.id) === keep; }) ? keep : (m ? String(m.id) : "");
+    $("plVoiceInfo").textContent = voices.length ? "" : "ยังไม่มีเสียง · สร้างเสียงในแอพหลัก (แท็บ เสียง) ก่อน แล้วกลับมาเลือกที่นี่";
+  }
+  $("plMode").addEventListener("change", refreshVoices);
+  $("plText").addEventListener("input", refreshVoices);
+  async function audioDur(blob){ return new Promise(function(ok){ var a = new Audio(), u = URL.createObjectURL(blob); a.preload = "metadata"; a.src = u;
+    a.onloadedmetadata = function(){ URL.revokeObjectURL(u); ok(isFinite(a.duration) ? a.duration : 0); }; a.onerror = function(){ URL.revokeObjectURL(u); ok(0); }; }); }
+  function timeShots(shots, al, total){ /* หาเวลาเริ่ม (x.at) กับความยาว (x.dur) ของแต่ละช็อตให้ตรงเสียง: จับข้อความช็อตกับเวลาตัวอักษร ที่จับไม่ได้ประมาณตามจำนวนตัวอักษร */
+    var n = shots.length, hit = [], pos = 0, i;
+    if(al) shots.forEach(function(x, k){
+      var s = norm(x.t), idx = al.chars.indexOf(s, pos), full = idx >= 0;
+      if(!full && s.length > 8) idx = al.chars.indexOf(s.slice(0, 8), pos);
+      if(idx >= 0){ var last = Math.min(al.en.length - 1, idx + s.length - 1); hit[k] = { s:al.st[idx], e:al.en[last] }; pos = idx + (full ? s.length : 8); }
+    });
+    for(i = 0; i < n; i++){ if(hit[i]) continue; /* ช่วงที่จับไม่ได้ → แบ่งตามจำนวนตัวอักษรระหว่างช็อตที่จับได้สองข้าง */
+      var a = i, b = i; while(b < n && !hit[b]) b++;
+      var lo = a && hit[a - 1] ? hit[a - 1].e : 0, hi = b < n ? hit[b].s : total, sum = 0, acc = 0, k;
+      for(k = a; k < b; k++) sum += norm(shots[k].t).length || 1;
+      for(k = a; k < b; k++){ var len = norm(shots[k].t).length || 1; hit[k] = { s:lo + (hi - lo) * acc / sum, e:lo + (hi - lo) * (acc + len) / sum }; acc += len; }
+      i = b - 1; }
+    var start = [];
+    for(i = 0; i < n; i++) start[i] = i === 0 ? 0 : Math.max(hit[i].s - 0.05, start[i - 1] + 0.5);
+    shots.forEach(function(x, k){ x.at = start[k]; x.dur = Math.max(0.4, (k + 1 < n ? start[k + 1] : total) - start[k]); });
+  }
 
   /* ---------- บทจากประวัติของแอพหลัก (mw_history_v1) ---------- */
   function part2(t){ var m = /^[^\n]*PART\s*2[^\n]*$/im.exec(t || ""); return (m ? t.slice(m.index + m[0].length) : (t || "")).trim(); }
@@ -60,11 +96,13 @@
     busy = true; this.disabled = true; var cost = 0, t0 = Date.now(), errs = 0;
     try{
       U.msg("plMsg", "AI กำลังแบ่งบทเป็นช็อต...");
-      var mode = $("plMode").value === "fast" ? "fast" : "long";
+      var mode = $("plMode").value === "fast" ? "fast" : "long", voice = mode === "fast" && $("plVoice").value && window.MWVoice ? await MWVoice.get(+$("plVoice").value) : null;
       var b = await FT.beats(script, mode); cost += b.cost;
       if(!b.shots.length) throw new Error("AI แบ่งช็อตไม่ได้ ลองใหม่อีกครั้ง");
+      var vdur = voice ? (await audioDur(voice.blob) || (voice.align ? voice.align.en[voice.align.en.length - 1] : 0)) : 0;
+      if(voice && vdur) timeShots(b.shots, voice.align, vdur); else voice = null; /* ไม่มีความยาวเสียง = ประมาณจากตัวอักษรตามเดิม */
       var used = {}, shots = b.shots.map(function(x){
-        x.dur = durOf(x.t);
+        if(!voice) x.dur = durOf(x.t);
         var cs = candidates(x, used); if(cs[0]) used[cs[0].c.id + "#" + cs[0].si] = 1;
         x.pool = cs; x.why = ""; return x;
       });
@@ -90,8 +128,8 @@
         var p = k && shots[k - 1].pool[0], a = x.pool[0];
         if(p && a && p.c.id === a.c.id && p.si === a.si && x.pool.length > 1) x.pool.push(x.pool.shift());
       });
-      plan = { mode:mode, at:Date.now(), cost:cost, ms:Date.now() - t0, script:script, shots:shots.map(function(x){
-        return { t:x.t, want:x.want, chars:x.chars, keys:x.keys, shot:x.shot, dur:x.dur, why:x.why, use:true, cands:x.pool.map(function(p){ return { id:p.c.id, si:p.si }; }) }; }) };
+      plan = { mode:mode, voice:voice ? { id:voice.id, name:voice.name || "", dur:vdur } : null, at:Date.now(), cost:cost, ms:Date.now() - t0, script:script, shots:shots.map(function(x){
+        return { t:x.t, want:x.want, chars:x.chars, keys:x.keys, shot:x.shot, dur:x.dur, at:x.at, why:x.why, use:true, cands:x.pool.map(function(p){ return { id:p.c.id, si:p.si }; }) }; }) };
       save(KEY, plan);
       U.msg("plMsg", errs ? "เสร็จ แต่มี " + errs + " ชุดที่ AI เลือกไม่ได้ ใช้ผลค้นในเครื่องแทน (กดใหม่ได้)" : "", errs ? "err" : "");
       render();
@@ -110,10 +148,10 @@
     if(!plan || !plan.shots || !plan.shots.length){ $("plOut").hidden = true; $("plRows").innerHTML = ""; return; }
     var found = plan.shots.filter(function(x){ return chosen(x); }).length, secs = plan.shots.reduce(function(t, x){ return t + x.dur; }, 0);
     $("plOut").hidden = false;
-    $("plInfo").textContent = (isLong() ? "แบบ 1 ไปตัดเอง · " : "แบบ 2 AI ตัดให้ · ") + plan.shots.length + " ช็อต (เจอฉาก " + found + ") · เสียงยาวราว " + Math.round(secs) + " วิ · ใช้ไป " + U.money(plan.cost || 0) + " · " + ((plan.ms || 0) / 1000).toFixed(0) + " วิ · แตะรูปเล็กเพื่อสลับฉาก";
+    $("plInfo").textContent = (isLong() ? "แบบ 1 ไปตัดเอง · " : plan.voice ? "แบบ 2 AI ตัดให้ + เสียงพากย์ · " : "แบบ 2 AI ตัดให้ · ") + plan.shots.length + " ช็อต (เจอฉาก " + found + ") · เสียงยาวราว " + Math.round(secs) + " วิ · ใช้ไป " + U.money(plan.cost || 0) + " · " + ((plan.ms || 0) / 1000).toFixed(0) + " วิ · แตะรูปเล็กเพื่อสลับฉาก";
     $("plRows").innerHTML = plan.shots.map(function(x, k){
       var ch = chosen(x), r = ch && cut(x, ch);
-      return '<div class="pl' + (x.use ? "" : " off") + '"><div class="ln"><i>' + (k + 1) + "</i>" + U.esc(x.t) + ' <small class="dur">' + x.dur.toFixed(1) + " วิ</small></div>"
+      return '<div class="pl' + (x.use ? "" : " off") + '"><div class="ln"><i>' + (k + 1) + "</i>" + U.esc(x.t) + ' <small class="dur">' + (plan.voice ? x.at.toFixed(1) + "–" + (x.at + x.dur).toFixed(1) + " วิ" : x.dur.toFixed(1) + " วิ") + "</small></div>"
         + '<div class="want">🎬 ' + U.esc(x.want || "-") + "</div>"
         + (ch ? U.card(ch.c, ch.sc, false, x.why) + '<p class="hint" style="margin:4px 0 0">ตัดช่วง ' + U.tm(r.from) + "–" + U.tm(r.to) + " (" + (r.to - r.from).toFixed(1) + " วิ)" + (!isLong() && r.to - r.from < x.dur - 0.3 ? " · ฉากสั้นกว่าประโยค ยืดใน CapCut" : "") + "</p>"
               : '<div class="none">ไม่มีฉากที่ตรงในคลัง (อัปฟุตเทจเพิ่ม หรือหาเองตามคำอธิบายด้านบน)</div>')
@@ -136,32 +174,33 @@
 
   /* ---------- วิดีโอยาว (จอเขียว + ตื๊ด คั่นทุกช็อต) ---------- */
   function picked(){
-    var out = [];
-    plan.shots.forEach(function(x, k){ var ch = x.use && chosen(x); if(!ch) return; var r = cut(x, ch);
-      out.push({ c:ch.c, sc:ch.sc, si:ch.si, from:r.from, to:r.to, k:k, t:x.t }); });
+    var out = [], v = !isLong() && plan.voice; /* มีเสียง: ทุกช็อตอยู่ในเส้นเวลา ช็อตที่ไม่ใช้/ไม่มีฉากค้างภาพก่อนหน้า (c:null) ไม่งั้นเสียงกับภาพเลื่อน */
+    plan.shots.forEach(function(x, k){ var ch = x.use && chosen(x);
+      if(!ch){ if(v) out.push({ c:null, from:0, to:0, at:x.at, k:k, t:x.t }); return; }
+      var r = cut(x, ch); out.push({ c:ch.c, sc:ch.sc, si:ch.si, from:r.from, to:r.to, at:x.at, k:k, t:x.t }); });
     return out;
   }
-  function sig(list){ return list.map(function(x){ return x.c.id + "#" + x.si + "@" + x.from.toFixed(2) + "-" + x.to.toFixed(2); }).join(","); }
+  function sig(list){ return (plan.voice ? "v" + plan.voice.id + ":" : "") + list.map(function(x){ return (x.c ? x.c.id + "#" + x.si : "hold") + "@" + x.from.toFixed(2) + "-" + x.to.toFixed(2); }).join(","); }
   var cuts = null, cutting = false, lastPick = ""; /* cuts = { sig, file, url, marks } หายเมื่อปิดหน้า */
   function renderResult(){
     var list = picked(), ok = cuts && cuts.sig === sig(list);
     if(!ok){ $("plBatches").innerHTML = ""; return; }
     $("plBatches").innerHTML = '<video class="plvid" src="' + cuts.url + '" controls playsinline></video>'
       + '<button class="btn" id="plSave" style="width:100%;margin-top:10px">💾 บันทึกไฟล์ลงเครื่อง (' + (cuts.file.size / 1048576).toFixed(1) + " MB)</button>"
-      + '<p class="hint">จากนั้นเปิด CapCut → โปรเจกต์ใหม่ → เลือกวิดีโอจากแกลเลอรี (อัลบั้ม Download หรือ ล่าสุด) · ' + (isLong() ? "จอเขียว + เสียงตื๊ด = จุดเปลี่ยนช็อต เลือกช่วงที่ชอบแล้วตัดจอเขียวทิ้ง" : "ปิดเสียงฉากแล้ววางเสียงพากย์ทับ ปรับจังหวะให้ตรงคำ") + "</p>"
+      + '<p class="hint">จากนั้นเปิด CapCut → โปรเจกต์ใหม่ → เลือกวิดีโอจากแกลเลอรี (อัลบั้ม Download หรือ ล่าสุด) · ' + (isLong() ? "จอเขียว + เสียงตื๊ด = จุดเปลี่ยนช็อต เลือกช่วงที่ชอบแล้วตัดจอเขียวทิ้ง" : (plan.voice ? "ในไฟล์มีเสียงพากย์แล้ว ภาพตัดตามคำพูด ใส่ซับ/เอฟเฟกต์ต่อได้เลย" : "ปิดเสียงฉากแล้ววางเสียงพากย์ทับ ปรับจังหวะให้ตรงคำ")) + "</p>"
       + '<p class="hint">เวลาเริ่มของแต่ละช็อตในไฟล์:</p><ol class="marks">'
-      + cuts.marks.map(function(m){ return "<li><b>" + m.at.toFixed(1) + " วิ</b> · ช็อต " + (m.x.k + 1) + " · " + U.esc(m.x.t) + " (" + m.len.toFixed(1) + " วิ)</li>"; }).join("") + "</ol>";
+      + cuts.marks.map(function(m){ return "<li><b>" + m.at.toFixed(1) + " วิ</b> · ช็อต " + (m.x.k + 1) + (m.x.c ? "" : " (ค้างภาพก่อนหน้า)") + " · " + U.esc(m.x.t) + " (" + m.len.toFixed(1) + " วิ)</li>"; }).join("") + "</ol>";
   }
   function renderShare(){
-    var list = picked(), miss = list.filter(function(x){ return !U.hasSrc(x.c); }), done = cuts && cuts.sig === sig(list);
-    var sep = isLong() ? SEP : 0, secs = list.reduce(function(t, x){ return t + (x.to - x.from); }, 0) + Math.max(0, list.length - 1) * sep;
-    $("plShare").textContent = done ? "✂ ทำใหม่อีกรอบ" : (isLong() ? "✂ สร้างวิดีโอยาว " : "✂ ให้ AI ตัดต่อ ") + list.length + " ช็อต";
+    var list = picked(), miss = list.filter(function(x){ return x.c && !U.hasSrc(x.c); }), done = cuts && cuts.sig === sig(list);
+    var sep = isLong() ? SEP : 0, secs = !isLong() && plan.voice ? plan.voice.dur : list.reduce(function(t, x){ return t + (x.to - x.from); }, 0) + Math.max(0, list.length - 1) * sep;
+    $("plShare").textContent = done ? "✂ ทำใหม่อีกรอบ" : (isLong() ? "✂ สร้างวิดีโอยาว " : plan.voice ? "✂ ตัดต่อ + ใส่เสียงพากย์ " : "✂ ให้ AI ตัดต่อ ") + list.length + " ช็อต";
     $("plShare").disabled = cutting || !list.length || miss.length > 0 || !FT.stitch.ok();
     $("plNeed").hidden = !miss.length;
     $("plNeedTxt").textContent = "ยังไม่มีไฟล์ " + miss.length + "/" + list.length + " ช็อต (ไม่อยู่ในคลังคลาวด์ และยังไม่ได้เปิดไฟล์ในเครื่อง) · กดปุ่มด้านล่าง → เข้าโฟลเดอร์อัลบั้ม → เลือกทั้งหมด แอพเก็บเฉพาะคลิปที่ใช้เอง";
     if(!cutting) say(!list.length ? "" : miss.length ? lastPick
       : done ? "สร้างไว้แล้ว ดูตัวอย่างด้านล่างก่อนบันทึกได้"
-      : "กด ✂ แล้วแอพจะเล่นเฉพาะช่วงที่ตัดเรียงตามบท" + (sep ? " คั่นด้วยจอเขียว + เสียงตื๊ด " + sep + " วิ" : " ต่อกันเลย") + " (ใช้เวลา ≈ " + Math.round(secs) + " วิ · เปิดหน้าค้างไว้ ห้ามสลับแอพ)", done ? "ok" : "");
+      : "กด ✂ แล้วแอพจะเล่นเฉพาะช่วงที่ตัดเรียงตามบท" + (sep ? " คั่นด้วยจอเขียว + เสียงตื๊ด " + sep + " วิ" : plan.voice ? " ตามจังหวะเสียงพากย์ (ใส่เสียงให้ในไฟล์)" : " ต่อกันเลย") + " (ใช้เวลา ≈ " + Math.round(secs) + " วิ · เปิดหน้าค้างไว้ ห้ามสลับแอพ)", done ? "ok" : "");
     renderResult();
   }
   document.addEventListener("ft:files", function(e){ /* footage-find.js ส่งมาหลังเลือกไฟล์ */
@@ -177,10 +216,12 @@
     if(cuts){ URL.revokeObjectURL(cuts.url); cuts = null; }
     cutting = true; renderShare(); $("plProg").hidden = false; $("plBar").style.width = "0";
     try{
+      var vb = null;
+      if(!isLong() && plan.voice){ var vr = window.MWVoice ? await MWVoice.get(plan.voice.id) : null; if(!vr) throw new Error("ไม่เจอเสียงพากย์ที่เลือกไว้แล้ว (ถูกลบ) ให้กำกับใหม่อีกครั้ง"); vb = vr.blob; }
       var r = await FT.stitch.make(list, function(i, x){
         say("กำลังอัดช็อต " + (i + 1) + "/" + list.length + " · " + x.t + " · อย่าสลับแอพ");
         $("plBar").style.width = (i / list.length * 100) + "%";
-      }, say, { sep:isLong() ? SEP : 0 });
+      }, say, { sep:isLong() ? SEP : 0, voice:vb });
       cuts = { sig:sig(list), file:r.file, url:URL.createObjectURL(r.file), marks:r.marks };
       cutting = false; renderShare();
       say("เสร็จแล้ว " + r.marks.length + " ช็อต · " + (r.file.size / 1048576).toFixed(1) + " MB · ดูตัวอย่างด้านล่าง แล้วกด 💾 บันทึก", "ok");

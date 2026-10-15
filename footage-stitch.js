@@ -1,6 +1,7 @@
 /* footage-stitch.js — ต่อฉากเป็นวิดีโอยาวไฟล์เดียวในเบราว์เซอร์ (แท็บผู้กำกับ) · โหลดหลัง footage-find.js (ใช้ FT.ui)
    FT.stitch = { ok(), make(list, onStep, onMsg, opt) → { file, marks, rate, mime }, save(file, say) }
    list = [{ c, sc, from?, to? }] (from/to = ช่วงที่ตัด ถ้าไม่ใส่ใช้ทั้งฉาก) · opt.sep = วินาทีของจอเขียว + เสียงตื๊ด คั่นระหว่างช็อต (0 = ไม่คั่น)
+   opt.voice = Blob เสียงพากย์ → โหมดตัดตามเสียง: list = [{ c|null, from, to, at }] (at = วินาทีที่ช็อตเริ่มในเสียง · c ว่าง = ค้างภาพก่อนหน้า) อัดต่อเนื่องไม่ pause เสียงพากย์เล่นเป็นเส้นเวลาหลัก ภาพของฉากปิดเสียง
    ไม่มีปุ่มแชร์: ทดสอบแล้ว CapCut ขึ้น "ไม่รองรับไฟล์" ทุกครั้งที่แชร์จาก Brave แต่เปิดไฟล์ที่บันทึกลงเครื่องได้ */
 (function(){
   "use strict";
@@ -64,12 +65,58 @@
     }finally{ stream.getTracks().forEach(function(t){ t.stop(); }); if(rec.state !== "inactive") rec.stop(); }
     return { blob:new Blob(parts, { type:mime.split(";")[0] }), marks:marks, rate:RATE };
   }
+  async function recordVoice(list, mime, ac, voiceBlob, onStep){ /* ตัดตามเสียง: เสียงพากย์เดินต่อเนื่อง ภาพเปลี่ยนตามเวลา at ของแต่ละช็อต (เตรียมคลิปถัดไปล่วงหน้า LOOK ช็อต) */
+    var LOOK = 3, buf = await ac.decodeAudioData(await voiceBlob.arrayBuffer()), total = buf.duration;
+    var f0 = list.find(function(x){ return x.c; }); if(!f0) throw new Error("ไม่มีช็อตที่มีฉากเลย");
+    var first = await openVid(f0.c), W = first.videoWidth || 1080, H = first.videoHeight || 1080; closeVid(first);
+    var cv = document.createElement("canvas"); cv.width = W; cv.height = H; var g = cv.getContext("2d"); g.fillStyle = "#000"; g.fillRect(0, 0, W, H);
+    var dest = ac.createMediaStreamDestination();
+    var stream = new MediaStream(cv.captureStream(30).getVideoTracks().concat(dest.stream.getAudioTracks()));
+    var rec = new MediaRecorder(stream, { mimeType:mime, videoBitsPerSecond:RATE, audioBitsPerSecond:128000 }), parts = [], marks = [];
+    rec.ondataavailable = function(ev){ if(ev.data && ev.data.size) parts.push(ev.data); };
+    var stopped = new Promise(function(ok){ rec.onstop = ok; });
+    var prepared = {};
+    function prep(i){ if(i >= list.length || prepared[i] || !list[i].c) return;
+      prepared[i] = (async function(){ var v = await openVid(list[i].c); v.muted = true; v.currentTime = list[i].from; await once(v, "seeked"); return v; })();
+      prepared[i].catch(function(){}); }
+    function draw(v){ var r = Math.min(W / v.videoWidth, H / v.videoHeight), w = v.videoWidth * r, h = v.videoHeight * r;
+      g.fillStyle = "#000"; g.fillRect(0, 0, W, H); g.drawImage(v, (W - w) / 2, (H - h) / 2, w, h); }
+    for(var k = 0; k <= LOOK; k++) prep(k);
+    var firstIdx = list.indexOf(f0); if(prepared[firstIdx]) await prepared[firstIdx].catch(function(){});
+    var src = ac.createBufferSource(); src.buffer = buf; src.connect(dest);
+    var t0 = ac.currentTime + 0.2; rec.start(); src.start(t0);
+    var now = function(){ return ac.currentTime - t0; };
+    try{
+      for(var i = 0; i < list.length; i++){
+        var x = list[i], end = i + 1 < list.length ? list[i + 1].at : total, v = null;
+        for(var q = 1; q <= LOOK; q++) prep(i + q);
+        if(x.c){ try{ v = await prepared[i]; }catch(err){ v = null; } }
+        onStep(i, x);
+        if(v){ try{ await v.play(); }catch(err){} }
+        var ts = now();
+        await new Promise(function(ok){
+          (function tick(){
+            if(v && v.readyState >= 2){ draw(v); if(v.currentTime >= x.to - 0.03) v.pause(); } /* ฉากสั้นกว่าช็อต = ค้างภาพสุดท้าย */
+            if(now() >= end){ ok(); return; } requestAnimationFrame(tick);
+          })();
+        });
+        marks.push({ i:i, at:Math.max(0, ts), len:Math.max(0, now() - ts), x:x });
+        if(v){ closeVid(v); delete prepared[i]; }
+      }
+      while(now() < total + 0.15) await new Promise(function(ok){ setTimeout(ok, 50); });
+      rec.stop(); await stopped;
+    }finally{
+      Object.keys(prepared).forEach(function(i){ prepared[i].then(closeVid, function(){}); });
+      try{ src.stop(); }catch(err){} stream.getTracks().forEach(function(t){ t.stop(); }); if(rec.state !== "inactive") rec.stop();
+    }
+    return { blob:new Blob(parts, { type:mime.split(";")[0] }), marks:marks, rate:RATE };
+  }
   function ok(){ var AC = window.AudioContext || window.webkitAudioContext; return !!(recMime() && AC && HTMLCanvasElement.prototype.captureStream); }
   async function make(list, onStep, onMsg, opt){ /* เรียกตรงจากการแตะปุ่ม (ต้องสร้าง AudioContext ตอนมีการแตะ) */
     var mime = recMime(), AC = window.AudioContext || window.webkitAudioContext, ac = new AC(); ac.resume();
     await U.wake(true);
     try{
-      var r = await record(list, mime, ac, onStep, (opt && opt.sep) || 0);
+      var r = opt && opt.voice ? await recordVoice(list, mime, ac, opt.voice, onStep) : await record(list, mime, ac, onStep, (opt && opt.sep) || 0);
       if(!r.blob.size) throw new Error("อัดได้ไฟล์ว่าง");
       var d = new Date(), ext = mime.indexOf("mp4") >= 0 ? "mp4" : "webm", out = r.blob;
       if(ext === "mp4" && window.MP4Fix){ if(onMsg) onMsg("กำลังจัดไฟล์ให้ CapCut อ่านได้..."); out = await MP4Fix.remux(r.blob); } /* MediaRecorder ให้ fragmented MP4 ซึ่ง CapCut ไม่รับ */

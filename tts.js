@@ -128,7 +128,7 @@
     var body = script.replace(/[ \t]*\n(?:[ \t]*\n)+/g, "\n");
     var warm = warmFor(script), sent = warm ? warm + "\n\n" + body : body;
     if(sent.length > MAX_CHARS) throw new Error("บท" + (warm ? "รวมช่วงวอร์ม" : "") + "ยาว " + sent.length.toLocaleString() + " ตัวอักษร เกินเพดาน " + MAX_CHARS.toLocaleString() + " ต่อครั้งของ ElevenLabs ตัดให้สั้นลงก่อน");
-    var full = null, al = null, tsTried = !!warm && cfg.trim && !cfg.tsOff;
+    var full = null, al = null, tsTried = !cfg.tsOff; /* ขอเวลาตัวอักษรเสมอ (ถ้าโมเดลรองรับ): ใช้ตัดช่วงวอร์ม + ให้แท็บผู้กำกับตัดภาพตามเสียง */
     if(tsTried){
       try{ var j = await (await call(true, sent)).json(); full = b64Blob(j.audio_base64 || ""); al = j.alignment || j.normalized_alignment; }
       catch(err){ if(!err.soft) throw err; }
@@ -148,7 +148,18 @@
       var bytes = c === null ? null : mp3Cut(new Uint8Array(await full.arrayBuffer()), c);
       if(bytes && bytes.length){ take.blob = new Blob([bytes], { type:"audio/mpeg" }); take.cut = c; }
     }
+    take.align = al ? bodyAlign(al, sent, body, !!warm, take.cut || 0) : null;
     return take;
+  }
+  /* เวลาตัวอักษรของ "บท" (ไม่รวมวอร์ม/ช่องว่าง) เทียบกับต้นไฟล์ที่เก็บ → เก็บใน MWVoice ให้แท็บผู้กำกับ */
+  function bodyAlign(al, sent, body, warm, offset){
+    if(!al || !Array.isArray(al.characters) || !Array.isArray(al.character_start_times_seconds)) return null;
+    var ch = al.characters, st = al.character_start_times_seconds, en = al.character_end_times_seconds || st, joined = ch.join("");
+    var at = !warm ? 0 : joined === sent ? sent.length - body.length : joined.indexOf(body.trim().slice(0, 12), Math.max(1, sent.length - body.length - 4));
+    if(at < 0) return null;
+    var c = [], s = [], e = [];
+    for(var i = at; i < ch.length; i++){ if(/\s/.test(ch[i])) continue; c.push(ch[i]); s.push(+(st[i] - offset).toFixed(2)); e.push(+(en[i] - offset).toFixed(2)); }
+    return c.length ? { chars:c.join(""), st:s, en:e } : null;
   }
 
   /* ---------- เทคที่สร้างแล้วในรอบนี้ (จับคู่กับข้อความบท) ---------- */
@@ -198,6 +209,7 @@
       take.url = URL.createObjectURL(take.blob);
       take.rawUrl = take.blob !== take.raw ? URL.createObjectURL(take.raw) : "";
       a.takes.push(take); a.sel = a.takes.length - 1;
+      if(window.MWVoice) MWVoice.put({ text:text, name:take.name, blob:take.blob, align:take.align }).catch(function(){}); /* ให้แท็บผู้กำกับของหน้าฟุตเทจใช้เสียงนี้ต่อ */
       MW.toast(a.takes.length > 1 ? "ได้เทค " + a.takes.length + " แล้ว" : "สร้างเสียงแล้ว");
       setTimeout(function(){ $("ttsOut").scrollIntoView({ behavior:"smooth", block:"center" }); }, 50); /* เลื่อนไปที่ตัวเล่นให้เห็นเลย */
     }catch(err){ note(err.message, true); }
