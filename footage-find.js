@@ -54,25 +54,53 @@
       return false;
     });
   }
-  /* ---------- อัลบั้มอัตโนมัติ: ชิปตัวละครจากป้ายของแต่ละฉาก (ฉากเดียวอยู่ได้หลายชิป ไม่ต้องย้ายไฟล์) ---------- */
+  /* ---------- อัลบั้มอัตโนมัติ: ชิปตัวละครสร้างจากป้ายของแต่ละฉากจริงๆ (ฉากเดียวอยู่ได้หลายชิป ไม่ย้ายไฟล์) ----------
+     ชื่อใน NAMES รวมสะกดต่างให้เป็นคนเดียวกัน · ตัวละครอื่นที่ AI เห็น ≥ MINSC ฉากได้ชิปเอง · เลือกหลายชิป = ต้องมีทุกคน · ชิปจำนวนคน = เดี่ยว/คู่/กลุ่ม/หมู่ */
   var NAMEX = NAMES.map(function(g){ return { key:g[0], th:g[1], en:new RegExp("(^|[^a-z])" + g[0] + "([^a-z]|$)"), ths:g.slice(1) }; });
-  var chipCache = new WeakMap(), chipSel = ""; /* chipSel = key ของชิปที่เลือกอยู่ ("" = ทุกฉาก · "?" = ไม่มีตัวละครที่รู้จัก) */
-  function sceneChars(sc){ /* คืนรายการ key ตัวละครที่รู้จักในฉากนี้ (จากป้ายของ AI) */
+  var MINSC = 3, TOPN = 14, SKIPN = /^(unknown|none|n\/a|na|-|unnamed)$/;
+  var chipCache = new WeakMap(), labelOf = {}, sel = [], only = false, sizeSel = "", chipAll = false;
+  NAMEX.forEach(function(n){ labelOf[n.key] = n.th; });
+  function sceneChars(sc){ /* คืนรายการ key ตัวละครในฉากนี้ (จากป้าย AI) */
     var r = chipCache.get(sc); if(r) return r;
-    var a = sc.ai || {}, en = (a.characters || []).join(" | ").toLowerCase(), th = (a.characters_th || []).join(" | ");
-    r = NAMEX.filter(function(n){ return n.en.test(en) || n.ths.some(function(t){ return th.indexOf(t) >= 0; }); }).map(function(n){ return n.key; });
+    var a = sc.ai || {}, en = a.characters || [], th = a.characters_th || []; r = [];
+    var add = function(k, lab){ if(k && r.indexOf(k) < 0){ r.push(k); if(!labelOf[k] && lab) labelOf[k] = lab; } };
+    en.forEach(function(raw, i){
+      var low = String(raw).toLowerCase().replace(/\s+/g, " ").trim(); if(!low || SKIPN.test(low)) return;
+      var n = NAMEX.find(function(x){ return x.en.test(low); }); add(n ? n.key : low, th.length === en.length ? th[i] : raw);
+    });
+    var jt = th.join(" | "); NAMEX.forEach(function(n){ if(r.indexOf(n.key) < 0 && n.ths.some(function(t){ return jt.indexOf(t) >= 0; })) add(n.key); }); /* ป้ายอังกฤษไม่มี/สะกดต่าง → ดูชื่อไทย */
     chipCache.set(sc, r); return r;
   }
-  function inChip(sc, k){ var cs = sceneChars(sc); return k === "?" ? !cs.length : cs.indexOf(k) >= 0; }
-  function renderChips(){
-    var cnt = {}, none = 0, total = 0;
-    U.lib().forEach(function(c){ if(c.status !== "done") return; c.scenes.forEach(function(sc){ total++; var cs = sceneChars(sc); if(!cs.length) none++; cs.forEach(function(k){ cnt[k] = (cnt[k] || 0) + 1; }); }); });
-    var ks = Object.keys(cnt).sort(function(a, b){ return cnt[b] - cnt[a]; }), name = {}; NAMEX.forEach(function(n){ name[n.key] = n.th; });
-    if(!total){ $("chips").innerHTML = ""; return; }
-    var chip = function(k, label, n){ return '<button class="chip' + (chipSel === k ? " on" : "") + '" data-c="' + esc(k) + '">' + esc(label) + " <i>" + n + "</i></button>"; };
-    $("chips").innerHTML = chip("", "ทั้งหมด", total) + ks.map(function(k){ return chip(k, name[k] || k, cnt[k]); }).join("") + (none ? chip("?", "ไม่ระบุตัวละคร", none) : "");
+  function sizeOf(n){ return n >= 5 ? "5" : n >= 3 ? "3" : String(n); }
+  function passSc(sc){ /* ฉากนี้ผ่านตัวกรองชิปที่เลือกไหม */
+    var cs = sceneChars(sc);
+    if(sel.length && !sel.every(function(k){ return k === "?" ? !cs.length : cs.indexOf(k) >= 0; })) return false;
+    if(only && sel.length && sel.indexOf("?") < 0 && cs.length !== sel.length) return false;
+    return !sizeSel || (cs.length && sizeOf(cs.length) === sizeSel);
   }
-  $("chips").addEventListener("click", function(e){ var b = e.target.closest("[data-c]"); if(!b) return; chipSel = b.dataset.c === chipSel ? "" : b.dataset.c; chipMax = 40; search(); });
+  function filtering(){ return sel.length > 0 || !!sizeSel; }
+  function renderChips(){
+    var cnt = {}, none = 0, total = 0, sz = { "1":0, "2":0, "3":0, "5":0 };
+    U.lib().forEach(function(c){ if(c.status !== "done") return; c.scenes.forEach(function(sc){ total++; var cs = sceneChars(sc); if(!cs.length) none++; else sz[sizeOf(cs.length)]++; cs.forEach(function(k){ cnt[k] = (cnt[k] || 0) + 1; }); }); });
+    if(!total){ $("chips").innerHTML = $("sizes").innerHTML = ""; $("onlyRow").hidden = true; return; }
+    var ks = Object.keys(cnt).filter(function(k){ return cnt[k] >= MINSC || labelOf[k] && NAMEX.some(function(n){ return n.key === k; }) || sel.indexOf(k) >= 0; }).sort(function(a, b){ return cnt[b] - cnt[a]; });
+    var shownKs = chipAll ? ks : ks.filter(function(k, i){ return i < TOPN || sel.indexOf(k) >= 0; });
+    $("chips").classList.toggle("wrap", chipAll);
+    var chip = function(k, label, n){ return '<button class="chip' + (sel.indexOf(k) >= 0 || (k === "" && !sel.length) ? " on" : "") + '" data-c="' + esc(k) + '">' + esc(label) + " <i>" + n + "</i></button>"; };
+    $("chips").innerHTML = chip("", "ทั้งหมด", total) + shownKs.map(function(k){ return chip(k, labelOf[k] || k, cnt[k]); }).join("") + (none ? chip("?", "ไม่ระบุตัวละคร", none) : "")
+      + (ks.length > shownKs.length ? '<button class="chip" data-more="1">ดูทั้งหมด +' + (ks.length - shownKs.length) + "</button>" : chipAll && ks.length > TOPN ? '<button class="chip" data-more="1">ย่อ</button>' : "");
+    var st = function(k, label){ return '<button class="chip' + (sizeSel === k ? " on" : "") + '" data-z="' + k + '">' + label + (k ? " <i>" + sz[k] + "</i>" : "") + "</button>"; };
+    $("sizes").innerHTML = st("", "ทุกจำนวนคน") + st("1", "เดี่ยว") + st("2", "คู่") + st("3", "กลุ่ม 3-4") + st("5", "หมู่ 5+");
+    $("onlyRow").hidden = !sel.length || sel.indexOf("?") >= 0; $("onlySel").checked = only;
+  }
+  $("chips").addEventListener("click", function(e){
+    if(e.target.closest("[data-more]")){ chipAll = !chipAll; renderChips(); return; }
+    var b = e.target.closest("[data-c]"); if(!b) return; var k = b.dataset.c, i = sel.indexOf(k);
+    if(!k) sel = []; else if(k === "?") sel = i >= 0 ? [] : ["?"]; else { sel = sel.filter(function(x){ return x !== "?"; }); if(i >= 0) sel.splice(i, 1); else sel.push(k); } /* แตะซ้ำ = เอาออก · "ไม่ระบุ" เลือกร่วมกับตัวอื่นไม่ได้ */
+    chipMax = 40; search();
+  });
+  $("sizes").addEventListener("click", function(e){ var b = e.target.closest("[data-z]"); if(!b) return; sizeSel = b.dataset.z === sizeSel ? "" : b.dataset.z; chipMax = 40; search(); });
+  $("onlySel").addEventListener("change", function(){ only = this.checked; chipMax = 40; search(); });
   var aiTerms = {}, sT = 0, shown = [], lastQ = "", showPartial = false, lastHits = [], aiQ = "", chipMax = 40; /* lastHits = ผลค้นในเครื่องล่าสุด (ผู้สมัครของ AI) · aiQ = คำค้นที่ AI เลือกให้อยู่ */ /* shown = รายการที่โชว์อยู่ (ให้ปุ่มดูรูปใหญ่อ้างถึง) */
   $("q").addEventListener("input", function(){ clearTimeout(sT); sT = setTimeout(search, 250); });
   $("albumFilter").addEventListener("change", search);
@@ -95,7 +123,7 @@
     var soft = extra.map(function(x){ return String(x).toLowerCase().trim(); }).filter(Boolean); /* คำที่ AI แปลให้ = ช่วยจัดอันดับ ไม่บังคับต้องตรง */
     var names = ts.filter(function(v){ return NAMES.indexOf(v) >= 0; }), emos = ts.filter(function(v){ return SYN.indexOf(v) >= 0; });
     clips.forEach(function(c){ c.scenes.forEach(function(sc){
-      if(chipSel && !inChip(sc, chipSel)) return;
+      if(!passSc(sc)) return;
       var h = hay(c, sc), hit = 0, score = 0;
       ts.forEach(function(v){
         var w = [4, 2, 1].find(function(_, k){ return v.some(function(n){ return h[k].indexOf(n) >= 0; }); });
@@ -125,12 +153,12 @@
     if(e.target.closest("#partialBtn")){ showPartial = !showPartial; search(); }
     if(e.target.closest("#moreBtn")){ chipMax += 40; search(); }
   });
-  function browse(clips){ /* ไม่พิมพ์คำค้น = โชว์ทุกคลิปพร้อมสรุป · เลือกชิปตัวละคร = โชว์ฉากของตัวละครนั้น (ใหม่สุดก่อน) */
+  function browse(clips){ /* ไม่พิมพ์คำค้น = โชว์ทุกคลิปพร้อมสรุป · เลือกชิป = โชว์ฉากที่ตรงทุกชิป (ใหม่สุดก่อน) */
     lastHits = []; shown = [];
-    if(chipSel){
-      var sc = []; clips.forEach(function(c){ c.scenes.forEach(function(s){ if(inChip(s, chipSel)) sc.push({ c:c, sc:s }); }); });
+    if(filtering()){
+      var sc = []; clips.forEach(function(c){ c.scenes.forEach(function(s){ if(passSc(s)) sc.push({ c:c, sc:s }); }); });
       sc.sort(function(a, b){ return (b.c.lastModified || 0) - (a.c.lastModified || 0) || a.sc.s - b.sc.s; });
-      $("findInfo").textContent = sc.length + " ฉากในอัลบั้มนี้ (จากป้ายตัวละครที่ AI ติดให้) · พิมพ์คำค้นเพื่อกรองต่อ" + (sc.length > chipMax ? " · โชว์ " + chipMax + " ฉากแรก" : "");
+      $("findInfo").textContent = sc.length + " ฉากตามชิปที่เลือก (จากป้ายตัวละครที่ AI ติดให้) · พิมพ์คำค้นเพื่อกรองต่อ" + (sc.length > chipMax ? " · โชว์ " + chipMax + " ฉากแรก" : "");
       $("results").innerHTML = sc.slice(0, chipMax).map(function(h){ return card(h.c, h.sc); }).join("")
         + (sc.length > chipMax ? '<button class="btn ghost small" id="moreBtn" style="width:100%">ดูเพิ่ม 40 ฉาก</button>' : "") || '<p class="empty">ไม่มีฉาก</p>';
       return;

@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600&family=Mitr:wght@500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="footage.css?v=20261015n">
+<link rel="stylesheet" href="footage.css?v=20261015o">
 </head>
 <body>
 <header>
@@ -70,6 +70,8 @@
     <div class="panel">
       <input id="q" type="search" enterkeyhint="search" placeholder="เช่น ลูฟี่ตกใจ, โซโร ฟันดาบ" autocomplete="off">
       <div class="chips" id="chips"></div>
+      <div class="chips" id="sizes"></div>
+      <label class="chk" id="onlyRow" hidden><input type="checkbox" id="onlySel"> เฉพาะคนที่เลือกเท่านั้น (ไม่มีตัวละครอื่นในฉาก)</label>
       <label for="albumFilter">อัลบั้มที่จัดเอง (ตัวกรองรอง)</label>
       <select id="albumFilter"><option value="">ทุกอัลบั้ม</option></select>
       <button class="btn ghost small" id="openFilesBtn" style="margin-top:12px;width:100%">📂 เปิดไฟล์ฟุตเทจให้เล่นดูฉากได้</button>
@@ -222,6 +224,6 @@
 <input id="pickDocs" type="file" multiple hidden><!-- ไม่ใส่ accept → Android เปิดแอพไฟล์ (เข้าโฟลเดอร์ + เลือกทั้งหมดได้) แทนตัวเลือกรูป -->
 <video id="vid" muted playsinline preload="auto" style="position:fixed;left:-9999px;width:2px;height:2px"></video>
 
-<script src="store.js?v=20261015n" data-boot="budget.js?v=20261015n footage-core.js?v=20261015n r2.js?v=20261015n footage.js?v=20261015n footage-find.js?v=20261015n footage-cloud.js?v=20261015n mp4fix.js?v=20261015n footage-plan.js?v=20261015n gdrive.js?v=20261015n"></script>
+<script src="store.js?v=20261015o" data-boot="budget.js?v=20261015o footage-core.js?v=20261015o r2.js?v=20261015o footage.js?v=20261015o footage-find.js?v=20261015o footage-cloud.js?v=20261015o mp4fix.js?v=20261015o footage-plan.js?v=20261015o gdrive.js?v=20261015o"></script>
 </body>
 </html>
