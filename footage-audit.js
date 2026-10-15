@@ -28,7 +28,7 @@
   }
   function view(){
     var el = $("auditBox"), n = log.length;
-    $("auditTag").textContent = n ? "ตรวจแล้ว " + n + " ฉาก · ตัวละครถูก " + pct(log, "ch") + "%" : "ยังไม่เคยตรวจ";
+    $("auditTag").textContent = n ? n + " ฉาก · ตัวละคร " + pct(log, "ch") + "%" : "ยังไม่เคยตรวจ";
     if(run && run.i < run.list.length){
       var h = run.list[run.i], c = h.c, sc = h.sc, a = sc.ai || {}, k = U.show(c, sc), who = (a.characters_th && a.characters_th.length ? a.characters_th : a.characters || []);
       el.innerHTML = '<p class="hint" style="margin-top:0">ฉากที่ ' + (run.i + 1) + "/" + run.list.length + " · แตะรูปเพื่อขยาย/เล่นดู · แตะเฉพาะข้อที่ AI <b>ผิด</b> (ไม่แตะ = ถูก)</p>"
