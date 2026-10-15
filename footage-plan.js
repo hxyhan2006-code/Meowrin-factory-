@@ -177,6 +177,7 @@
     if(!ok){ $("plBatches").innerHTML = ""; return; }
     $("plBatches").innerHTML = '<video class="plvid" src="' + cuts.url + '" controls playsinline></video>'
       + '<button class="btn" id="plSend" style="width:100%;margin-top:10px">แชร์ไป CapCut (1 ไฟล์ · ' + (cuts.file.size / 1048576).toFixed(1) + " MB)</button>"
+      + '<button class="btn" id="plSave" style="width:100%;margin-top:8px">💾 บันทึกไฟล์ลงเครื่อง (ไว้ทดสอบเปิดใน CapCut)</button>'
       + '<p class="hint">จุดเริ่มของแต่ละบรรทัดในไฟล์ (แยกคลิปใน CapCut ตรงเวลาเหล่านี้):</p><ol class="marks">'
       + cuts.marks.map(function(m){ return "<li><b>" + m.at.toFixed(1) + " วิ</b> · บรรทัด " + m.lines.join(",") + " · " + U.esc(m.c.album) + " " + U.tm(m.sc.s) + " (" + m.len.toFixed(1) + " วิ)</li>"; }).join("") + "</ol>";
   }
@@ -225,6 +226,10 @@
     ac.close(); $("plProg").hidden = true; await U.wake(false);
   });
   $("plBatches").addEventListener("click", async function(e){
+    if(e.target.closest("#plSave") && cuts){
+      var a = document.createElement("a"); a.href = cuts.url; a.download = cuts.file.name; document.body.appendChild(a); a.click(); a.remove();
+      U.msg("plShareMsg", "สั่งบันทึกแล้ว ดูในโฟลเดอร์ Download ของมือถือ (" + cuts.file.name + ") แล้วเปิดจากแกลเลอรี/CapCut โดยตรง", "ok"); return;
+    }
     if(!e.target.closest("#plSend") || !cuts) return;
     var files = [cuts.file];
     if(!navigator.canShare || !navigator.canShare({ files:files })){ U.msg("plShareMsg", "เบราว์เซอร์นี้แชร์ไฟล์นี้ไม่ได้ ใช้ปุ่ม คัดลอกรายการ แทน", "err"); return; }
