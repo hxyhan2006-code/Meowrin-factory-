@@ -47,7 +47,7 @@
   function renderState(){
     var on = R2.ready();
     if(!on) tag("idle", "ยังไม่ตั้ง"); else if(!objs) tag("warn", "ยังไม่ได้เช็ก");
-    $("cloudBox").hidden = !on; $("cloudOff").hidden = on; $("toCloudRow").hidden = !on;
+    $("cloudBox").hidden = !on; $("cloudOff").hidden = on;
     if(!on) return;
     if(!objs){ $("cloudInfo").textContent = "กด ดูไฟล์ในคลัง เพื่อเช็กว่ามีอะไรบ้าง"; $("cloudQueue").hidden = true; $("cloudAlbums").innerHTML = ""; return; }
     var lib = U.lib(), vids = objs.filter(function(o){ return VID.test(o.key); }), byKey = {}, byNs = {};

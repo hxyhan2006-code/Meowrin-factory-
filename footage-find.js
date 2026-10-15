@@ -227,14 +227,12 @@
     });
     var n = lib.filter(fileOf).length;
     if(FT.onFiles) FT.onFiles(files.length); /* หน้าวางแผนฉากอัปเดตสถานะไฟล์ที่พร้อมแชร์ */
-    $("openFilesInfo").textContent = "เปิดไฟล์ไว้ตรงกับดัชนี " + n + " คลิป (หายเมื่อปิดหน้านี้) · แตะรูปฉาก แล้วกด ▶ ดูฉากนี้";
     if(!$("big").hidden && bigCur){
       renderPlayBtn();
       if(fileOf(bigCur.c)) playScene(); else $("playMsg").textContent = "ไม่เจอไฟล์ " + bigCur.c.name + " ในที่เลือก (ชื่อและขนาดไฟล์ต้องตรงกับตอนทำดัชนี) ลองเลือกไฟล์จากอัลบั้ม “" + bigCur.c.album + "”";
     }
   }
   $("playBtn").addEventListener("click", playScene);
-  $("openFilesBtn").addEventListener("click", function(){ $("playFiles").click(); });
   $("playFiles").addEventListener("change", function(){ addPlayFiles(this.files); this.value = ""; });
   $("pickDocs").addEventListener("change", function(){ addPlayFiles(this.files); this.value = ""; });
   $("bigX").addEventListener("click", closeBig);
@@ -242,11 +240,10 @@
   function closeBig(){ stopPlay(); $("big").hidden = true; bigCur = null; }
 
   /* ---------- ให้ AI เลือกฉากจากคำขอแบบประโยค ---------- */
-  function aiOptLabel(){ var n = ($("aiQuery").checked ? 1 : 0) + ($("aiRank").checked ? 1 : 0); $("aiOpt").textContent = "⚙ ตัวเลือก AI" + (n ? " · เปิดอยู่ " + n : "") + ($("aiOptBox").hidden ? "" : " (ซ่อน)"); }
-  $("aiQuery").checked = !!cfg.aiQuery; $("aiRank").checked = !!cfg.aiRank; $("aiGo").hidden = !cfg.aiRank; aiOptLabel();
-  $("aiOpt").addEventListener("click", function(){ $("aiOptBox").hidden = !$("aiOptBox").hidden; aiOptLabel(); }); /* ซ่อนสวิตช์ไว้ ต้องกดปุ่มก่อนถึงจะเห็น */
-  $("aiQuery").addEventListener("change", function(){ cfg.aiQuery = this.checked; FT.saveCfg(); aiOptLabel(); });
-  $("aiRank").addEventListener("change", function(){ cfg.aiRank = this.checked; FT.saveCfg(); $("aiGo").hidden = !this.checked; aiOptLabel(); });
+  function tagFind(){ var n = ($("aiQuery").checked ? 1 : 0) + ($("aiRank").checked ? 1 : 0), el = $("tagFind"); el.className = "state " + (n ? "ok" : "idle"); el.textContent = n ? "เปิดอยู่ " + n : "ปิด"; } /* ป้ายสถานะของพับในตั้งค่า */
+  $("aiQuery").checked = !!cfg.aiQuery; $("aiRank").checked = !!cfg.aiRank; $("aiGo").hidden = !cfg.aiRank; tagFind();
+  $("aiQuery").addEventListener("change", function(){ cfg.aiQuery = this.checked; FT.saveCfg(); tagFind(); });
+  $("aiRank").addEventListener("change", function(){ cfg.aiRank = this.checked; FT.saveCfg(); $("aiGo").hidden = !this.checked; tagFind(); });
   $("q").addEventListener("keydown", function(e){ if(e.key === "Enter" && $("aiRank").checked){ e.preventDefault(); aiSearch(); } });
   $("aiGo").addEventListener("click", function(){ aiSearch(); });
   async function aiSearch(){

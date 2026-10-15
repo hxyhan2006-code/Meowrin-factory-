@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600&family=Mitr:wght@500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="footage.css?v=20261015p">
+<link rel="stylesheet" href="footage.css?v=20261015r">
 </head>
 <body>
 <header>
@@ -17,8 +17,29 @@
 </header>
 
 <main class="wrap">
-  <!-- ทำดัชนี (คลังคลาวด์ + ต้นทุน + คิว) -->
+  <!-- ทำดัชนี (เพิ่มฟุตเทจ + คลังคลาวด์ + ต้นทุน + คิว) -->
   <section class="page" id="p-idx">
+    <div class="panel">
+      <h2>เพิ่มฟุตเทจเข้าคลัง</h2>
+      <button class="btn" id="filesDocsBtn" type="button" style="width:100%">📁 เลือกจากแอพไฟล์ (เลือกทั้งโฟลเดอร์ได้)</button>
+      <input id="filesDocs" type="file" multiple hidden><!-- ไม่ใส่ accept → Android เปิดแอพไฟล์ เข้า Pictures/Gallery/owner/<อัลบั้ม> แล้วเลือกทั้งหมดได้ -->
+      <p class="hint" style="margin-top:6px">เลือกทั้งโฟลเดอร์มั่วๆ ได้เลย (Pictures → Gallery → owner → ชื่ออัลบั้ม · กดค้างไฟล์แรก → เลือกทั้งหมด) · คลิปที่ทำแล้วข้ามเอง · ถ้าตั้งค่าคลังไว้ จะอัปไฟล์ขึ้นคลังให้อัตโนมัติ · AI จัดหมวดตัวละครให้เอง</p>
+      <details class="dbg"><summary>ขั้นสูง: ตั้งชื่ออัลบั้ม</summary>
+        <label for="album">ชื่ออัลบั้ม (ไม่บังคับ · เลือกคลิปเดิมซ้ำพร้อมพิมพ์ชื่อใหม่ = แก้ชื่อให้ ไม่เสียค่า AI)</label>
+        <input id="album" type="text" list="albumList" placeholder="เช่น luffy" autocomplete="off">
+        <datalist id="albumList"></datalist>
+      </details>
+      <div class="row" style="margin-top:12px">
+        <button class="btn" id="startBtn" disabled>เริ่มทำดัชนี</button>
+        <button class="btn ghost" id="pauseBtn" hidden>พัก</button>
+      </div>
+      <button class="btn ghost small" id="retryBtn" hidden style="margin-top:8px;width:100%">ลองใหม่คลิปที่ error</button>
+      <div id="runMsg"></div>
+      <div class="prog"><i id="progBar"></i></div>
+      <p class="hint" id="progTxt"></p>
+      <p class="hint" id="wakeInfo" hidden></p>
+      <p class="hint">⚠ เปิดหน้านี้ค้างไว้ระหว่างทำ ถ้าสลับแอพ เบราว์เซอร์จะหยุดอ่านวิดีโอ (กลับมาแล้วกด เริ่ม/ทำต่อ ได้)</p>
+    </div>
     <div class="panel">
       <h2>คลังบนคลาวด์</h2>
       <p class="hint" id="cloudOff" style="margin-top:0">ยังไม่ได้ตั้งค่าคลัง (แท็บ ตั้งค่า → คลังวิดีโอ) · ตั้งแล้วฟุตเทจทั้งหมดอยู่บนคลาวด์ ไม่ต้องเลือกไฟล์ทุกครั้ง</p>
@@ -41,32 +62,8 @@
     </div>
   </section>
 
-  <!-- คลัง (ค้นหา + อัลบั้มอัตโนมัติ + เพิ่มฟุตเทจ) -->
+  <!-- คลัง (ค้นหา + อัลบั้มอัตโนมัติ + ตรวจความแม่น) -->
   <section class="page on" id="p-find">
-    <details class="panel fold" id="addFold"><summary><span>⬆ เพิ่มฟุตเทจเข้าคลัง</span><em class="state idle">เลือกไฟล์ → ทำดัชนี</em></summary><div class="fbody">
-      <label for="album">ชื่ออัลบั้ม (ไม่บังคับ ปล่อยว่างได้ AI จัดหมวดตัวละครให้เองอยู่แล้ว)</label>
-      <input id="album" type="text" list="albumList" placeholder="เช่น luffy" autocomplete="off">
-      <datalist id="albumList"></datalist>
-      <label for="files">ไฟล์วิดีโอ (เลือกได้หลายไฟล์)</label>
-      <button class="btn" id="filesDocsBtn" type="button" style="width:100%">📁 เลือกจากแอพไฟล์ (เลือกทั้งอัลบั้มได้)</button>
-      <input id="filesDocs" type="file" multiple hidden><!-- ไม่ใส่ accept → Android เปิดแอพไฟล์ เข้า Pictures/Gallery/owner/<อัลบั้ม> แล้วเลือกทั้งหมดได้ -->
-      <p class="hint" style="margin-top:6px">อัลบั้มของแกลเลอรีอยู่ที่ Pictures → Gallery → owner → ชื่ออัลบั้ม · กดค้างไฟล์แรก → เลือกทั้งหมด · เลือกซ้ำได้ คลิปที่ทำ/อัปแล้วจะถูกข้ามเอง</p>
-      <label for="files" style="margin-top:10px">หรือเลือกจากแกลเลอรี</label>
-      <input id="files" type="file" accept="video/*" multiple>
-      <p class="hint">เลือกทั้งโฟลเดอร์มั่วๆ ได้เลย · เลือกคลิปที่เคยทำไว้ซ้ำพร้อมพิมพ์ชื่อใหม่ = แก้ชื่ออัลบั้มให้ ไม่เสียค่า AI · วิดีโอไม่ถูกอัปโหลด</p>
-      <label class="chk" id="toCloudRow" hidden><input type="checkbox" id="toCloud" checked> อัปไฟล์ขึ้นคลังด้วย (ต่อไปไม่ต้องเลือกไฟล์อีก · เลือกคลิปที่ทำดัชนีแล้วซ้ำ = อัปอย่างเดียว ไม่เรียก AI)</label>
-      <label class="chk"><input type="checkbox" id="upImg" checked> อัปเกรดรูปคลิปที่เคยทำไว้ให้คมขึ้น (เลือกไฟล์เดิมซ้ำ · ไม่เรียก AI ไม่เสียค่า)</label>
-      <div class="row" style="margin-top:12px">
-        <button class="btn" id="startBtn" disabled>เริ่มทำดัชนี</button>
-        <button class="btn ghost" id="pauseBtn" hidden>พัก</button>
-      </div>
-      <button class="btn ghost small" id="retryBtn" hidden style="margin-top:8px;width:100%">ลองใหม่คลิปที่ error</button>
-      <div id="runMsg"></div>
-      <div class="prog"><i id="progBar"></i></div>
-      <p class="hint" id="progTxt"></p>
-      <p class="hint" id="wakeInfo" hidden></p>
-      <p class="hint">⚠ เปิดหน้านี้ค้างไว้ระหว่างทำ ถ้าสลับแอพ เบราว์เซอร์จะหยุดอ่านวิดีโอ (กลับมาแล้วกด เริ่ม/ทำต่อ ได้)</p>
-    </div></details>
     <details class="panel fold" id="auditFold"><summary><span>🎯 ตรวจความแม่นของ AI</span><em class="state idle" id="auditTag">...</em></summary><div class="fbody"><div id="auditBox"></div></div></details>
     <div class="panel">
       <input id="q" type="search" enterkeyhint="search" placeholder="เช่น ลูฟี่ตกใจ, โซโร ฟันดาบ" autocomplete="off">
@@ -75,13 +72,6 @@
       <label class="chk" id="onlyRow" hidden><input type="checkbox" id="onlySel"> เฉพาะคนที่เลือกเท่านั้น (ไม่มีตัวละครอื่นในฉาก)</label>
       <label for="albumFilter">อัลบั้มที่จัดเอง (ตัวกรองรอง)</label>
       <select id="albumFilter"><option value="">ทุกอัลบั้ม</option></select>
-      <button class="btn ghost small" id="openFilesBtn" style="margin-top:12px;width:100%">📂 เปิดไฟล์ฟุตเทจให้เล่นดูฉากได้</button>
-      <p class="hint" id="openFilesInfo" style="margin-top:6px">ยังไม่ได้เปิดไฟล์ (เลือกไฟล์ของอัลบั้มที่จะใช้ครั้งเดียว แล้วกด ▶ ดูฉากนี้ ได้ทันที · ไฟล์ไม่ถูกอัปโหลด)</p>
-      <button class="btn ghost small" id="aiOpt" style="margin-top:12px;width:100%">⚙ ตัวเลือก AI</button>
-      <div id="aiOptBox" hidden>
-        <label class="sw"><span>ให้ AI แปลคำค้นไทยเป็นแท็กอังกฤษ<small>เสียเงินนิดหน่อยต่อครั้ง ปกติไม่ต้องเปิด</small></span><input type="checkbox" id="aiQuery"><i class="knob"></i></label>
-        <label class="sw"><span>ให้ AI ช่วยเลือกฉากที่ตรงที่สุด<small>เข้าใจประโยคยาวๆ · ราว $0.002 ต่อครั้ง · มีปุ่มกดถามต่างหาก</small></span><input type="checkbox" id="aiRank"><i class="knob"></i></label>
-      </div>
       <button class="btn" id="aiGo" hidden style="width:100%;margin-top:10px">ถาม AI เลือกฉากให้</button>
       <p class="hint" id="findInfo"></p>
     </div>
@@ -182,6 +172,10 @@
       <label for="par">ส่งพร้อมกันกี่คำขอ</label>
       <input id="par" type="number" min="1" max="4" step="1">
     </div></details>
+    <details class="panel fold"><summary><span>ค้นหาด้วย AI</span><em class="state idle" id="tagFind"></em></summary><div class="fbody">
+      <label class="sw"><span>ให้ AI แปลคำค้นไทยเป็นแท็กอังกฤษ<small>เสียเงินนิดหน่อยต่อครั้ง ปกติไม่ต้องเปิด</small></span><input type="checkbox" id="aiQuery"><i class="knob"></i></label>
+      <label class="sw"><span>ให้ AI ช่วยเลือกฉากที่ตรงที่สุด<small>เข้าใจประโยคยาวๆ · ราว $0.002 ต่อครั้ง · จะมีปุ่ม ถาม AI เลือกฉากให้ ที่แท็บคลัง</small></span><input type="checkbox" id="aiRank"><i class="knob"></i></label>
+    </div></details>
     <details class="panel fold"><summary><span>ตัดฉาก</span><em class="state idle" id="tagCut"></em></summary><div class="fbody">
       <label for="thr">ความไวจุดตัดฉาก: <b id="thrVal"></b> (น้อย = ตัดถี่)</label>
       <input id="thr" type="range" min="0.04" max="0.5" step="0.01">
@@ -225,6 +219,6 @@
 <input id="pickDocs" type="file" multiple hidden><!-- ไม่ใส่ accept → Android เปิดแอพไฟล์ (เข้าโฟลเดอร์ + เลือกทั้งหมดได้) แทนตัวเลือกรูป -->
 <video id="vid" muted playsinline preload="auto" style="position:fixed;left:-9999px;width:2px;height:2px"></video>
 
-<script src="store.js?v=20261015p" data-boot="budget.js?v=20261015p footage-core.js?v=20261015p r2.js?v=20261015p footage.js?v=20261015p footage-find.js?v=20261015p footage-audit.js?v=20261015p footage-cloud.js?v=20261015p mp4fix.js?v=20261015p footage-plan.js?v=20261015p gdrive.js?v=20261015p"></script>
+<script src="store.js?v=20261015r" data-boot="budget.js?v=20261015r footage-core.js?v=20261015r r2.js?v=20261015r footage.js?v=20261015r footage-find.js?v=20261015r footage-audit.js?v=20261015r footage-cloud.js?v=20261015r mp4fix.js?v=20261015r footage-plan.js?v=20261015r gdrive.js?v=20261015r"></script>
 </body>
 </html>

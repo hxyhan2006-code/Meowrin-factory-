@@ -47,11 +47,11 @@
   /* ---------- เลือกไฟล์ → คิว ---------- */
   var VIDEO = /\.(mp4|m4v|mov|webm|mkv|3gp)$/i;
   function addFiles(list){
-    var typed = $("album").value.trim(), album = typed || "ไม่ระบุ", picked = Date.now(), up = $("toCloud").checked && FT.cloud && FT.cloud.ready();
+    var typed = $("album").value.trim(), album = typed || "ไม่ระบุ", picked = Date.now(), up = FT.cloud && FT.cloud.ready(); /* ตั้งค่าคลังไว้ = อัปขึ้นคลังอัตโนมัติ */
     var files = Array.prototype.filter.call(list, function(f){ return /^video\//.test(f.type) || VIDEO.test(f.name); }), other = list.length - files.length; /* แอพไฟล์เลือกทั้งโฟลเดอร์ได้ → ตัดรูป/ไฟล์อื่นทิ้ง */
     var add = files.map(function(f){
       var done = findClip(f), id = done ? done.id : FT.clipId(f), fin = done && done.status === "done";
-      var old = fin && (done.imgV || 1) < FT.IMG_V && $("upImg").checked; /* รูปรุ่นเก่า (เล็ก/เบลอ) → วาดใหม่ฟรี */
+      var old = fin && (done.imgV || 1) < FT.IMG_V; /* รูปรุ่นเก่า (เล็ก/เบลอ) → วาดใหม่ฟรี */
       var relabel = fin && !!typed && done.album !== typed; /* เลือกคลิปเดิมซ้ำพร้อมพิมพ์อัลบั้มใหม่ → แก้ชื่ออัลบั้มให้ (ไม่เรียก AI) */
       var cloud = up && fin && !done.r2; /* ทำดัชนีแล้วแต่ยังไม่อยู่ในคลัง → อัปอย่างเดียว */
       var mode = old ? "up" : relabel ? "label" : cloud ? "cloud" : "";
@@ -66,7 +66,6 @@
     renderQueue(); renderDebug();
   }
   function avgCost(){ var d = lib.filter(function(c){ return c.status === "done" && c.cost; }); return d.length ? d.reduce(function(t, c){ return t + c.cost; }, 0) / d.length : 0.014; }
-  $("files").addEventListener("change", function(){ addFiles(this.files); this.value = ""; });
   $("filesDocs").addEventListener("change", function(){ addFiles(this.files); this.value = ""; });
   $("filesDocsBtn").addEventListener("click", function(){ $("filesDocs").click(); });
   $("album").addEventListener("input", function(){ /* เปลี่ยนชื่ออัลบั้มก่อนกดเริ่ม = ใช้กับคลิปที่ยังรออยู่ */
