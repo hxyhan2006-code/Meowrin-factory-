@@ -150,5 +150,10 @@
       origBusy = false; sheet();
     }
   });
+  FT.pick = { /* footage-plan.js ส่งฉากจากแผนเข้ามา: เพิ่มต่อท้ายที่เลือกไว้ (ไม่ซ้ำ) แล้วเปิดถาด */
+    add:function(list){ var added = 0; list.forEach(function(x){ if(!sel.some(function(y){ return y.id === x.id && y.si === x.si; })){ sel.push({ id:x.id, si:x.si }); added++; } });
+      save(); bar(); return { added:added, dup:list.length - added }; },
+    open:function(){ sheet(); }
+  };
   bar();
 })();

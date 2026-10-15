@@ -103,11 +103,10 @@
   $("onlySel").addEventListener("change", function(){ only = this.checked; chipMax = 40; search(); });
   var aiTerms = {}, sT = 0, shown = [], lastQ = "", showPartial = false, lastHits = [], aiQ = "", chipMax = 40; /* lastHits = ผลค้นในเครื่องล่าสุด (ผู้สมัครของ AI) · aiQ = คำค้นที่ AI เลือกให้อยู่ */ /* shown = รายการที่โชว์อยู่ (ให้ปุ่มดูรูปใหญ่อ้างถึง) */
   $("q").addEventListener("input", function(){ clearTimeout(sT); sT = setTimeout(search, 250); });
-  $("albumFilter").addEventListener("change", search);
   $("aiQuery").addEventListener("change", search);
   async function search(){
-    var q = $("q").value.trim(), al = $("albumFilter").value;
-    var clips = U.lib().filter(function(c){ return c.status === "done" && (!al || c.album === al); });
+    var q = $("q").value.trim();
+    var clips = U.lib().filter(function(c){ return c.status === "done"; });
     renderChips();
     if(!q){ return browse(clips); }
     var extra = [];

@@ -346,9 +346,6 @@
   function renderAlbums(){
     var as = lib.map(function(c){ return c.album; }).filter(function(a, i, s){ return a && s.indexOf(a) === i; }).sort();
     $("albumList").innerHTML = as.map(function(a){ return '<option value="' + esc(a) + '">'; }).join("");
-    var cur = $("albumFilter").value;
-    $("albumFilter").innerHTML = '<option value="">ทุกอัลบั้ม</option>' + as.map(function(a){ return '<option value="' + esc(a) + '">' + esc(a) + "</option>"; }).join("");
-    $("albumFilter").value = as.indexOf(cur) >= 0 ? cur : "";
     var ro = $("renOld").value;
     $("renOld").innerHTML = as.length ? as.map(function(a){ return '<option value="' + esc(a) + '">' + esc(a) + " (" + lib.filter(function(c){ return c.album === a; }).length + " คลิป)</option>"; }).join("") : '<option value="">ยังไม่มีอัลบั้ม</option>';
     if(as.indexOf(ro) >= 0) $("renOld").value = ro;

@@ -173,6 +173,11 @@
     if(e.target.closest("#plSave")) FT.stitch.save(cuts.file, say);
     else if(e.target.closest("#plSend")) FT.stitch.send(cuts.file, say);
   });
+  $("plToPick").addEventListener("click", function(){ /* ฉากที่ใช้ตามบท → ถาดเลือกฉากของแท็บคลัง (footage-pick.js) */
+    var l = picked(); if(!l.length){ say("ยังไม่มีฉากที่ใช้ในแผน", "err"); return; }
+    var r = FT.pick.add(l.map(function(x){ return { id:x.c.id, si:x.si }; }));
+    say("ส่งเข้าถาดแล้ว " + r.added + " ฉาก" + (r.dup ? " (ซ้ำกับที่เลือกไว้ " + r.dup + ")" : "") + " · เปิดถาดต่อได้เลย", "ok"); FT.pick.open();
+  });
   $("plCopy").addEventListener("click", function(){
     var txt = plan.rows.map(function(r, k){ var ch = r.use && chosen(r), sc = ch && ch.c.scenes[ch.pk.si];
       return (k + 1) + ". " + r.line + "\n   → " + (sc ? ch.c.album + " · " + ch.c.name + " (" + U.capDur(ch.c.duration) + ") ฉาก " + U.tm(sc.s) + "–" + U.tm(sc.e) : "ไม่มีในคลัง: " + r.scene); }).join("\n");

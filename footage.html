@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600&family=Mitr:wght@500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="footage.css?v=20261015y">
+<link rel="stylesheet" href="footage.css?v=20261015z">
 </head>
 <body>
 <header>
@@ -70,8 +70,6 @@
       <div class="chips" id="chips"></div>
       <div class="chips" id="sizes"></div>
       <label class="chk" id="onlyRow" hidden><input type="checkbox" id="onlySel"> เฉพาะคนที่เลือกเท่านั้น (ไม่มีตัวละครอื่นในฉาก)</label>
-      <label for="albumFilter">อัลบั้มที่จัดเอง (ตัวกรองรอง)</label>
-      <select id="albumFilter"><option value="">ทุกอัลบั้ม</option></select>
       <button class="btn" id="aiGo" hidden style="width:100%;margin-top:10px">ถาม AI เลือกฉากให้</button>
       <button class="btn ghost" id="pickMode" style="width:100%;margin-top:10px">☑ เลือกฉากไปทำวิดีโอ</button>
       <p class="hint" id="pickHint" hidden>แตะรูปย่อของฉากในแต่ละคลิปเพื่อเลือก (ขึ้นเครื่องหมาย ✓ ส้ม) · ปุ่ม 🔍 ที่รูปย่อ = ดูรูปใหญ่/เล่นฉาก · ผลค้นหาหรือชิปจะมีช่อง "เลือกฉากนี้" · ที่เลือกไว้ค้างอยู่แม้ค้นหาใหม่หรือปิดหน้า · ดู/ล้างได้ที่แถบด้านล่าง
@@ -99,6 +97,7 @@
         <button class="btn" id="plShare">✂ ต่อฉากเป็นวิดีโอเดียว</button>
         <button class="btn ghost" id="plCopy">คัดลอกรายการ</button>
       </div>
+      <button class="btn ghost" id="plToPick" style="width:100%;margin-top:8px">➕ ส่งฉากเข้าถาดเลือกฉาก (บันทึกต้นฉบับ/ตัดเองใน CapCut)</button>
       <div id="plShareMsg"></div>
       <div class="prog" id="plProg" hidden><i id="plBar"></i></div>
       <div id="plBatches"></div>
@@ -236,6 +235,6 @@
 <input id="pickDocs" type="file" multiple hidden><!-- ไม่ใส่ accept → Android เปิดแอพไฟล์ (เข้าโฟลเดอร์ + เลือกทั้งหมดได้) แทนตัวเลือกรูป -->
 <video id="vid" muted playsinline preload="auto" style="position:fixed;left:-9999px;width:2px;height:2px"></video>
 
-<script src="store.js?v=20261015y" data-boot="budget.js?v=20261015y footage-core.js?v=20261015y r2.js?v=20261015y footage.js?v=20261015y footage-find.js?v=20261015y footage-audit.js?v=20261015y footage-cloud.js?v=20261015y mp4fix.js?v=20261015y footage-stitch.js?v=20261015y footage-plan.js?v=20261015y footage-pick.js?v=20261015y gdrive.js?v=20261015y"></script>
+<script src="store.js?v=20261015z" data-boot="budget.js?v=20261015z footage-core.js?v=20261015z r2.js?v=20261015z footage.js?v=20261015z footage-find.js?v=20261015z footage-audit.js?v=20261015z footage-cloud.js?v=20261015z mp4fix.js?v=20261015z footage-stitch.js?v=20261015z footage-plan.js?v=20261015z footage-pick.js?v=20261015z gdrive.js?v=20261015z"></script>
 </body>
 </html>
