@@ -246,10 +246,6 @@
         try{ q.stage = "อัปขึ้นคลัง..."; renderQueue(); await FT.cloud.upload(rec, q.file, function(p){ q.stage = "อัปขึ้นคลัง " + Math.round(p * 100) + "%"; renderQueue(); }); }
         catch(err){ q.err = "ทำดัชนีเสร็จ แต่อัปขึ้นคลังไม่ได้: " + (err.message || err); if(err.budget){ paused = true; capMsg = err.message; } } /* ชนเพดานคลัง → พักคิว ไม่ทำดัชนีต่อทั้งที่อัปไม่ได้ */
       }
-      if(cfg.keepLocal && FT.local && FT.local.ok() && q.file && !FT.local.file(rec)){ /* ตั้งค่า "เก็บสำเนาไว้ในแอพ" (footage-local.js) */
-        try{ q.stage = "เก็บสำเนาในเครื่อง..."; renderQueue(); await FT.local.put(rec, q.file, function(p){ q.stage = "เก็บสำเนาในเครื่อง " + Math.round(p * 100) + "%"; renderQueue(); }); }
-        catch(err){ q.err = "ทำดัชนีเสร็จ แต่เก็บสำเนาในเครื่องไม่ได้: " + (err.message || err); }
-      }
       if(q.key) q.file = null; /* ไฟล์ที่โหลดจากคลังกินแรม ปล่อยทิ้ง */
       q.status = "done"; q.p = 1;
     }catch(err){
