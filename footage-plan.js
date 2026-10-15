@@ -74,7 +74,7 @@
     shot.chars.forEach(function(n){ var k = U.charKey(n); if(want.indexOf(k) < 0) want.push(k); });
     U.lib().forEach(function(c){ if(c.status !== "done" || c.hide) return; c.scenes.forEach(function(sc, si){
       var cs = U.chars(sc), hitC = want.filter(function(k){ return cs.indexOf(k) >= 0; }).length, h = U.hay(c, sc), score = 0;
-      ts.forEach(function(v){ var w = [3, 2, 1].find(function(_, k){ return v.some(function(n){ return h[k].indexOf(n) >= 0; }); }); if(w) score += w; });
+      ts.forEach(function(v){ var k = U.matchIdx(v, h); if(k >= 0) score += [3, 2, 1][k]; });
       if(want.length){ score += hitC * 8; if(!hitC) score -= 6; } /* สไตล์ช่อง: เอ่ยชื่อใคร ต้องเห็นคนนั้น */
       var len = sc.e - sc.s; score += len >= shot.dur ? 1.5 : len / shot.dur * 1.5; /* ฉากยาวพอกับประโยค */
       var a = sc.ai || {}; if(a.shot && a.shot === shot.shot) score += 1.5; /* ดัชนีรุ่นละเอียด: ระยะภาพตรงที่ผู้กำกับอยากได้ */

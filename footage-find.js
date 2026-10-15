@@ -23,27 +23,60 @@
     ["ฟันดาบ","ดาบ","sword","slash"],["กิน","อาหาร","หิว","eat","food","hungry"],["วิ่ง","หนี","run","flee","chase"],["เท่","เจ๋ง","cool","badass"]
   ];
   SYN.push(["ชูสองนิ้ว","ชู 2 นิ้ว","ชูนิ้ว","ท่าสันติภาพ","สองนิ้ว","2 นิ้ว","peace sign","v sign","victory sign","two fingers"]); /* ตัวตัดคำของเบราว์เซอร์ตัด "ชูสองนิ้ว" เป็น ชูส/อง/นิ้ว → กันไว้เป็นวลีเดียว */
+  SYN.push(["เศร้า","หดหู่","ซึม","เสียใจ","ร้องไห้","sad","sorrow","gloom"],["ยิ้ม","ยิ้มกว้าง","หัวเราะ","grin","smile"],["เตะ","กระทืบ","kick","stomp"],["กระโดด","โดด","พุ่ง","jump","leap","dash"],
+    ["บิน","ลอย","fly","float","soar"],["ตาย","เสียชีวิต","จากไป","death","dead","die"],["ช่วย","ช่วยเหลือ","ช่วยชีวิต","help","rescue","save"],["ปกป้อง","คุ้มกัน","ขวาง","protect","guard","shield"],
+    ["ระเบิด","ปะทุ","explode","explosion","blast"],["เผชิญหน้า","ประจันหน้า","จ้องหน้า","confront","stare","face-off","glare"],["ว่ายน้ำ","จมน้ำ","swim","drown"],["ดื่ม","เหล้า","เบียร์","drink","sake","beer"],
+    ["สัญญา","สาบาน","ปฏิญาณ","promise","vow","swear"],["ฝัน","ความฝัน","dream"],["ย้อนอดีต","อดีต","ความทรงจำ","flashback","memory","past"],["เขิน","อาย","เขินอาย","blush","shy","embarrass"],
+    ["ภูมิใจ","เท่ห์","proud","triumph"],["ชนะ","ชัยชนะ","win","victory"],["แพ้","พ่ายแพ้","lose","defeat","beaten"],["จับ","คว้า","รัด","grab","grip","hold"],["ดึง","ลาก","ยืด","pull","drag","stretch"],
+    ["คิด","ครุ่นคิด","นิ่งคิด","think","ponder","thought"],["นั่ง","พักผ่อน","sit","rest","relax"],["เดิน","ก้าวเดิน","walk","stroll"],["จ้อง","มอง","เหลือบมอง","look","gaze","watch"]);
   SYN.push(["พายเรือ","ล่องเรือ","แล่นเรือ","เรือ","พาย","boat","ship","row","sail","raft"],["ทะเล","มหาสมุทร","คลื่น","sea","ocean","wave"],["ป่า","ต้นไม้","forest","jungle"],
     ["เมือง","หมู่บ้าน","ชาวบ้าน","town","village"],["นอน","หลับ","เตียง","sleep","bed"],["พูด","คุย","บอก","talk","speak","say"],["ร้อง","ตะโกน","scream","shout","yell"],["ร้องเพลง","เพลง","sing","song"],
     ["ซ่อน","แอบ","hide","sneak"],["กอด","hug","embrace"],["วิ่ง","หนี","run","flee","chase"]);
   var STOP = ["ฉาก","ฉากที่","ที่","ซึ่ง","อยู่","กับ","และ","ของ","ใน","ตอน","ตอนที่","แบบ","มี","เป็น","ให้","ไป","มา","คือ","หา","อยาก","ได้","เวลา","เจอ","ครับ","ค่ะ","หน่อย","ด้วย","แล้ว","จะ","ก็","ไหม","มั้ย","อะ","นะ","เมื่อ","กำลัง","แต่","หรือ","กัน","เรื่อง","ภาพ","คลิป","ช่วง","ที"];
   var seg = null; try{ seg = new Intl.Segmenter("th", { granularity:"word" }); }catch(e){}
-  function terms(q){ /* คืนกลุ่มคำ [[คำที่ความหมายเดียวกัน...]] แต่ละกลุ่ม = 1 เงื่อนไขที่ต้องตรง */
-    var out = [], rest = q.toLowerCase();
-    NAMES.concat(SYN).forEach(function(v){ if(v.some(function(n){ return rest.indexOf(n) >= 0; })){ out.push(v); v.forEach(function(n){ rest = rest.split(n).join(" "); }); } });
+  /* ปรับข้อความให้เทียบกันได้แม้สะกดต่าง: ตัดวรรณยุกต์/ไม้ยมก · เลขไทย→อารบิก · สอง/สาม/หนึ่ง→2/3/1 · compact = ตัดช่องว่างด้วย (ภาษาไทยไม่เว้นวรรคสม่ำเสมอ) */
+  var NZC = {};
+  function nzk(s){
+    return String(s || "").toLowerCase().replace(/[๐-๙]/g, function(d){ return d.charCodeAt(0) - 0xE50; }).replace(/[\u0e48-\u0e4c\u0e46]/g, "")
+      .replace(/สอง/g, "2").replace(/สาม/g, "3").replace(/หนึง/g, "1");
+  }
+  function nzc(s){ var k = String(s); return NZC[k] || (NZC[k] = nzk(k).replace(/\s+/g, "")); }
+  var SKC = {};
+  function skel(s){ return SKC[s] || (SKC[s] = s.replace(/[\u0e31\u0e34-\u0e3a\u0e47]/g, "")); }
+  function fuzzyHas(h, w){ /* เจอคำเกือบครบ: มีช่วงยาว ≥70% ของคำอยู่ในข้อความ (ทนพิมพ์ตกหล่น/สะกดต่างหนึ่งตัว) */
+    var L = w.length; if(L < 4) return false;
+    var m = Math.max(3, Math.ceil(L * 0.7));
+    for(var i = 0; i + m <= L; i++) if(h.indexOf(w.substr(i, m)) >= 0) return true;
+    return false;
+  }
+  function terms(q){ /* คืนกลุ่มคำ [[คำที่ความหมายเดียวกัน...]] แต่ละกลุ่ม = 1 เงื่อนไขที่ต้องตรง · เงื่อนไขคำธรรมดามี .chunk = ก้อนที่พิมพ์ติดกัน (ใช้กู้เมื่อตัวตัดคำตัดผิด) */
+    var out = [], rest = nzk(q);
+    NAMES.concat(SYN).forEach(function(v){ if(v.some(function(n){ return rest.indexOf(nzk(n)) >= 0; })){ out.push(v); v.forEach(function(n){ rest = rest.split(nzk(n)).join(" "); }); } });
     rest.split(/[\s,]+/).filter(Boolean).forEach(function(p){
       if(/[฀-๿]/.test(p) && seg){
-        var ws = Array.from(seg.segment(p)).filter(function(x){ return x.isWordLike && x.segment.length >= 2; }).map(function(x){ return x.segment; });
-        (ws.length ? ws : [p]).forEach(function(w){ if(STOP.indexOf(w) < 0) out.push([w]); });
+        var ws = Array.from(seg.segment(p)).filter(function(x){ return x.isWordLike && x.segment.length >= 2; }).map(function(x){ return x.segment; }).filter(function(w){ return STOP.indexOf(w) < 0; });
+        var chunk = ws.join("");
+        (ws.length || STOP.indexOf(p) >= 0 ? ws : [p]).forEach(function(w){ var g = [w]; g.chunk = chunk; out.push(g); });
       } else if(p.length >= 2 && STOP.indexOf(p) < 0) out.push([p]);
     });
     return out;
   }
+  /* เงื่อนไขหนึ่งตรงกับข้อความระดับไหน: คืน index ในอาเรย์ hay (0 ตัวละคร · 1 แท็ก · 2 สรุป) หรือ -1 · hn = hayN() */
+  function matchIdx(v, hn){
+    var k, i;
+    for(k = 0; k < hn.length; k++) for(i = 0; i < v.length; i++) if(hn[k].indexOf(nzc(v[i])) >= 0) return k;
+    if(v.chunk && v.chunk.length >= 4){ /* ตัวตัดคำอาจตัดผิด (ชู|ส|อง) → ลองทั้งก้อนที่พิมพ์ติดกัน */
+      for(k = 0; k < hn.length; k++) if(fuzzyHas(hn[k], v.chunk)) return k;
+    }
+    var w = v[0]; /* พิมพ์ตกสระ (ศตรู ↔ ศัตรู): เทียบโครงพยัญชนะ ไม่นับสระบน/ล่าง */
+    if(w.length >= 3){ var sk = skel(w); if(sk.length >= 3) for(k = 0; k < hn.length; k++) if(skel(hn[k]).indexOf(sk) >= 0) return k; }
+    return -1;
+  }
   function hay(c, sc){
     var a = sc.ai || {};
-    return [ (a.characters || []).concat(a.characters_th || []).join(" ").toLowerCase(),
-             (a.tags_en || []).concat(a.tags_th || [], [a.action, a.emotion, a.mood]).join(" ").toLowerCase(),
-             [a.summary_th, a.location, a.arc, a.event].join(" ").toLowerCase() ]; /* mood/arc/event มีเฉพาะดัชนีรุ่นละเอียด */ /* ระดับฉากเท่านั้น: ไม่รวมสรุปทั้งคลิป (ไม่งั้นทุกฉากในคลิปที่มีลูฟี่ตรงหมด) และไม่รวมชื่ออัลบั้ม */
+    return [ (a.characters || []).concat(a.characters_th || []).join(" "),
+             (a.tags_en || []).concat(a.tags_th || [], [a.action, a.emotion, a.mood], a.objects || []).join(" "),
+             [a.summary_th, a.location, a.arc, a.event, a.text].concat((a.fr || []).map(function(f){ return f.d; })).join(" ") ].map(nzc); /* mood/arc/event มีเฉพาะดัชนีรุ่นละเอียด */ /* ระดับฉากเท่านั้น: ไม่รวมสรุปทั้งคลิป (ไม่งั้นทุกฉากในคลิปที่มีลูฟี่ตรงหมด) และไม่รวมชื่ออัลบั้ม */
   }
   /* "ลูฟี่ตกใจ" ต้องหมายถึงลูฟี่เป็นคนตกใจ ไม่ใช่แค่มีลูฟี่อยู่ในฉากแล้วคนอื่นตกใจ → ดูว่าชื่อตัวละครตามด้วยคำอารมณ์ติดกันในสรุปของฉาก (ไม่เกิน NEAR ตัวอักษร) */
   var NEAR = 24;
@@ -121,8 +154,8 @@
       if(!passSc(sc)) return;
       var h = hay(c, sc), hit = 0, score = 0;
       ts.forEach(function(v){
-        var w = [4, 2, 1].find(function(_, k){ return v.some(function(n){ return h[k].indexOf(n) >= 0; }); });
-        if(w){ hit++; score += w; }
+        var k = matchIdx(v, h);
+        if(k >= 0){ hit++; score += [4, 2, 1][k]; }
       });
       var exact = false, sm = (sc.ai && sc.ai.summary_th || "").toLowerCase();
       names.forEach(function(ng){ emos.forEach(function(eg){ if(near(sm, ng, eg)) exact = true; }); });
@@ -260,7 +293,7 @@
       a.characters = (a.characters || []).concat(nx ? nx.key.replace(/(^| )\w/g, function(m){ return m.toUpperCase(); }) : k); a.characters_th = (a.characters_th || []).concat(nx ? nx.th : k); n++; });
     if(n){ a.rc = 1; chipCache.delete(sc); } return n;
   }
-  Object.assign(U, { addChars:addChars, show:function(c, sc){ return shown.push({ c:c, sc:sc }) - 1; }, terms:terms, hay:hay, card:card, chars:sceneChars, charKey:charKey, fileFor:fileOf, hasSrc:hasSrc, srcUrl:srcUrl, search:search,
+  Object.assign(U, { addChars:addChars, show:function(c, sc){ return shown.push({ c:c, sc:sc }) - 1; }, terms:terms, hay:hay, matchIdx:matchIdx, card:card, chars:sceneChars, charKey:charKey, fileFor:fileOf, hasSrc:hasSrc, srcUrl:srcUrl, search:search,
                      openFiles:function(docs){ $(docs ? "pickDocs" : "playFiles").click(); } });
   if($("p-find").classList.contains("on")) search();
 })();
