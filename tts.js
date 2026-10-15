@@ -219,7 +219,7 @@
     }catch(err){ note(err.message, true); }
     busy = false; sync();
   }
-  /* ---------- เสียงที่เก็บไว้ (MWVoice: 10 เทคล่าสุดในเครื่อง + สำรองบนคลัง R2 ถ้าตั้งค่าไว้ · หน้าฟุตเทจใช้ต่อได้) ---------- */
+  /* ---------- เสียงที่เก็บไว้ (MWVoice: 50 เทคล่าสุดในเครื่อง + สำรองบนคลัง R2 ถ้าตั้งค่าไว้ · หน้าฟุตเทจใช้ต่อได้) ---------- */
   var savedUrls = [], dateOf = function(id){ return new Date(id).toLocaleString("th-TH", { day:"numeric", month:"short", hour:"2-digit", minute:"2-digit" }); };
   async function renderSaved(){
     if(!window.MWVoice) return;
@@ -236,7 +236,7 @@
           + '<div class="row"><a class="btn ghost small" href="' + u + '" download="' + MW.esc(r.name || "meowrin.mp3") + '" style="flex:1">ดาวน์โหลด</a>'
           + (on && !r.cloud ? '<button class="btn ghost small" data-vup="' + r.id + '" style="flex:1">☁ อัปขึ้นคลัง</button>' : "")
           + '<button class="btn ghost small" data-vdel="' + r.id + '" style="flex:1">ลบ</button></div></div>';
-      }).join("") || '<p class="empty">ยังไม่มีเสียงที่เก็บไว้ · สร้างเสียงแล้วจะเก็บให้อัตโนมัติ (10 เทคล่าสุด' + (on ? " + สำรองบนคลัง" : "") + ')</p>')
+      }).join("") || '<p class="empty">ยังไม่มีเสียงที่เก็บไว้ · สร้างเสียงแล้วจะเก็บให้อัตโนมัติ (50 เทคล่าสุด' + (on ? " + สำรองบนคลัง" : "") + ')</p>')
         + (only.length ? '<p class="hint" style="margin-top:12px">☁ อยู่ในคลังแต่ยังไม่ได้ดึงมาเครื่องนี้</p>' + only.map(function(c){
           return '<div class="vsaved"><div class="vsh"><b>' + MW.esc(dateOf(c.id)) + '</b> · ' + (c.size / 1048576).toFixed(1) + ' MB · ☁ อยู่ในคลัง</div><div class="row"><button class="btn ghost small" data-vpull="' + c.id + '" style="flex:1">⬇ ดึงมาเครื่องนี้</button><button class="btn ghost small" data-vdelc="' + c.id + '" style="flex:1">ลบจากคลัง</button></div></div>'; }).join("") : "");
     };

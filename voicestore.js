@@ -4,7 +4,7 @@
    record = { id, at, text, name, blob (mp3), align?:{ chars, st[], en[] } } · align = เวลาเริ่ม/จบของทุกตัวอักษร (ไม่รวมช่องว่าง) ของ "บท" เทียบกับต้นไฟล์ blob */
 (function(){
   "use strict";
-  var DB = "mw_voice_v1", ST = "takes", KEEP = 10, CKEEP = 50, PFX = "voice/", dbp = null;
+  var DB = "mw_voice_v1", ST = "takes", KEEP = 50, CKEEP = 50, PFX = "voice/", dbp = null;
   function open(){
     if(!dbp) dbp = new Promise(function(ok, no){
       var r = indexedDB.open(DB, 1);
