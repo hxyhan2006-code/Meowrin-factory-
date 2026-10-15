@@ -71,10 +71,11 @@
       return { file:file, marks:r.marks, rate:r.rate, mime:mime };
     }finally{ ac.close(); await U.wake(false); }
   }
-  async function send(file, say){ /* แชร์ไฟล์เดียวไป CapCut (Web Share) */
-    if(!navigator.canShare || !navigator.canShare({ files:[file] })){ say("เบราว์เซอร์นี้แชร์ไฟล์นี้ไม่ได้ ลองปุ่ม 💾 บันทึกไฟล์ลงเครื่องแทน", "err"); return; }
-    try{ await navigator.share({ files:[file], title:"ฟุตเทจตามบท" }); }
-    catch(err){ if(err && err.name !== "AbortError") say("แชร์ไม่ได้: " + err.message + (file.size > 50 * 1048576 ? " (ไฟล์เกิน 50 MB ลองเลือกฉากให้น้อยลง)" : ""), "err"); }
+  async function send(file, say){ /* แชร์ไฟล์ (หรือหลายไฟล์) ไป CapCut ด้วย Web Share · Brave/Chrome Android จำกัด ≤10 ไฟล์ รวม ≤50 MB */
+    var fs = Array.isArray(file) ? file : [file], big = fs.reduce(function(t, f){ return t + f.size; }, 0) > 50 * 1048576 || fs.length > 10;
+    if(!navigator.canShare || !navigator.canShare({ files:fs })){ say("เบราว์เซอร์นี้แชร์ไฟล์นี้ไม่ได้" + (big ? " (เกินลิมิตแชร์ ≤10 ไฟล์ รวม ≤50 MB)" : "") + " ลองปุ่ม 💾 บันทึกลงเครื่องแทน", "err"); return; }
+    try{ await navigator.share({ files:fs, title:"ฟุตเทจ" }); }
+    catch(err){ if(err && err.name !== "AbortError") say("แชร์ไม่ได้: " + err.message + (big ? " (เกินลิมิตแชร์ ใช้ปุ่ม 💾 บันทึกลงเครื่องแทน)" : ""), "err"); }
   }
   function save(file, say){ /* บันทึกลงโฟลเดอร์ Download (ไว้เปิดใน CapCut ตรงๆ ไม่ผ่านปุ่มแชร์) */
     var url = URL.createObjectURL(file), a = document.createElement("a"); a.href = url; a.download = file.name; document.body.appendChild(a); a.click(); a.remove();

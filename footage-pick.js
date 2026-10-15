@@ -5,12 +5,30 @@
   var FT = window.FT, U = FT && FT.ui; if(!U || !FT.stitch) return;
   var $ = function(id){ return document.getElementById(id); }, esc = U.esc, tm = U.tm;
   var KEY = "mw_footage_pick_v1", sel = MWStore.get(KEY, []), mode = false, map = {}, out = null, making = false;
+  var SHARE_MAX = 49 * 1048576, origCache = {}, origBusy = false; /* origCache = คลิปต้นฉบับที่โหลดจากคลังมาเตรียมแชร์ (id → File) · แชร์ต้องแตะแล้วแชร์ทันที จึงโหลดให้เสร็จก่อน */
   function save(){ MWStore.set(KEY, sel); }
   function keyOf(c, sc){ return c.id + "#" + c.scenes.indexOf(sc); }
   function resolve(){ /* [{ c, si, sc, lines }] เฉพาะฉากที่ยังอยู่ในดัชนี */
     var lib = U.lib(), r = [];
     sel.forEach(function(x){ var c = lib.find(function(y){ return y.id === x.id; }), sc = c && c.scenes[x.si]; if(sc) r.push({ c:c, si:x.si, sc:sc, lines:[r.length + 1] }); });
     return r;
+  }
+  /* ---------- ต้นฉบับทั้งคลิป: แชร์/บันทึก/คัดลอกรายการช่วงเวลา (ไม่ต้องต่อวิดีโอ) ---------- */
+  function origs(l){ var m = [], seen = {}; l.forEach(function(x){ var o = seen[x.c.id]; if(!o){ o = seen[x.c.id] = { c:x.c, rs:[] }; m.push(o); } o.rs.push(x.sc); }); return m; }
+  function ranges(o){ return o.rs.map(function(sc){ return tm(sc.s) + "–" + tm(sc.e); }).join(", "); }
+  function mb(n){ return (n / 1048576).toFixed(1); }
+  async function getFile(c, onp){ var f = origCache[c.id] || U.fileFor(c); if(f) return f;
+    if(c.r2 && FT.cloud && FT.cloud.ready()) return FT.cloud.fetch({ key:c.r2, info:{ name:c.name, lastModified:c.lastModified } }, onp);
+    throw new Error("ไม่มีไฟล์ " + c.name); }
+  function origHtml(l){
+    var o = origs(l), total = o.reduce(function(t, x){ return t + (x.c.size || 0); }, 0), miss = o.some(function(x){ return !U.hasSrc(x.c); }), fit = o.length <= 10 && total <= SHARE_MAX;
+    var ready = o.every(function(x){ return origCache[x.c.id] || U.fileFor(x.c); }), dis = origBusy || miss ? " disabled" : "";
+    return '<hr><h2 style="font-size:16px">หรือ: ต้นฉบับทั้งคลิป</h2><p class="hint" style="margin-top:0">' + o.length + " คลิป รวม " + mb(total) + " MB · ได้ไฟล์เต็มคุณภาพทันที ไม่ต้องรออัด · ใน CapCut ให้ตัดตามช่วงเวลา:</p><ol class=\"marks\">"
+      + o.map(function(x){ return "<li><b>" + esc(x.c.name) + "</b> (" + esc(x.c.album) + ") · " + ranges(x) + "</li>"; }).join("") + "</ol>"
+      + '<button class="btn" id="pickOShare" style="width:100%"' + (fit ? dis : " disabled") + ">" + (fit ? (ready ? "📤 แชร์คลิปต้นฉบับไป CapCut" : "⬇ โหลดจากคลังให้พร้อมแชร์ (" + mb(total) + " MB)") : "📤 แชร์ไม่ได้ (ลิมิตแชร์ ≤10 คลิป รวม ≤50 MB)") + "</button>"
+      + '<button class="btn" id="pickOSave" style="width:100%;margin-top:8px"' + dis + ">💾 บันทึกคลิปต้นฉบับลงเครื่อง (ไม่จำกัดจำนวน/ขนาด)</button>"
+      + '<button class="btn ghost small" id="pickOCopy" style="width:100%;margin-top:8px">คัดลอกรายการช่วงเวลา</button>'
+      + (fit ? "" : '<p class="hint">ปุ่มแชร์ของเบราว์เซอร์มือถือจำกัด ≤10 ไฟล์ รวม ≤50 MB ต่อครั้ง แก้ไม่ได้จากในแอพ · ใช้ 💾 บันทึกลงเครื่อง แล้วเลือกคลิปในแกลเลอรีของ CapCut แทน (บันทึกหลายไฟล์ เบราว์เซอร์อาจถามขออนุญาต กดอนุญาต)</p>');
   }
   function sig(l){ return l.map(function(x){ return x.c.id + "#" + x.si; }).join(","); }
   function secs(l){ return l.reduce(function(t, x){ return t + (x.sc.e - x.sc.s); }, 0); }
@@ -51,6 +69,7 @@
       + '<button class="btn ghost" id="pickSave" style="width:100%;margin-top:8px">💾 บันทึกไฟล์ลงเครื่อง</button>'
       + '<p class="hint">จุดเริ่มของแต่ละฉากในไฟล์ (แยกคลิปใน CapCut ตรงเวลาเหล่านี้):</p><ol class="marks">'
       + out.marks.map(function(m){ return "<li><b>" + m.at.toFixed(1) + " วิ</b> · ฉาก " + m.lines.join(",") + " · " + esc(m.c.album) + " " + tm(m.sc.s) + " (" + m.len.toFixed(1) + " วิ)</li>"; }).join("") + "</ol>" : "";
+    $("pickOrig").innerHTML = origHtml(l);
     $("pickSheet").hidden = false;
   }
   var say = function(t, k){ U.msg("pickMsg", t, k); };
@@ -85,6 +104,30 @@
     if(!out) return;
     if(e.target.closest("#pickSave")) FT.stitch.save(out.file, say);
     else if(e.target.closest("#pickSend")) FT.stitch.send(out.file, say);
+  });
+  $("pickOrig").addEventListener("click", async function(e){
+    var b = e.target.closest("button"); if(!b || origBusy) return; var l = resolve(), o = origs(l);
+    if(b.id === "pickOCopy"){
+      var txt = o.map(function(x, i){ return (i + 1) + ". " + x.c.name + " (" + x.c.album + ") · " + ranges(x); }).join("\n");
+      (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(function(){ b.textContent = "คัดลอกแล้ว"; setTimeout(function(){ b.textContent = "คัดลอกรายการช่วงเวลา"; }, 1500); }).catch(function(){ window.prompt("คัดลอกตรงนี้", txt); });
+      return;
+    }
+    if(b.id === "pickOShare"){
+      if(o.every(function(x){ return origCache[x.c.id] || U.fileFor(x.c); })){ FT.stitch.send(o.map(function(x){ return origCache[x.c.id] || U.fileFor(x.c); }), say); return; } /* พร้อมแล้ว → แชร์ทันที (ต้องอยู่ในจังหวะแตะ) */
+      origBusy = true; sheet();
+      try{ for(var i = 0; i < o.length; i++){ var c = o[i].c; if(origCache[c.id] || U.fileFor(c)) continue;
+            origCache[c.id] = await getFile(c, function(p){ say("โหลดคลิป " + (i + 1) + "/" + o.length + " จากคลัง " + Math.round(p * 100) + "%"); }); }
+        say("โหลดครบแล้ว กด 📤 แชร์คลิปต้นฉบับไป CapCut อีกครั้ง", "ok"); }
+      catch(err){ say("โหลดไม่ได้: " + err.message, "err"); }
+      origBusy = false; sheet(); return;
+    }
+    if(b.id === "pickOSave"){
+      origBusy = true; sheet();
+      try{ for(var j = 0; j < o.length; j++){ var f = await getFile(o[j].c, function(p){ say("โหลดคลิป " + (j + 1) + "/" + o.length + " " + Math.round(p * 100) + "%"); }); FT.stitch.save(f, function(){}); await new Promise(function(ok){ setTimeout(ok, 600); }); }
+        say("สั่งบันทึกแล้ว " + o.length + " คลิป ดูในโฟลเดอร์ Download (ถ้าเบราว์เซอร์ถามขออนุญาตดาวน์โหลดหลายไฟล์ ให้กดอนุญาต) แล้วเลือกจากแกลเลอรีใน CapCut · ช่วงเวลาที่ต้องตัดดูในรายการด้านบน", "ok"); }
+      catch(err){ say("บันทึกไม่ได้: " + err.message, "err"); }
+      origBusy = false; sheet();
+    }
   });
   bar();
 })();
