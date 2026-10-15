@@ -173,7 +173,7 @@
       return '<div class="st" data-k="' + k + '"><img src="' + s.thumb + '" alt="ฉาก"><em>' + tm(s.s) + "</em></div>";
     }).join("") + "</div>";
   }
-  function card(c, sc, exact, why){
+  function card(c, sc, exact, why, noPick){
     var a = sc && sc.ai || {}, who = (a.characters_th && a.characters_th.length ? a.characters_th : a.characters || []).join(", ");
     var kc = shown.push({ c:c, cover:true }) - 1, k = sc ? shown.push({ c:c, sc:sc }) - 1 : kc; /* แตะปก = ดูปกใหญ่ · แตะรูปฉาก = ดูรูปฉากใหญ่ */
     return '<div class="card"><div class="shots"><div class="cover" data-k="' + kc + '"><img src="' + (c.cover || "") + '" alt="ปกคลิป"><em>' + capDur(c.duration) + "</em></div>"
@@ -181,6 +181,7 @@
       + "<b>" + esc(c.album) + "</b>" + (sc ? ' · <span class="when">ฉาก ' + tm(sc.s) + "–" + tm(sc.e) + "</span>" : " · " + c.scenes.length + " ฉาก")
       + "<p>" + (exact ? '<span class="tag ok">★ ตรงเป๊ะ</span> ' : "") + (why ? '<span class="tag run">AI: ' + esc(why) + "</span> " : "") + esc(sc ? (a.summary_th || "(AI ไม่ได้อธิบายฉากนี้)") : (c.summary_th || "")) + "</p>"
       + (who ? "<p>👤 " + esc(who) + "</p>" : "")
+      + (sc && !noPick && U.pickHtml ? U.pickHtml(c, sc) : "") /* ช่องติ๊กเลือกฉาก (โหมดเลือก ใน footage-pick.js) */
       + (sc ? "" : strip(c)) /* โหมดดูทั้งคลิป: แถบรูปทุกฉาก แตะดูรูปใหญ่ + คำอธิบายฉากนั้น */
       + '<p>' + day(c.lastModified) + '</p><div class="fname">' + esc(c.name) + ' <button class="editbtn" data-e="' + k + '" aria-label="แก้ชื่ออัลบั้มของคลิปนี้">✎ แก้อัลบั้ม</button></div></div></div>';
   }
@@ -226,7 +227,7 @@
       var o = bySize[f.size]; bySize[f.size] = o === undefined || (o && o.name === f.name) ? f : false;
     });
     var n = lib.filter(fileOf).length;
-    if(FT.onFiles) FT.onFiles(files.length); /* หน้าวางแผนฉากอัปเดตสถานะไฟล์ที่พร้อมแชร์ */
+    document.dispatchEvent(new CustomEvent("ft:files", { detail:files.length })); /* หน้าวางแผน/ถาดเลือกฉากอัปเดตสถานะไฟล์ที่พร้อมใช้ */
     if(!$("big").hidden && bigCur){
       renderPlayBtn();
       if(fileOf(bigCur.c)) playScene(); else $("playMsg").textContent = "ไม่เจอไฟล์ " + bigCur.c.name + " ในที่เลือก (ชื่อและขนาดไฟล์ต้องตรงกับตอนทำดัชนี) ลองเลือกไฟล์จากอัลบั้ม “" + bigCur.c.album + "”";
@@ -271,7 +272,7 @@
     if(to && to.trim() && to.trim() !== h.c.album) U.rename([h.c], to.trim()).catch(function(err){ window.alert("เปลี่ยนไม่ได้: " + err.message); });
   });
 
-  Object.assign(U, { show:function(c, sc){ return shown.push({ c:c, sc:sc }) - 1; }, terms:terms, hay:hay, card:card, fileFor:fileOf, hasSrc:hasSrc, srcUrl:srcUrl, search:search,
+  Object.assign(U, { show:function(c, sc){ return shown.push({ c:c, sc:sc }) - 1; }, terms:terms, hay:hay, card:function(c, sc, exact, why){ return card(c, sc, exact, why, true); }, /* แท็บวางแผนไม่ต้องมีช่องติ๊ก */ fileFor:fileOf, hasSrc:hasSrc, srcUrl:srcUrl, search:search,
                      openFiles:function(docs){ $(docs ? "pickDocs" : "playFiles").click(); } });
   if($("p-find").classList.contains("on")) search();
 })();

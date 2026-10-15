@@ -117,61 +117,7 @@
   }
   function sig(list){ return list.map(function(x){ return x.c.id + "#" + x.si; }).join(","); }
 
-  /* ---------- ต่อฉากทั้งหมดเป็นวิดีโอไฟล์เดียวในเครื่อง ----------
-     แชร์หลายไฟล์ไม่เวิร์ก: Brave/Chrome Android จำกัด ≤10 ไฟล์ ≤50 MB ต่อครั้ง และ CapCut รับแชร์เข้าโปรเจกต์เดิมซ้ำไม่ได้ ลำดับไฟล์ก็ไม่แน่นอน
-     เลยเล่นทีละฉาก (เฉพาะช่วง) วาดลง canvas + ส่งเสียงผ่าน WebAudio แล้วอัดต่อกันด้วย MediaRecorder ตัวเดียว (pause ระหว่างเปลี่ยนฉาก)
-     ได้ 1 ไฟล์เรียงตามบท + ตารางเวลาว่าแต่ละบรรทัดเริ่มวินาทีไหน · อัดเวลาจริง ต้องเปิดหน้าค้างไว้ */
-  var MAX_BYTES = 45 * 1024 * 1024, MAX_RATE = 8e6, MIN_RATE = 2e6;
-  var cuts = null, cutting = false; /* cuts = { sig, file, url, marks:[{lines, at, len}] } หายเมื่อปิดหน้า */
-  function recMime(){
-    var c = ["video/mp4;codecs=avc1.640028,mp4a.40.2", "video/mp4;codecs=avc1,mp4a.40.2", "video/mp4;codecs=avc1", "video/mp4", "video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm"];
-    return window.MediaRecorder ? c.find(function(m){ return MediaRecorder.isTypeSupported(m); }) || "" : null;
-  }
-  function once(el, ev){ return new Promise(function(ok, no){ el.addEventListener(ev, ok, { once:true }); el.addEventListener("error", function(){ no(new Error("เปิดไฟล์วิดีโอไม่ได้")); }, { once:true }); }); }
-  async function openVid(c){ /* ไฟล์ในเครื่อง หรือสตรีมจากคลัง (crossOrigin ให้วาดลง canvas/อัดเสียงได้ — คลังต้องตั้ง CORS) */
-    var src = await U.srcUrl(c); if(!src) throw new Error("ไม่มีไฟล์ " + c.name);
-    var v = document.createElement("video"); v.playsInline = true; v.preload = "auto"; v.crossOrigin = "anonymous"; v._done = src.done;
-    v.style.cssText = "position:fixed;left:-9999px;width:2px;height:2px"; document.body.appendChild(v);
-    v.src = src.url; await once(v, "loadedmetadata"); return v;
-  }
-  function closeVid(v){ v.pause(); if(v._done) v._done(); v.removeAttribute("src"); v.load(); v.remove(); }
-  async function record(list, mime, ac, onStep){
-    var secs = list.reduce(function(t, x){ return t + (x.sc.e - x.sc.s); }, 0);
-    var rate = Math.max(MIN_RATE, Math.min(MAX_RATE, MAX_BYTES * 8 / Math.max(secs, 1) * 0.85)); /* ให้ไฟล์รวมไม่เกินเพดานแชร์ */
-    var first = await openVid(list[0].c), W = first.videoWidth || 1080, H = first.videoHeight || 1080; closeVid(first);
-    var cv = document.createElement("canvas"); cv.width = W; cv.height = H; var g = cv.getContext("2d");
-    var dest = ac.createMediaStreamDestination();
-    var stream = new MediaStream(cv.captureStream(30).getVideoTracks().concat(dest.stream.getAudioTracks()));
-    var rec = new MediaRecorder(stream, { mimeType:mime, videoBitsPerSecond:rate, audioBitsPerSecond:128000 }), parts = [], marks = [], at = 0;
-    rec.ondataavailable = function(ev){ if(ev.data && ev.data.size) parts.push(ev.data); };
-    var stopped = new Promise(function(ok){ rec.onstop = ok; });
-    try{
-      for(var i = 0; i < list.length; i++){
-        var x = list[i], v = await openVid(x.c), src = null;
-        try{
-          var s = x.sc.s, e = Math.min(x.sc.e, v.duration);
-          v.currentTime = s; await once(v, "seeked");
-          try{ src = ac.createMediaElementSource(v); src.connect(dest); }catch(err){ v.muted = true; } /* เสียงไปเข้าไฟล์อย่างเดียว ไม่ออกลำโพง */
-          var draw = function(){ var r = Math.min(W / v.videoWidth, H / v.videoHeight), w = v.videoWidth * r, h = v.videoHeight * r;
-            g.fillStyle = "#000"; g.fillRect(0, 0, W, H); g.drawImage(v, (W - w) / 2, (H - h) / 2, w, h); };
-          draw();
-          onStep(i, x);
-          if(rec.state === "inactive") rec.start(); else rec.resume();
-          try{ await v.play(); }catch(err){ v.muted = true; await v.play(); } /* เล่นมีเสียงไม่ได้ → อัดภาพอย่างเดียวฉากนี้ */
-          var t0 = performance.now();
-          await new Promise(function(ok){
-            function tick(){ draw(); if(v.currentTime >= e - 0.03 || v.ended){ ok(); return; } if(v.requestVideoFrameCallback) v.requestVideoFrameCallback(tick); else requestAnimationFrame(tick); }
-            tick(); v.onended = ok;
-          });
-          rec.pause(); v.pause();
-          var len = (performance.now() - t0) / 1000;
-          marks.push({ lines:x.lines, at:at, len:len, c:x.c, sc:x.sc }); at += len;
-        }finally{ if(src) src.disconnect(); closeVid(v); }
-      }
-      rec.stop(); await stopped;
-    }finally{ stream.getTracks().forEach(function(t){ t.stop(); }); if(rec.state !== "inactive") rec.stop(); }
-    return { blob:new Blob(parts, { type:mime.split(";")[0] }), marks:marks, rate:rate };
-  }
+  var cuts = null, cutting = false; /* cuts = { sig, file, url, marks:[{lines, at, len}] } หายเมื่อปิดหน้า · การอัด/แชร์/บันทึกอยู่ใน footage-stitch.js (FT.stitch) */
   function renderBatches(){
     var list = picked(), ok = cuts && cuts.sig === sig(list);
     if(!ok){ $("plBatches").innerHTML = ""; return; }
@@ -196,45 +142,35 @@
     renderBatches();
   }
   var lastPick = "";
-  FT.onFiles = function(n){
+  document.addEventListener("ft:files", function(e){ /* footage-find.js ส่งมาหลังเลือกไฟล์ */
     if(!plan) return;
-    var list = picked(), got = list.filter(function(x){ return U.hasSrc(x.c); }).length;
+    var n = e.detail, list = picked(), got = list.filter(function(x){ return U.hasSrc(x.c); }).length;
     lastPick = "เลือกมา " + n + " ไฟล์ → ตรงกับแผน " + got + "/" + list.length + " ฉาก" + (got < list.length ? " · เปิดอัลบั้มที่เหลือต่อได้เลย (ของเดิมไม่หาย)" : "");
     renderShare();
-  };
+  });
   $("plDocs").addEventListener("click", function(){ U.openFiles(true); });
   $("plGal").addEventListener("click", function(){ U.openFiles(false); });
+  var say = function(t, k){ U.msg("plShareMsg", t, k); };
   $("plShare").addEventListener("click", async function(){
-    var list = picked(), mime = recMime(), AC = window.AudioContext || window.webkitAudioContext;
-    if(!mime || !AC || !HTMLCanvasElement.prototype.captureStream){ U.msg("plShareMsg", "เบราว์เซอร์นี้อัดวิดีโอไม่ได้ ใช้ปุ่ม คัดลอกรายการ แทน", "err"); return; }
-    var ac = new AC(); ac.resume(); /* สร้างตอนกดปุ่ม (ต้องมีการแตะก่อนถึงจะเปิดเสียงได้) */
+    var list = picked();
+    if(!FT.stitch.ok()){ say("เบราว์เซอร์นี้อัดวิดีโอไม่ได้ ใช้ปุ่ม คัดลอกรายการ แทน", "err"); return; }
     if(cuts){ URL.revokeObjectURL(cuts.url); cuts = null; }
-    cutting = true; renderShare(); $("plProg").hidden = false; $("plBar").style.width = "0"; await U.wake(true);
+    cutting = true; renderShare(); $("plProg").hidden = false; $("plBar").style.width = "0";
     try{
-      var r = await record(list, mime, ac, function(i, x){
-        U.msg("plShareMsg", "กำลังอัดฉาก " + (i + 1) + "/" + list.length + " (" + x.c.album + " " + U.tm(x.sc.s) + "–" + U.tm(x.sc.e) + ") · อย่าสลับแอพ");
+      var r = await FT.stitch.make(list, function(i, x){
+        say("กำลังอัดฉาก " + (i + 1) + "/" + list.length + " (" + x.c.album + " " + U.tm(x.sc.s) + "–" + U.tm(x.sc.e) + ") · อย่าสลับแอพ");
         $("plBar").style.width = (i / list.length * 100) + "%";
-      });
-      if(!r.blob.size) throw new Error("อัดได้ไฟล์ว่าง");
-      var d = new Date(), ext = mime.indexOf("mp4") >= 0 ? "mp4" : "webm", out = r.blob;
-      if(ext === "mp4" && window.MP4Fix){ U.msg("plShareMsg", "กำลังจัดไฟล์ให้ CapCut อ่านได้..."); out = await MP4Fix.remux(r.blob); } /* MediaRecorder ให้ fragmented MP4 ซึ่ง CapCut ไม่รับ */
-      var file = new File([out], "meowrin_" + String(d.getHours()).padStart(2, "0") + String(d.getMinutes()).padStart(2, "0") + "." + ext, { type:out.type || r.blob.type });
-      cuts = { sig:sig(list), file:file, url:URL.createObjectURL(file), marks:r.marks };
+      }, say);
+      cuts = { sig:sig(list), file:r.file, url:URL.createObjectURL(r.file), marks:r.marks };
       cutting = false; renderShare();
-      U.msg("plShareMsg", "เสร็จแล้ว " + r.marks.length + " ฉาก · " + (file.size / 1048576).toFixed(1) + " MB · " + (r.rate / 1e6).toFixed(1) + " Mbps (" + mime + ")" + (mime.indexOf("avc1") < 0 ? " · ไม่ใช่ H.264 ถ้า CapCut ไม่รับ บอกได้เลย" : "") + " · ดูตัวอย่างด้านล่างก่อนแชร์", "ok");
-    }catch(err){ cutting = false; renderShare(); U.msg("plShareMsg", "อัดไม่ได้: " + err.message + (document.hidden ? " (สลับแอพระหว่างอัด?)" : ""), "err"); }
-    ac.close(); $("plProg").hidden = true; await U.wake(false);
+      say("เสร็จแล้ว " + r.marks.length + " ฉาก · " + (r.file.size / 1048576).toFixed(1) + " MB · " + (r.rate / 1e6).toFixed(1) + " Mbps (" + r.mime + ")" + (r.mime.indexOf("avc1") < 0 ? " · ไม่ใช่ H.264 ถ้า CapCut ไม่รับ บอกได้เลย" : "") + " · ดูตัวอย่างด้านล่างก่อนแชร์", "ok");
+    }catch(err){ cutting = false; renderShare(); say("อัดไม่ได้: " + err.message + (document.hidden ? " (สลับแอพระหว่างอัด?)" : ""), "err"); }
+    $("plProg").hidden = true;
   });
-  $("plBatches").addEventListener("click", async function(e){
-    if(e.target.closest("#plSave") && cuts){
-      var a = document.createElement("a"); a.href = cuts.url; a.download = cuts.file.name; document.body.appendChild(a); a.click(); a.remove();
-      U.msg("plShareMsg", "สั่งบันทึกแล้ว ดูในโฟลเดอร์ Download ของมือถือ (" + cuts.file.name + ") แล้วเปิดจากแกลเลอรี/CapCut โดยตรง", "ok"); return;
-    }
-    if(!e.target.closest("#plSend") || !cuts) return;
-    var files = [cuts.file];
-    if(!navigator.canShare || !navigator.canShare({ files:files })){ U.msg("plShareMsg", "เบราว์เซอร์นี้แชร์ไฟล์นี้ไม่ได้ ใช้ปุ่ม คัดลอกรายการ แทน", "err"); return; }
-    try{ await navigator.share({ files:files, title:"ฟุตเทจตามบท" }); }
-    catch(err){ if(err && err.name !== "AbortError") U.msg("plShareMsg", "แชร์ไม่ได้: " + err.message + (cuts.file.size > 50 * 1048576 ? " (ไฟล์เกิน 50 MB ลองติ๊กไม่ใช้บางบรรทัด)" : ""), "err"); }
+  $("plBatches").addEventListener("click", function(e){
+    if(!cuts) return;
+    if(e.target.closest("#plSave")) FT.stitch.save(cuts.file, say);
+    else if(e.target.closest("#plSend")) FT.stitch.send(cuts.file, say);
   });
   $("plCopy").addEventListener("click", function(){
     var txt = plan.rows.map(function(r, k){ var ch = r.use && chosen(r), sc = ch && ch.c.scenes[ch.pk.si];
