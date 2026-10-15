@@ -23,12 +23,14 @@
   function origHtml(l){
     var o = origs(l), total = o.reduce(function(t, x){ return t + (x.c.size || 0); }, 0), miss = o.some(function(x){ return !U.hasSrc(x.c); }), fit = o.length <= 10 && total <= SHARE_MAX;
     var ready = o.every(function(x){ return origCache[x.c.id] || U.fileFor(x.c); }), dis = origBusy || miss ? " disabled" : "";
-    return '<hr><h2 style="font-size:16px">หรือ: ต้นฉบับทั้งคลิป</h2><p class="hint" style="margin-top:0">' + o.length + " คลิป รวม " + mb(total) + " MB · ได้ไฟล์เต็มคุณภาพทันที ไม่ต้องรออัด · ใน CapCut ให้ตัดตามช่วงเวลา:</p><ol class=\"marks\">"
-      + o.map(function(x){ return "<li><b>" + esc(x.c.name) + "</b> (" + esc(x.c.album) + ") · " + ranges(x) + "</li>"; }).join("") + "</ol>"
-      + '<button class="btn" id="pickOShare" style="width:100%"' + (fit ? dis : " disabled") + ">" + (fit ? (ready ? "📤 แชร์คลิปต้นฉบับไป CapCut" : "⬇ โหลดจากคลังให้พร้อมแชร์ (" + mb(total) + " MB)") : "📤 แชร์ไม่ได้ (ลิมิตแชร์ ≤10 คลิป รวม ≤50 MB)") + "</button>"
-      + '<button class="btn" id="pickOSave" style="width:100%;margin-top:8px"' + dis + ">💾 บันทึกคลิปต้นฉบับลงเครื่อง (ไม่จำกัดจำนวน/ขนาด)</button>"
-      + '<button class="btn ghost small" id="pickOCopy" style="width:100%;margin-top:8px">คัดลอกรายการช่วงเวลา</button>'
-      + (fit ? "" : '<p class="hint">ปุ่มแชร์ของเบราว์เซอร์มือถือจำกัด ≤10 ไฟล์ รวม ≤50 MB ต่อครั้ง แก้ไม่ได้จากในแอพ · ใช้ 💾 บันทึกลงเครื่อง แล้วเลือกคลิปในแกลเลอรีของ CapCut แทน (บันทึกหลายไฟล์ เบราว์เซอร์อาจถามขออนุญาต กดอนุญาต)</p>');
+    var net = o.filter(function(x){ return !(origCache[x.c.id] || U.fileFor(x.c)); }).reduce(function(t, x){ return t + (x.c.size || 0); }, 0);
+    return '<hr><h2 style="font-size:16px">หรือ: หาเองใน CapCut (ไม่ใช้เน็ต)</h2><p class="hint" style="margin-top:0">' + o.length + " คลิป · เปิด CapCut เลือกคลิปจากแกลเลอรีที่รูปปกและความยาวตรงกับด้านล่าง แล้วตัดตามช่วงเวลา · ได้ไฟล์ต้นฉบับเต็มคุณภาพ ไม่ต้องรออัด</p>"
+      + o.map(function(x){ return '<div class="pkrow"><div class="cvr"><img src="' + (x.c.cover || "") + '" alt="ปก"><em>' + U.capDur(x.c.duration) + '</em></div><div class="t"><b>' + esc(x.c.name) + "</b><span>" + esc(x.c.album) + " · ตัดช่วง " + ranges(x) + "</span></div></div>"; }).join("")
+      + '<button class="btn ghost small" id="pickOCopy" style="width:100%;margin-top:10px">คัดลอกรายการช่วงเวลา</button>'
+      + '<p class="hint" style="margin-top:14px">หรือส่งไฟล์ต้นฉบับให้เลย · ' + (net ? "⚠ ต้องโหลดจากคลัง ≈ " + mb(net) + " MB (แนะนำต่อ Wi-Fi)" : "ไฟล์อยู่ในเครื่องแล้ว ไม่ต้องโหลด") + " · รวม " + mb(total) + " MB</p>"
+      + '<button class="btn ghost" id="pickOShare" style="width:100%"' + (fit ? dis : " disabled") + ">" + (fit ? (ready ? "📤 แชร์คลิปต้นฉบับไป CapCut" : "⬇ โหลดจากคลังให้พร้อมแชร์ (" + mb(total) + " MB)") : "📤 แชร์ไม่ได้ (ลิมิตแชร์ ≤10 คลิป รวม ≤50 MB)") + "</button>"
+      + '<button class="btn ghost" id="pickOSave" style="width:100%;margin-top:8px"' + dis + ">💾 บันทึกคลิปต้นฉบับลงเครื่อง (ไม่จำกัดจำนวน/ขนาด)</button>"
+      + (fit ? "" : '<p class="hint">ปุ่มแชร์ของเบราว์เซอร์มือถือจำกัด ≤10 ไฟล์ รวม ≤50 MB ต่อครั้ง แก้ไม่ได้จากในแอพ · ใช้ 💾 บันทึกลงเครื่อง หรือเลือกจากแกลเลอรีใน CapCut ตามรายการด้านบน (บันทึกหลายไฟล์ เบราว์เซอร์อาจถามขออนุญาต กดอนุญาต)</p>');
   }
   function sig(l){ return l.map(function(x){ return x.c.id + "#" + x.si; }).join(","); }
   function secs(l){ return l.reduce(function(t, x){ return t + (x.sc.e - x.sc.s); }, 0); }
