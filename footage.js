@@ -79,7 +79,7 @@
     var wait = queue.filter(function(q){ return q.status === "wait"; }).length, errs = queue.filter(function(q){ return q.status === "error"; }).length;
     $("startBtn").disabled = running || !wait; /* อัลบั้มไม่บังคับ (ว่าง = "ไม่ระบุ") */
     $("startBtn").textContent = running ? "กำลังทำ..." : wait ? (queue.some(function(q){ return q.status === "done" || q.status === "error"; }) ? "ทำต่อ " : "เริ่มทำดัชนี ") + wait + " คลิป" : "เริ่มทำดัชนี";
-    if(lib.length) renderDeep();
+    if(lib.length){ renderDeep(); renderRc(); }
     $("pauseBtn").hidden = !running; $("pauseBtn").textContent = paused ? "จะพักหลังคลิปนี้..." : "พัก";
     $("retryBtn").hidden = running || !errs; $("retryBtn").textContent = "ลองใหม่คลิปที่ error (" + errs + ")";
     var work = queue.filter(function(q){ return q.status !== "skip"; }), fin = work.filter(function(q){ return q.status === "done" || q.status === "error"; }).length;
@@ -260,6 +260,39 @@
              mood:String(a.mood || ""), arc:String(a.arc || ""), event:String(a.event || ""), issues:arr(a.issues).map(function(x){ return x.toLowerCase(); }) }; /* ช่องหลัง summary_th = ดัชนีรุ่น 2 */
   }
 
+  /* ---------- ตรวจตัวละครซ้ำ: ส่งรูปที่เก็บไว้ (480px) ให้ AI ถามเจาะจงว่ามีใครในรายชื่อบ้าง แล้วเติมเฉพาะที่ขาด ---------- */
+  var rcRun = false, rcStop = false, rcMsg = "", RC_CHUNK = 12; /* rcMsg = สรุปรอบล่าสุด (คงไว้ข้างสถานะรวม) */
+  function rcTodo(){ var out = []; lib.forEach(function(c){ if(c.status === "done") c.scenes.forEach(function(sc, i){ if(!(sc.ai && (sc.ai.rc || sc.ai.fixed)) && (sc.img || sc.thumb)) out.push({ c:c, sc:sc, i:i }); }); }); return out; }
+  function renderRc(){
+    var all = 0, todo = rcTodo().length; lib.forEach(function(c){ all += c.status === "done" ? c.scenes.length : 0; });
+    if(!rcRun) $("rcInfo").textContent = (rcMsg ? rcMsg + " · " : "") + "ตรวจแล้ว " + (all - todo) + "/" + all + " ฉาก" + (todo ? " · ค่า AI ประมาณ " + money(todo * 0.0012) + " (รูปที่เก็บไว้ ไม่ต้องเปิดไฟล์)" : "");
+    $("rcBtn").disabled = !rcRun && !todo; $("rcBtn").textContent = rcRun ? "⏹ หยุด" : todo ? "👤 ตรวจตัวละครซ้ำ " + todo + " ฉาก" : "👤 ตรวจครบแล้ว";
+  }
+  $("rcBtn").addEventListener("click", async function(){
+    if(rcRun){ rcStop = true; return; }
+    var todo = rcTodo(); if(!todo.length) return;
+    if(!FT.orKey()){ $("rcInfo").textContent = "ยังไม่มี OpenRouter key ในเบราว์เซอร์นี้"; return; }
+    if(!window.confirm("ให้ AI ตรวจตัวละครซ้ำ " + todo.length + " ฉาก ค่า AI ประมาณ " + money(todo.length * 0.0012) + "\nเติมเฉพาะตัวละครที่ขาด ไม่ลบของเดิม ฉากที่ Han แก้เองไม่แตะ · เปิดหน้านี้ค้างไว้")) return;
+    rcRun = true; rcStop = false; rcMsg = ""; var done = 0, added = 0, cost = 0, dirty = {}, groups = [], i;
+    for(i = 0; i < todo.length; i += RC_CHUNK) groups.push(todo.slice(i, i + RC_CHUNK));
+    renderRc(); await wake(true);
+    try{
+      for(i = 0; i < groups.length && !rcStop; i += cfg.par){
+        await Promise.all(groups.slice(i, i + cfg.par).map(async function(g){
+          var items = g.map(function(x, k){ return { n:k + 1, img:x.sc.img || x.sc.thumb }; }), r = await FT.recognize(items);
+          cost += r.cost; runCost += r.cost;
+          g.forEach(function(x, k){ var keys = r.map[k + 1] || [], a = x.sc.ai = x.sc.ai || {}; if(!a.fixed){ added += FT.ui.addChars(x.sc, keys); a.rc = 1; dirty[x.c.id] = x.c; } });
+          done += g.length; $("rcInfo").textContent = "ตรวจแล้ว " + done + "/" + todo.length + " ฉาก · เติมตัวละครที่ขาด " + added + " ตัว · ใช้ " + money(cost);
+        }));
+        await FT.store.putMany(Object.keys(dirty).map(function(k){ return dirty[k]; })); dirty = {}; /* บันทึกทุกรอบ หยุด/ปิดหน้ากลางคันก็ไม่เสียงาน */
+      }
+      rcMsg = (rcStop ? "หยุดแล้ว" : "เสร็จรอบนี้") + ": ตรวจ " + done + " ฉาก เติมตัวละครที่ขาด " + added + " ตัว ใช้ " + money(cost);
+    }catch(err){
+      await FT.store.putMany(Object.keys(dirty).map(function(k){ return dirty[k]; })).catch(function(){});
+      rcMsg = (err.budget ? "ถึงเพดานงบ: " : "ตรวจไม่สำเร็จ: ") + err.message + " · ตรวจไปแล้ว " + done + " ฉาก (กดใหม่ทำต่อจากเดิม)";
+    }
+    rcRun = false; await wake(false); renderStats(); renderRc(); if(FT.ui.search) FT.ui.search();
+  });
   /* ---------- อัปเกรดเป็นดัชนีละเอียด ---------- */
   function deepState(){
     var done = lib.filter(function(c){ return c.status === "done"; }), v2 = done.filter(function(c){ return (c.aiV || 1) >= FT.AI_V; });

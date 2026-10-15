@@ -210,6 +210,32 @@
     try{ j = parseJSON(r.text); }catch(err){ err.raw = r.text; err.cost = r.cost; throw err; }
     r.json = j; return r;
   }
+  /* ---------- ตรวจตัวละครซ้ำ (ใช้รูปที่เก็บไว้ ไม่ต้องเปิดไฟล์วิดีโอ) ----------
+     ถามเจาะจงอย่างเดียว: ในรูปมีตัวละครไหนในรายชื่อบ้าง (พร้อมลักษณะเด่นของแต่ละตัว) → ช่วยตัวละครที่ดัชนีแรกมองข้าม/จำไม่ได้ (เช่น แชงคูส) · key ต้องตรงกับ NAMES ใน footage-find.js */
+  var ROSTER = [
+    ["luffy","straw hat, small scar under left eye, red vest, shorts, rubber body"],["zoro","green hair, three swords, green haramaki, scar on left eye"],["nami","orange hair, female navigator, tattoo on left shoulder"],
+    ["usopp","very long nose, curly black hair, bandana/goggles, overalls, slingshot (also Sogeking: mask+cape)"],["sanji","blond hair covering one eye, black suit, cigarette, curly eyebrow"],["chopper","small reindeer doctor, pink hat with X, blue nose"],
+    ["robin","black hair, tall woman, archaeologist, often sunglasses or cowboy hat"],["franky","huge blue pompadour, star sunglasses, cyborg, speedo/open shirt"],["brook","skeleton with afro, top hat, suit, cane sword"],["jinbe","large blue fishman, shark features, kimono/karate"],
+    ["ace","orange cowboy hat, freckles, shirtless with tattoos, black hair"],["sabo","blond hair, top hat with goggles, blue coat, burn scar on left eye"],["shanks","red hair, three scars over left eye, missing left arm, black cloak, straw hat on his head only in flashbacks"],
+    ["garp","old muscular marine vice admiral, gray hair, marine coat, sometimes dog mask, huge fists"],["buggy","clown with big red round nose, blue hair, makeup"],["hancock","very tall woman, long black hair, snake earrings, pirate empress dress"],
+    ["law","spotted hat, goatee, tattoos on hands, long sword, yellow hoodie"],["kid","red hair spiked up, goggles, metal arm, heavy makeup"],["yamato","horns, white-blue hair, kimono, female oni"],["kaido","giant man with horns, tattoos, dragon form"],
+    ["big mom","giant pink-haired old woman, huge, hat"],["blackbeard","black beard, big belly, missing front teeth, laughing"],["whitebeard","giant old man with white crescent mustache, bandage, naginata"],["vivi","blue hair, princess, Alabasta"],
+    ["shirahoshi","giant mermaid princess, pink hair"],["mihawk","hawk eyes, black hat with feather, huge sword, long coat"],["dragon","hooded man with face tattoo, revolutionary"],["koby","pink hair, round glasses, marine uniform"],
+    ["smoker","white hair, two cigars, marine coat, jitte"],["crocodile","scar across face, hook hand, long black coat with fur, cigar"],["arlong","blue sawfish fishman with long saw nose, sharp teeth"],["enel","sky island god, long earlobes, drums on back"],
+    ["lucci","CP9 agent, pigeon on shoulder, top hat, mask"],["doflamingo","pink feather coat, blond hair, sunglasses, wide grin"],["akainu","marine admiral, red suit, magma"],["aokiji","marine admiral, tall, eye mask, ice"],["kizaru","marine admiral, yellow suit, light"],["rebecca","young woman gladiator with blond hair, Dressrosa"]
+  ];
+  async function recognize(items){ /* items:[{ n, img }] → map n → [key] */
+    var content = [{ type:"text", text:"These are frames from One Piece anime. For EACH numbered image list which of the following characters are clearly visible (face or very distinctive look; a character partly in frame or in the background still counts if recognizable). Use ONLY these keys; skip anyone you are not reasonably sure about.\nRoster (key: look):\n" + ROSTER.map(function(r){ return r[0] + ": " + r[1]; }).join("\n") + "\nReturn ONLY JSON: {\"r\":[{\"i\":<image number>,\"c\":[\"key\",...]}]} with one entry per image (empty list if none)." }];
+    items.forEach(function(it){ content.push({ type:"text", text:"Image " + it.n + ":" }); content.push({ type:"image_url", image_url:{ url:it.img } }); });
+    var body = { model:cfg.model, usage:{ include:true }, messages:[{ role:"user", content:content }] };
+    if(/^google\//.test(cfg.model)) body.reasoning = { effort:"low" };
+    var r = await post(body), j;
+    try{ j = parseJSON(r.text); }catch(err){ err.cost = r.cost; throw err; }
+    var ok = {}; ROSTER.forEach(function(x){ ok[x[0]] = 1; });
+    r.map = {}; (Array.isArray(j.r) ? j.r : []).forEach(function(x){ r.map[Number(x.i)] = (Array.isArray(x.c) ? x.c : []).map(function(k){ return String(k).toLowerCase().trim(); }).filter(function(k){ return ok[k]; }); });
+    return r;
+  }
+
   /* ---------- ผู้กำกับ AI ----------
      1) beats: แบ่งบทเป็นช็อตสั้นๆ (ประโยคย่อย ~1-3 วิ) ตามสไตล์ช่อง: เอ่ยชื่อใคร/อะไร ภาพต้องเป็นสิ่งนั้น (ข้อความล้วน)
      2) direct: ส่งรูปผู้สมัครของแต่ละช็อต (ค้นจากดัชนีในเครื่องแล้ว) ให้ AI ดูภาพจริงแล้วเลือก ทีละชุดหลายช็อต (เห็นบทเต็มเพื่อความต่อเนื่อง) */
@@ -258,5 +284,5 @@
     return r;
   }
 
-  window.FT = { cfg:cfg, saveCfg:saveCfg, orKey:orKey, store:store, clipId:clipId, scan:scan, refreshImages:refreshImages, IMG_V:IMG.v, AI_V:AI_V, deepFrames:deepFrames, describe:describe, beats:beats, direct:direct };
+  window.FT = { cfg:cfg, saveCfg:saveCfg, orKey:orKey, store:store, clipId:clipId, scan:scan, refreshImages:refreshImages, IMG_V:IMG.v, AI_V:AI_V, deepFrames:deepFrames, describe:describe, beats:beats, direct:direct, recognize:recognize };
 })();

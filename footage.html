@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600&family=Mitr:wght@500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="footage.css?v=20261017d">
+<link rel="stylesheet" href="footage.css?v=20261017f">
 </head>
 <body>
 <header>
@@ -40,6 +40,10 @@
       <p class="hint" style="margin-top:0">AI ดูเฟรมต้น/กลาง/ท้ายของทุกฉาก + ติดป้ายระยะภาพ (ใกล้/กลาง/ไกล) ความแรงของฉาก อารมณ์ เหตุการณ์ในเรื่อง และภาพมีลายน้ำ/ซับ/เบลอไหม → ค้นหาและผู้กำกับเลือกฉากแม่นขึ้น · คลิปใหม่ทำแบบนี้ให้เองแล้ว · คลิปเก่าอัปเกรดได้จากคลังโดยไม่ต้องเลือกไฟล์ (อ่านเฉพาะช่วงที่ใช้ ไม่โหลดทั้งไฟล์)</p>
       <p class="hint" id="deepInfo"></p>
       <button class="btn" id="deepBtn" style="width:100%;margin-top:8px" disabled>🔬 อัปเกรดคลิปเก่า</button>
+      <h3 style="margin:18px 0 4px;font-size:15px">👤 ตรวจตัวละครซ้ำ</h3>
+      <p class="hint" style="margin-top:0">ถ้าฉากที่มีตัวละคร (เช่น แชงคูส อุซป) ค้นไม่เจอ ให้ AI ดูรูปที่เก็บไว้อีกรอบ แบบถามเจาะจงว่ามีใครในรายชื่อ 38 ตัวละครบ้าง (บอกลักษณะเด่นของแต่ละตัวให้ด้วย) แล้วเติมเฉพาะที่ขาด · ถูกกว่าและเร็วกว่าอัปเกรดดัชนีละเอียด ไม่ต้องเปิดไฟล์วิดีโอ</p>
+      <p class="hint" id="rcInfo"></p>
+      <button class="btn" id="rcBtn" style="width:100%;margin-top:8px" disabled>👤 ตรวจตัวละครซ้ำ</button>
     </div>
     <div class="panel">
       <h2>คลังบนคลาวด์</h2>
@@ -206,6 +210,6 @@
 <input id="pickDocs" type="file" multiple hidden><!-- ไม่ใส่ accept → Android เปิดแอพไฟล์ (เข้าโฟลเดอร์ + เลือกทั้งหมดได้) แทนตัวเลือกรูป -->
 <video id="vid" muted playsinline preload="auto" style="position:fixed;left:-9999px;width:2px;height:2px"></video>
 
-<script src="store.js?v=20261017d" data-boot="budget.js?v=20261017d footage-core.js?v=20261017d r2.js?v=20261017d footage.js?v=20261017d footage-find.js?v=20261017d footage-audit.js?v=20261017d footage-cloud.js?v=20261017d mp4fix.js?v=20261017d footage-stitch.js?v=20261017d voicestore.js?v=20261017d footage-plan.js?v=20261017d gdrive.js?v=20261017d"></script>
+<script src="store.js?v=20261017f" data-boot="budget.js?v=20261017f footage-core.js?v=20261017f r2.js?v=20261017f footage.js?v=20261017f footage-find.js?v=20261017f footage-audit.js?v=20261017f footage-cloud.js?v=20261017f mp4fix.js?v=20261017f footage-stitch.js?v=20261017f voicestore.js?v=20261017f footage-plan.js?v=20261017f gdrive.js?v=20261017f"></script>
 </body>
 </html>

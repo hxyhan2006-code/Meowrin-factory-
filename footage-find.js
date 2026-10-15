@@ -13,7 +13,8 @@
     ["chopper","ช็อปเปอร์","ชอปเปอร์","ช๊อปเปอร์","ช็อปเปอ","tony tony"],["robin","โรบิน","nico"],["franky","แฟรงกี้","แฟรงค์กี้","แฟรงกี","frankie","แฟรงกี้"],["brook","บรู๊ค","บรูค","บรุ๊ค","บรู๊ก"],["jinbe","จินเบ","จินเบอิ","jinbei","jimbei","จิมเบ"],
     ["ace","เอส","portgas"],["sabo","ซาโบ้","ซาโบ"],["shanks","แชงคูส","แชงค์","แชงค์ส"],["garp","การ์ป","การ์ฟ"],["buggy","บากี้"],["hancock","ฮันค็อก","แฮนค็อก","ฮันค๊อก"],
     ["law","ลอว์","ลอ","trafalgar"],["kid","คิด"],["yamato","ยามาโตะ"],["kaido","ไคโด"],["big mom","บิ๊กมัม","บิ๊กมอม"],["blackbeard","หนวดดำ","ทีช","teach","marshall d"],
-    ["whitebeard","หนวดขาว","newgate"],["vivi","วีวี่","วิวี่"],["shirahoshi","ชิราโฮชิ"],["mihawk","มิฮอว์ค","มิฮอว์ก","dracule"],["dragon","ดราก้อน"],["koby","โคบี้","โคบี"],["smoker","สโมกเกอร์"]
+    ["whitebeard","หนวดขาว","newgate"],["vivi","วีวี่","วิวี่"],["shirahoshi","ชิราโฮชิ"],["mihawk","มิฮอว์ค","มิฮอว์ก","dracule"],["dragon","ดราก้อน"],["koby","โคบี้","โคบี"],["smoker","สโมกเกอร์"],
+    ["crocodile","ครอคโคไดล์","ครอกโคไดล์","โครโคไดล์","เซอร์ ครอคโคไดล์"],["arlong","อาร์ลอง"],["enel","เอเนล","เอเนลล์"],["lucci","ลูชชี่","ลุชชี่","ลูชี่","rob lucci"],["doflamingo","โดฟลามิงโก้","โดฟลามิงโก","โดฟี่"],["akainu","อาคาอินุ","อากาอินุ","sakazuki"],["aokiji","อาโอคิจิ","คุซัน","kuzan"],["kizaru","คิซารุ","borsalino"],["rebecca","รีเบคก้า","รีเบกก้า"]
   ];
   var SYN = [ /* อารมณ์/การกระทำที่ AI อาจใช้คำต่างกัน (ไทย+อังกฤษ) → ค้นคำไหนก็เจอทุกคำในกลุ่ม */
     ["ตกใจ","ตกตะลึง","ช็อก","ช็อค","อึ้ง","สะดุ้ง","shock","surprise","startle","astonish"],["โกรธ","โมโห","เดือด","angry","anger","furious","rage"],
@@ -252,7 +253,13 @@
   function closeBig(){ stopPlay(); $("big").hidden = true; bigCur = null; }
 
   function charKey(name){ var low = String(name).toLowerCase().trim(), n = NAMEX.find(function(x){ return x.en.test(low) || x.ths.indexOf(name) >= 0; }); return n ? n.key : low; } /* ชื่อที่ AI ตอบ → key เดียวกับ sceneChars */
-  Object.assign(U, { show:function(c, sc){ return shown.push({ c:c, sc:sc }) - 1; }, terms:terms, hay:hay, card:card, chars:sceneChars, charKey:charKey, fileFor:fileOf, hasSrc:hasSrc, srcUrl:srcUrl, search:search,
+  function addChars(sc, keys){ /* เติมตัวละครที่ตรวจซ้ำเจอ (ไม่ลบของเดิม · ฉากที่ Han แก้เอง ai.fixed ไม่แตะ) คืนจำนวนที่เติม */
+    var a = sc.ai = sc.ai || {}; if(a.fixed) return 0; var cur = sceneChars(sc), n = 0;
+    keys.forEach(function(k){ if(cur.indexOf(k) >= 0) return; var nx = NAMEX.find(function(x){ return x.key === k; });
+      a.characters = (a.characters || []).concat(nx ? nx.key.replace(/(^| )\w/g, function(m){ return m.toUpperCase(); }) : k); a.characters_th = (a.characters_th || []).concat(nx ? nx.th : k); n++; });
+    if(n){ a.rc = 1; chipCache.delete(sc); } return n;
+  }
+  Object.assign(U, { addChars:addChars, show:function(c, sc){ return shown.push({ c:c, sc:sc }) - 1; }, terms:terms, hay:hay, card:card, chars:sceneChars, charKey:charKey, fileFor:fileOf, hasSrc:hasSrc, srcUrl:srcUrl, search:search,
                      openFiles:function(docs){ $(docs ? "pickDocs" : "playFiles").click(); } });
   if($("p-find").classList.contains("on")) search();
 })();
