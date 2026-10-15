@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600&family=Mitr:wght@500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="footage.css?v=20261017j">
+<link rel="stylesheet" href="footage.css?v=20261017k">
 </head>
 <body>
 <header>
@@ -187,6 +187,14 @@
       <label for="par">ส่งพร้อมกันกี่คำขอ</label>
       <input id="par" type="number" min="1" max="4" step="1">
     </div></details>
+    <details class="panel fold" id="locFold"><summary><span>📱 เก็บคลิปไว้ในมือถือ</span><em class="state idle" id="locTag"></em></summary><div class="fbody">
+      <p class="hint" style="margin-top:0">ใช้พื้นที่ว่างของมือถือเก็บสำเนาคลิปไว้ในแอพ (ต้นฉบับ 1080p ไม่ลดขนาด) · ดูฉาก/ตัดต่อ/ตรวจขั้นเทพอ่านจากเครื่องเลย ไม่ต้องสตรีม ไม่ต้องเลือกไฟล์ซ้ำ ไม่มีเน็ตก็ใช้ได้ · ไฟล์ในคลัง R2 ยังอยู่เหมือนเดิม</p>
+      <p class="hint" id="locInfo">กำลังเช็กพื้นที่...</p>
+      <label class="chk"><input type="checkbox" id="locKeep"> คลิปที่ทำดัชนีใหม่ เก็บสำเนาไว้ในแอพด้วย</label>
+      <button class="btn" id="locPull" style="width:100%;margin-top:8px" disabled>📥 ดึงจากคลังมาเก็บในเครื่อง</button>
+      <p class="hint" id="locMsg"></p>
+      <button class="btn ghost small" id="locClear" style="width:100%;margin-top:10px" disabled>ลบสำเนาในเครื่องทั้งหมด</button>
+    </div></details>
     <details class="panel fold"><summary><span>🔁 ตรวจฟุตซ้ำ</span></summary><div class="fbody">
       <p class="hint" style="margin-top:0">หาคลิปที่เป็นฟุตเดียวกันที่อัดหน้าจอซ้ำหลายรอบ (คนละไฟล์ แต่ฉากเหมือนกัน) โดยเทียบหน้าตาของรูปฉากที่เก็บไว้ · ไม่เรียก AI ไม่เสียเงิน · "ซ่อน" = ไม่โผล่ในค้นหา/ผู้กำกับ ย้อนกลับได้ ไม่ลบไฟล์</p>
       <p class="hint" id="dupInfo"></p>
@@ -222,6 +230,6 @@
 <input id="pickDocs" type="file" multiple hidden><!-- ไม่ใส่ accept → Android เปิดแอพไฟล์ (เข้าโฟลเดอร์ + เลือกทั้งหมดได้) แทนตัวเลือกรูป -->
 <video id="vid" muted playsinline preload="auto" style="position:fixed;left:-9999px;width:2px;height:2px"></video>
 
-<script src="store.js?v=20261017j" data-boot="budget.js?v=20261017j footage-core.js?v=20261017j r2.js?v=20261017j footage.js?v=20261017j footage-find.js?v=20261017j footage-dup.js?v=20261017j footage-audit.js?v=20261017j footage-cloud.js?v=20261017j mp4fix.js?v=20261017j footage-stitch.js?v=20261017j voicestore.js?v=20261017j footage-plan.js?v=20261017j gdrive.js?v=20261017j"></script>
+<script src="store.js?v=20261017k" data-boot="budget.js?v=20261017k footage-core.js?v=20261017k r2.js?v=20261017k footage.js?v=20261017k footage-find.js?v=20261017k footage-dup.js?v=20261017k footage-audit.js?v=20261017k footage-cloud.js?v=20261017k footage-local.js?v=20261017k mp4fix.js?v=20261017k footage-stitch.js?v=20261017k voicestore.js?v=20261017k footage-plan.js?v=20261017k gdrive.js?v=20261017k"></script>
 </body>
 </html>

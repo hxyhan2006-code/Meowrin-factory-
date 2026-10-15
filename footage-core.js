@@ -9,7 +9,7 @@
 
   /* ---------- ตั้งค่า ---------- */
   var CFG = "mw_footage_cfg_v1";
-  var cfg = Object.assign({ model:"google/gemini-3.8-flash", thr:0.18, maxScenes:30, budget:1, par:2, aiQuery:false, aiRank:false, godModel:"", godNew:false, fine:false }, load(CFG, {}));
+  var cfg = Object.assign({ model:"google/gemini-3.8-flash", thr:0.18, maxScenes:30, budget:1, par:2, aiQuery:false, aiRank:false, godModel:"", godNew:false, fine:false, keepLocal:false }, load(CFG, {}));
   function saveCfg(){ return save(CFG, cfg); }
   function orKey(){ return load("mw_openrouter_key_v1", ""); }
 
