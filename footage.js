@@ -71,8 +71,8 @@
   function renderQueue(){
     if(!queue.length){ $("queue").innerHTML = '<li class="empty">ยังไม่ได้เลือกไฟล์</li>'; }
     else $("queue").innerHTML = queue.map(function(q){
-      var c = byId(q.id), tag = { wait:[q.mode === "up" ? "รออัปเกรดรูป" : q.mode === "deep" ? "รอทำละเอียด" : q.mode === "cloud" ? "รออัปขึ้นคลัง" : q.key ? "รอ (จากคลัง)" : "รอ",""], run:["กำลังทำ " + Math.round(q.p * 100) + "%","run"], done:["เสร็จ","ok"], error:["error","err"], skip:["ทำแล้ว (ข้าม)","ok"] }[q.status];
-      var sub = q.status === "run" ? esc((q.stage || "เริ่ม...") + " · " + mmss(Date.now() - q.t0)) : q.mode === "cloud" && q.status === "wait" ? "ทำดัชนีแล้ว · จะอัปไฟล์ขึ้นคลัง (ไม่เรียก AI)" : q.mode === "up" && q.status === "wait" ? "รูปรุ่นเก่า (เบลอ) · จะวาดรูปใหม่ ไม่เรียก AI" : q.mode === "deep" && q.status === "wait" ? "อัปเกรดเป็นดัชนีละเอียด · AI ดูเฟรมต้น/กลาง/ท้ายของทุกฉาก (เสียค่า AI)" : c && c.status === "done" ? c.scenes.length + " ฉาก · " + money(c.cost || 0) + " · " + ((c.ms || 0) / 1000).toFixed(0) + " วิ · " + capDur(c.duration) : esc(q.album || "ไม่ระบุอัลบั้ม");
+      var c = byId(q.id), tag = { wait:[q.mode === "up" ? "รออัปเกรดรูป" : q.mode === "deep" ? (q.god ? "รอตรวจขั้นเทพ" : "รอทำละเอียด") : q.mode === "cloud" ? "รออัปขึ้นคลัง" : q.key ? "รอ (จากคลัง)" : "รอ",""], run:["กำลังทำ " + Math.round(q.p * 100) + "%","run"], done:["เสร็จ","ok"], error:["error","err"], skip:["ทำแล้ว (ข้าม)","ok"] }[q.status];
+      var sub = q.status === "run" ? esc((q.stage || "เริ่ม...") + " · " + mmss(Date.now() - q.t0)) : q.mode === "cloud" && q.status === "wait" ? "ทำดัชนีแล้ว · จะอัปไฟล์ขึ้นคลัง (ไม่เรียก AI)" : q.mode === "up" && q.status === "wait" ? "รูปรุ่นเก่า (เบลอ) · จะวาดรูปใหม่ ไม่เรียก AI" : q.mode === "deep" && q.status === "wait" ? (q.god ? "ตรวจขั้นเทพ · AI ดู 2-5 เฟรมต่อฉาก ทีละเฟรม (ค่า AI สูงสุด)" : "อัปเกรดเป็นดัชนีละเอียด · AI ดูเฟรมต้น/กลาง/ท้ายของทุกฉาก (เสียค่า AI)") : c && c.status === "done" ? c.scenes.length + " ฉาก · " + money(c.cost || 0) + " · " + ((c.ms || 0) / 1000).toFixed(0) + " วิ · " + capDur(c.duration) : esc(q.album || "ไม่ระบุอัลบั้ม");
       return '<li><img ' + (c && c.cover ? 'src="' + c.cover + '" ' : "") + 'alt=""><div class="t"><b>' + esc(q.info.name) + "</b><span>" + sub + "</span>"
         + (q.err ? '<br><span style="color:var(--err)">' + esc(q.err) + "</span>" : "") + '</div><span class="tag ' + tag[1] + '">' + tag[0] + "</span></li>";
     }).join("");
@@ -174,7 +174,8 @@
   /* ส่งฉากให้ AI ดูทีละ CHUNK ฉาก พร้อมกัน cfg.par คำขอ → ใส่ sc.ai · ใช้ทั้งทำดัชนีใหม่และอัปเกรดเป็นรุ่นละเอียด · base = ความคืบหน้าก่อนเริ่มส่วน AI */
   async function describeAll(scenes, album, dur, q, base){
     var chunks = [], out = { cost:0, tin:0, tout:0, raw:[], sums:"" }, sums = [], done = 0;
-    for(var i = 0; i < scenes.length; i += CHUNK) chunks.push(scenes.slice(i, i + CHUNK));
+    var csz = scenes[0] && scenes[0].aiFrames ? 5 : CHUNK; /* ขั้นเทพ = รูปเยอะต่อฉาก ส่งทีละน้อย */
+    for(var i = 0; i < scenes.length; i += csz) chunks.push(scenes.slice(i, i + csz));
     q.stage = "ฉากทั้งหมด " + scenes.length + " · ส่งให้ AI ดู..."; renderQueue();
     try{
       for(i = 0; i < chunks.length; i += cfg.par){
@@ -186,7 +187,7 @@
             out.raw.push({ chunk:i + k + 1, text:r.text });
             if(r.json.clip_summary_th) sums[i + k] = String(r.json.clip_summary_th);
             (Array.isArray(r.json.scenes) ? r.json.scenes : []).forEach(function(a){
-              var sc = ch.find(function(x){ return x.n === Number(a.i); }); if(sc) sc.ai = cleanAi(a);
+              var sc = ch.find(function(x){ return x.n === Number(a.i); }); if(sc) sc.ai = godUnion(cleanAi(a));
             });
           }catch(err){ if(err.raw) out.raw.push({ chunk:i + k + 1, text:err.raw }); if(err.cost){ out.cost += err.cost; runCost += err.cost; } throw err; }
           finally{ done++; q.p = base + done / chunks.length * (1 - base); q.stage = "AI ตอบแล้ว " + done + "/" + chunks.length + " ชุด"; renderQueue(); }
@@ -202,12 +203,13 @@
     try{
       var src = q.file || (FT.ui.fileFor && FT.ui.fileFor(c)) || (c.r2 && FT.cloud && FT.cloud.ready() ? await R2.url(c.r2) : null);
       if(!src) throw new Error("ไม่มีไฟล์ (ไม่อยู่ในคลัง และยังไม่ได้เปิดไฟล์ในเครื่อง)");
-      var fr = await FT.deepFrames($("vid"), src, c, function(p){ q.p = p * 0.4; q.stage = "จับเฟรมต้น/กลาง/ท้าย " + Math.round(p * 100) + "%"; renderQueue(); });
-      var scenes = c.scenes.map(function(sc, i){ return { n:i + 1, s:sc.s, e:sc.e, aiImg:fr[i].img, nf:fr[i].n }; });
+      var god = !!q.god;
+      var fr = await FT.deepFrames($("vid"), src, c, function(p){ q.p = p * 0.4; q.stage = (god ? "จับเฟรมรอบฉาก " : "จับเฟรมต้น/กลาง/ท้าย ") + Math.round(p * 100) + "%"; renderQueue(); }, god);
+      var scenes = c.scenes.map(function(sc, i){ return god ? { n:i + 1, s:sc.s, e:sc.e, aiFrames:fr[i].frames, nf:fr[i].n } : { n:i + 1, s:sc.s, e:sc.e, aiImg:fr[i].img, nf:fr[i].n }; });
       var r = await describeAll(scenes, c.album, c.duration, q, 0.4);
       scenes.forEach(function(x, i){ var o = c.scenes[i].ai; if(x.ai){ if(o && o.fixed){ x.ai.characters = o.characters; x.ai.characters_th = o.characters_th; x.ai.fixed = true; } c.scenes[i].ai = x.ai; } }); /* ตัวละครที่ Han แก้เองไว้ไม่ถูกทับ */
       if(r.sums) c.summary_th = r.sums;
-      c.aiV = FT.AI_V; c.cost = (c.cost || 0) + r.cost; c.raw = r.raw; c.deepAt = Date.now(); c.model = cfg.model;
+      c.aiV = god ? FT.AI_GOD : FT.AI_V; c.cost = (c.cost || 0) + r.cost; c.raw = r.raw; c.deepAt = Date.now(); c.model = god ? (cfg.godModel || cfg.model) : cfg.model;
       await FT.store.put(c); q.status = "done"; q.p = 1; q.mode = "";
     }catch(err){
       if(err.budget || document.hidden){ q.status = "wait"; q.p = 0; if(err.budget){ paused = true; capMsg = err.message === "ถึงเพดานงบ" ? "" : err.message; } }
@@ -236,7 +238,7 @@
       var rec = { id:q.id, name:q.info.name, album:q.album, size:q.info.size, type:q.info.type, lastModified:q.info.lastModified,
         duration:m.duration, w:m.w, h:m.h, cover:m.cover, summary_th:r.sums,
         scenes: m.scenes.map(function(sc){ return { s:sc.s, e:sc.e, thumb:sc.thumb, img:sc.img, ai:sc.ai || null }; }),
-        raw:r.raw, cost:r.cost, tokens:{ in:r.tin, out:r.tout }, ms:Date.now() - t0, imgV:FT.IMG_V, aiV:FT.AI_V, msScan:msScan, msAI:Date.now() - t0 - msScan, model:cfg.model, at:Date.now(), status:"done" };
+        raw:r.raw, cost:r.cost, tokens:{ in:r.tin, out:r.tout }, ms:Date.now() - t0, imgV:FT.IMG_V, aiV:cfg.godNew ? FT.AI_GOD : FT.AI_V, msScan:msScan, msAI:Date.now() - t0 - msScan, model:cfg.model, at:Date.now(), status:"done" };
       if(q.key) rec.r2 = q.key;
       await FT.store.put(rec);
       lib = lib.filter(function(c){ return c.id !== rec.id; }).concat([rec]);
@@ -257,7 +259,14 @@
     return { characters:arr(a.characters), characters_th:arr(a.characters_th), action:String(a.action || ""), emotion:String(a.emotion || ""),
              location:String(a.location || ""), tags_en:arr(a.tags_en), tags_th:arr(a.tags_th), summary_th:String(a.summary_th || ""),
              shot:/^(close|medium|wide)$/.test(a.shot) ? a.shot : "", intensity:Math.max(0, Math.min(5, Math.round(Number(a.intensity) || 0))), motion:String(a.motion || ""),
-             mood:String(a.mood || ""), arc:String(a.arc || ""), event:String(a.event || ""), issues:arr(a.issues).map(function(x){ return x.toLowerCase(); }) }; /* ช่องหลัง summary_th = ดัชนีรุ่น 2 */
+             mood:String(a.mood || ""), arc:String(a.arc || ""), event:String(a.event || ""), issues:arr(a.issues).map(function(x){ return x.toLowerCase(); }),
+             usable:Math.max(0, Math.min(5, Math.round(Number(a.usable) || 0))), multi:!!a.multi, objects:arr(a.objects), text:String(a.text || ""),
+             fr:(Array.isArray(a.frames) ? a.frames : []).slice(0, 6).map(function(f){ return { c:arr(f && f.c), d:String(f && f.d || "") }; }) }; /* ช่องหลัง summary_th = ดัชนีรุ่น 2 · usable..fr = ขั้นเทพ */
+  }
+  function godUnion(a){ /* รวมตัวละครทุกเฟรมเข้าตัวละครของฉาก (กันตกหล่น) */
+    if(!a.fr || !a.fr.length) return a;
+    a.fr.forEach(function(f){ f.c.forEach(function(n){ if(n && a.characters.indexOf(n) < 0) a.characters.push(n); }); });
+    return a;
   }
 
   /* ---------- ตรวจตัวละครซ้ำ: ส่งรูปที่เก็บไว้ (480px) ให้ AI ถามเจาะจงว่ามีใครในรายชื่อบ้าง แล้วเติมเฉพาะที่ขาด ---------- */
@@ -299,14 +308,28 @@
     var need = done.filter(function(c){ return (c.aiV || 1) < FT.AI_V && !queue.some(function(q){ return q.id === c.id && q.status !== "done"; }); });
     var ok = need.filter(function(c){ return (FT.ui.fileFor && FT.ui.fileFor(c)) || (c.r2 && FT.cloud && FT.cloud.ready()); });
     var per = avgCost() * 1.6; /* ยังไม่มีตัวอย่างรุ่นละเอียด = ประมาณ 1.6 เท่าของรุ่นเดิม (รูปใหญ่ขึ้น + ป้ายมากขึ้น) */
-    return { done:done.length, v2:v2.length, need:need.length, ok:ok, cost:per * ok.length };
+    var g3 = done.filter(function(c){ return (c.aiV || 1) >= FT.AI_GOD; }).length;
+    var gneed = done.filter(function(c){ return (c.aiV || 1) < FT.AI_GOD && !queue.some(function(q){ return q.id === c.id && q.status !== "done"; }); });
+    var gok = gneed.filter(function(c){ return (FT.ui.fileFor && FT.ui.fileFor(c)) || (c.r2 && FT.cloud && FT.cloud.ready()); });
+    return { done:done.length, v2:v2.length, need:need.length, ok:ok, cost:per * ok.length, g3:g3, gok:gok, gcost:avgCost() * 4 * gok.length * (cfg.godModel ? 2 : 1) };
   }
   function renderDeep(){
     var d = deepState();
     $("deepInfo").textContent = "ละเอียดแล้ว " + d.v2 + "/" + d.done + " คลิป" + (d.need ? " · ยังไม่ละเอียด " + d.need + " คลิป (พร้อมอัปเกรด " + d.ok.length + (d.need > d.ok.length ? " · อีก " + (d.need - d.ok.length) + " ไม่อยู่ในคลัง ต้องเลือกไฟล์ในเครื่องก่อน" : "") + ")" : "");
     $("deepBtn").disabled = running || !d.ok.length;
+    $("godInfo").textContent = "ขั้นเทพแล้ว " + d.g3 + "/" + d.done + " คลิป";
+    $("godBtn").disabled = running || !d.gok.length;
+    $("godBtn").textContent = d.gok.length ? "🧠 ตรวจขั้นเทพ " + d.gok.length + " คลิป (ค่า AI ≈ " + money(d.gcost) + ")" : "🧠 ไม่มีคลิปที่ต้องตรวจ";
     $("deepBtn").textContent = d.ok.length ? "🔬 อัปเกรด " + d.ok.length + " คลิป (ค่า AI ≈ " + money(d.cost) + ")" : "🔬 ไม่มีคลิปที่ต้องอัปเกรด";
   }
+  $("godInfo").textContent = "";
+  $("godBtn").addEventListener("click", function(){
+    var d = deepState(); if(!d.gok.length) return;
+    if(!window.confirm("ตรวจขั้นเทพ " + d.gok.length + " คลิป (AI ดูทีละเฟรม 2-5 เฟรมต่อฉาก) ค่า AI ประมาณ " + money(d.gcost) + "\nงบต่อรอบตั้งไว้ " + money(cfg.budget) + " ถึงแล้วจะพักเอง กด ทำต่อ ได้\nเปิดหน้านี้ค้างไว้ระหว่างทำ")) return;
+    queue = queue.filter(function(q){ return q.status === "wait" || q.status === "run"; }).concat(d.gok.map(function(c){
+      return { id:c.id, mode:"deep", god:true, album:c.album, status:"wait", err:"", p:0, file:null, toCloud:false, info:{ name:c.name, type:c.type, size:c.size, lastModified:c.lastModified, picked:Date.now() } }; }));
+    renderQueue(); run();
+  });
   $("deepBtn").addEventListener("click", function(){
     var d = deepState(); if(!d.ok.length) return;
     if(!window.confirm("อัปเกรด " + d.ok.length + " คลิปเป็นดัชนีละเอียด ค่า AI ประมาณ " + money(d.cost) + "\nงบต่อรอบตั้งไว้ " + money(cfg.budget) + " ถึงแล้วจะพักเอง กด ทำต่อ ได้ (ปรับงบได้ที่ ตั้งค่า)\nเปิดหน้านี้ค้างไว้ระหว่างทำ")) return;
@@ -346,6 +369,10 @@
   $("model").addEventListener("change", function(){ cfg.model = this.value.trim() || "google/gemini-3.8-flash"; this.value = cfg.model; FT.saveCfg(); });
   $("thr").addEventListener("input", function(){ cfg.thr = Number(this.value); $("thrVal").textContent = cfg.thr.toFixed(2); FT.saveCfg(); });
   $("thrVal").textContent = Number(cfg.thr).toFixed(2);
+  $("godModel").value = cfg.godModel; $("godNew").checked = !!cfg.godNew; $("fine").checked = !!cfg.fine;
+  $("godModel").addEventListener("change", function(){ cfg.godModel = this.value.trim(); FT.saveCfg(); renderDeep(); });
+  $("godNew").addEventListener("change", function(){ cfg.godNew = this.checked; FT.saveCfg(); });
+  $("fine").addEventListener("change", function(){ cfg.fine = this.checked; FT.saveCfg(); });
   function setTag(id, kind, text){ var el = $(id); el.className = "state " + kind; el.textContent = text; } /* ป้ายสีบนหัวข้อที่พับอยู่ในตั้งค่า */
   function tagsSet(){
     setTag("tagAi", FT.orKey() ? "ok" : "warn", FT.orKey() ? String(cfg.model).replace(/^.*\//, "") : "ไม่มี key");

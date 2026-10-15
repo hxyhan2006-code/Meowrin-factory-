@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600&family=Mitr:wght@500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="footage.css?v=20261017f">
+<link rel="stylesheet" href="footage.css?v=20261017h">
 </head>
 <body>
 <header>
@@ -40,6 +40,8 @@
       <p class="hint" style="margin-top:0">AI ดูเฟรมต้น/กลาง/ท้ายของทุกฉาก + ติดป้ายระยะภาพ (ใกล้/กลาง/ไกล) ความแรงของฉาก อารมณ์ เหตุการณ์ในเรื่อง และภาพมีลายน้ำ/ซับ/เบลอไหม → ค้นหาและผู้กำกับเลือกฉากแม่นขึ้น · คลิปใหม่ทำแบบนี้ให้เองแล้ว · คลิปเก่าอัปเกรดได้จากคลังโดยไม่ต้องเลือกไฟล์ (อ่านเฉพาะช่วงที่ใช้ ไม่โหลดทั้งไฟล์)</p>
       <p class="hint" id="deepInfo"></p>
       <button class="btn" id="deepBtn" style="width:100%;margin-top:8px" disabled>🔬 อัปเกรดคลิปเก่า</button>
+      <p class="hint" id="godInfo" style="margin-top:12px"></p>
+      <button class="btn" id="godBtn" style="width:100%;margin-top:8px" disabled>🧠 ตรวจขั้นเทพ</button>
       <h3 style="margin:18px 0 4px;font-size:15px">👤 ตรวจตัวละครซ้ำ</h3>
       <p class="hint" style="margin-top:0">ถ้าฉากที่มีตัวละคร (เช่น แชงคูส อุซป) ค้นไม่เจอ ให้ AI ดูรูปที่เก็บไว้อีกรอบ แบบถามเจาะจงว่ามีใครในรายชื่อ 38 ตัวละครบ้าง (บอกลักษณะเด่นของแต่ละตัวให้ด้วย) แล้วเติมเฉพาะที่ขาด · ถูกกว่าและเร็วกว่าอัปเกรดดัชนีละเอียด ไม่ต้องเปิดไฟล์วิดีโอ</p>
       <p class="hint" id="rcInfo"></p>
@@ -177,16 +179,26 @@
       <label for="model">โมเดล (OpenRouter model id ที่ดูรูปได้)</label>
       <input id="model" type="text" list="modelList" autocomplete="off">
       <datalist id="modelList"><option value="google/gemini-3.8-flash"><option value="google/gemini-4-argon"></datalist>
+      <label for="godModel">โมเดลตรวจขั้นเทพ (ว่าง = ใช้โมเดลด้านบน · ใส่ตัวแรงกว่าจะแพงขึ้น ~2 เท่า)</label>
+      <input id="godModel" type="text" list="modelList" autocomplete="off">
+      <label class="chk"><input type="checkbox" id="godNew"> คลิปใหม่ที่อัปโหลดตรวจขั้นเทพเลย (ค่า AI ~4 เท่า)</label>
       <label for="budget">เพดานงบต่อรอบ (USD) เกินแล้วพักเอง</label>
       <input id="budget" type="number" min="0.05" step="0.05">
       <label for="par">ส่งพร้อมกันกี่คำขอ</label>
       <input id="par" type="number" min="1" max="4" step="1">
+    </div></details>
+    <details class="panel fold"><summary><span>🔁 ตรวจฟุตซ้ำ</span></summary><div class="fbody">
+      <p class="hint" style="margin-top:0">หาคลิปที่เป็นฟุตเดียวกันที่อัดหน้าจอซ้ำหลายรอบ (คนละไฟล์ แต่ฉากเหมือนกัน) โดยเทียบหน้าตาของรูปฉากที่เก็บไว้ · ไม่เรียก AI ไม่เสียเงิน · "ซ่อน" = ไม่โผล่ในค้นหา/ผู้กำกับ ย้อนกลับได้ ไม่ลบไฟล์</p>
+      <p class="hint" id="dupInfo"></p>
+      <button class="btn" id="dupBtn" style="width:100%">🔁 ตรวจฟุตซ้ำ</button>
+      <div id="dupOut"></div>
     </div></details>
     <details class="panel fold"><summary><span>ตัดฉาก</span><em class="state idle" id="tagCut"></em></summary><div class="fbody">
       <label for="thr">ความไวจุดตัดฉาก: <b id="thrVal"></b> (น้อย = ตัดถี่)</label>
       <input id="thr" type="range" min="0.04" max="0.5" step="0.01">
       <label for="maxScenes">ฉากสูงสุดต่อคลิป</label>
       <input id="maxScenes" type="number" min="1" max="60" step="1">
+      <label class="chk"><input type="checkbox" id="fine"> ตัดละเอียด (สุ่มทุก 0.5 วิ ช้าลง ~2 เท่า · สำหรับคลิปตัดไว)</label>
       <p class="hint">สุ่มเฟรมทุก 1 วินาที · ฉากที่ต่างกันน้อยที่สุดจะถูกรวมจนเหลือไม่เกินเพดาน</p>
     </div></details>
     <details class="panel fold" id="auditFold"><summary><span>🎯 ตรวจความแม่นของ AI</span><em class="state idle" id="auditTag">...</em></summary><div class="fbody"><div id="auditBox"></div></div></details>
@@ -210,6 +222,6 @@
 <input id="pickDocs" type="file" multiple hidden><!-- ไม่ใส่ accept → Android เปิดแอพไฟล์ (เข้าโฟลเดอร์ + เลือกทั้งหมดได้) แทนตัวเลือกรูป -->
 <video id="vid" muted playsinline preload="auto" style="position:fixed;left:-9999px;width:2px;height:2px"></video>
 
-<script src="store.js?v=20261017f" data-boot="budget.js?v=20261017f footage-core.js?v=20261017f r2.js?v=20261017f footage.js?v=20261017f footage-find.js?v=20261017f footage-audit.js?v=20261017f footage-cloud.js?v=20261017f mp4fix.js?v=20261017f footage-stitch.js?v=20261017f voicestore.js?v=20261017f footage-plan.js?v=20261017f gdrive.js?v=20261017f"></script>
+<script src="store.js?v=20261017h" data-boot="budget.js?v=20261017h footage-core.js?v=20261017h r2.js?v=20261017h footage.js?v=20261017h footage-find.js?v=20261017h footage-dup.js?v=20261017h footage-audit.js?v=20261017h footage-cloud.js?v=20261017h mp4fix.js?v=20261017h footage-stitch.js?v=20261017h voicestore.js?v=20261017h footage-plan.js?v=20261017h gdrive.js?v=20261017h"></script>
 </body>
 </html>

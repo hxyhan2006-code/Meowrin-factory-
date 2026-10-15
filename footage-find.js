@@ -83,7 +83,7 @@
   function filtering(){ return sel.length > 0 || !!sizeSel; }
   function renderChips(){
     var cnt = {}, none = 0, total = 0, sz = { "1":0, "2":0, "3":0, "5":0 };
-    U.lib().forEach(function(c){ if(c.status !== "done") return; c.scenes.forEach(function(sc){ total++; var cs = sceneChars(sc); if(!cs.length) none++; else sz[sizeOf(cs.length)]++; cs.forEach(function(k){ cnt[k] = (cnt[k] || 0) + 1; }); }); });
+    U.lib().forEach(function(c){ if(c.status !== "done" || c.hide) return; c.scenes.forEach(function(sc){ total++; var cs = sceneChars(sc); if(!cs.length) none++; else sz[sizeOf(cs.length)]++; cs.forEach(function(k){ cnt[k] = (cnt[k] || 0) + 1; }); }); });
     if(!total){ $("chips").innerHTML = $("sizes").innerHTML = ""; $("onlyRow").hidden = true; return; }
     var ks = Object.keys(cnt).filter(function(k){ return cnt[k] >= MINSC || labelOf[k] && NAMEX.some(function(n){ return n.key === k; }) || sel.indexOf(k) >= 0; }).sort(function(a, b){ return cnt[b] - cnt[a]; });
     var shownKs = chipAll ? ks : ks.filter(function(k, i){ return i < TOPN || sel.indexOf(k) >= 0; });
@@ -94,7 +94,7 @@
     var st = function(k, label){ return '<button class="chip' + (sizeSel === k ? " on" : "") + '" data-z="' + k + '">' + label + (k ? " <i>" + sz[k] + "</i>" : "") + "</button>"; };
     $("sizes").innerHTML = st("", "ทุกจำนวนคน") + st("1", "เดี่ยว") + st("2", "คู่") + st("3", "กลุ่ม 3-4") + st("5", "หมู่ 5+");
     $("onlyRow").hidden = !sel.length || sel.indexOf("?") >= 0; $("onlySel").checked = only;
-    var al = {}; U.lib().forEach(function(c){ if(c.status === "done") al[c.album] = (al[c.album] || 0) + 1; }); /* ชิปอัลบั้มที่จัดเอง: นับเป็นคลิป */
+    var al = {}; U.lib().forEach(function(c){ if(c.status === "done" && !c.hide) al[c.album] = (al[c.album] || 0) + 1; }); /* ชิปอัลบั้มที่จัดเอง: นับเป็นคลิป */
     var an = Object.keys(al).sort(function(x, y){ return al[y] - al[x]; });
     $("albums").innerHTML = an.length > 1 ? '<button class="chip' + (albumSel ? "" : " on") + '" data-a="">ทุกอัลบั้ม</button>' + an.map(function(a){ return '<button class="chip' + (albumSel === a ? " on" : "") + '" data-a="' + esc(a) + '">📁 ' + esc(a) + " <i>" + al[a] + "</i></button>"; }).join("") : "";
   }
@@ -111,7 +111,7 @@
   $("q").addEventListener("input", function(){ clearTimeout(sT); sT = setTimeout(search, 250); });
   function search(){
     var q = $("q").value.trim();
-    var clips = U.lib().filter(function(c){ return c.status === "done" && (!albumSel || c.album === albumSel); });
+    var clips = U.lib().filter(function(c){ return c.status === "done" && !c.hide && (!albumSel || c.album === albumSel); }); /* c.hide = ซ่อนเพราะซ้ำ (footage-dup.js) */
     renderChips();
     if(!q){ return browse(clips); }
     var ts = terms(q), hits = [];
@@ -177,7 +177,7 @@
       + "<b>" + esc(c.album) + "</b>" + (sc ? ' · <span class="when">ฉาก ' + tm(sc.s) + "–" + tm(sc.e) + "</span>" : " · " + c.scenes.length + " ฉาก")
       + "<p>" + (exact ? '<span class="tag ok">★ ตรงเป๊ะ</span> ' : "") + (why ? '<span class="tag run">AI: ' + esc(why) + "</span> " : "") + esc(sc ? (a.summary_th || "(AI ไม่ได้อธิบายฉากนี้)") : (c.summary_th || "")) + "</p>"
       + (who ? "<p>👤 " + esc(who) + "</p>" : "")
-      + (sc && (a.shot || a.intensity || a.event) ? '<p class="meta">🎞 ' + esc([SHOT[a.shot], a.intensity ? "แรง " + a.intensity + "/5" : "", a.event || a.arc, (a.issues || []).length ? "⚠ " + a.issues.join(", ") : ""].filter(Boolean).join(" · ")) + "</p>" : "") /* ป้ายดัชนีรุ่นละเอียด */
+      + (sc && (a.shot || a.intensity || a.event || a.multi) ? '<p class="meta">🎞 ' + esc([SHOT[a.shot], a.intensity ? "แรง " + a.intensity + "/5" : "", a.event || a.arc, (a.issues || []).length ? "⚠ " + a.issues.join(", ") : "", a.multi ? "✂ หลายช็อตปน" : "", a.usable && a.usable <= 2 ? "คุณภาพต่ำ" : ""].filter(Boolean).join(" · ")) + "</p>" : "") /* ป้ายดัชนีรุ่นละเอียด */
       + (sc ? "" : strip(c)) /* โหมดดูทั้งคลิป: แถบรูปทุกฉาก แตะดูรูปใหญ่ + คำอธิบายฉากนั้น */
       + '<p>' + day(c.lastModified) + '</p><div class="fname">' + esc(c.name) + "</div></div></div>";
   }

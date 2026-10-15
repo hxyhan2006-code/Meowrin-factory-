@@ -9,7 +9,7 @@
 
   /* ---------- ตั้งค่า ---------- */
   var CFG = "mw_footage_cfg_v1";
-  var cfg = Object.assign({ model:"google/gemini-3.8-flash", thr:0.18, maxScenes:30, budget:1, par:2, aiQuery:false, aiRank:false }, load(CFG, {}));
+  var cfg = Object.assign({ model:"google/gemini-3.8-flash", thr:0.18, maxScenes:30, budget:1, par:2, aiQuery:false, aiRank:false, godModel:"", godNew:false, fine:false }, load(CFG, {}));
   function saveCfg(){ return save(CFG, cfg); }
   function orKey(){ return load("mw_openrouter_key_v1", ""); }
 
@@ -80,17 +80,25 @@
     for(var i = 0; i < ts.length; i++){ await seek(v, ts[i]); cx2.drawImage(v, i * (FW + 6), 0, FW, h); }
     return { img:cv2.toDataURL("image/jpeg", 0.72), n:ts.length };
   }
+  /* โหมดขั้นเทพ: ส่งเฟรมแยกรูป 3-5 เฟรมต่อฉาก (กว้าง 448) ให้ AI ดูละเอียดทุกช่วงของฉาก */
+  var GOD_W = 448, cv3 = document.createElement("canvas"), cx3 = cv3.getContext("2d");
+  function godN(sc){ var len = sc.e - sc.s; return len < 1 ? 2 : len < 3 ? 3 : len < 6 ? 4 : 5; }
+  async function godFrames(v, sc){
+    var n = godN(sc), len = sc.e - sc.s, h = Math.max(1, Math.round(GOD_W * v.videoHeight / v.videoWidth)), out = []; cv3.width = GOD_W; cv3.height = h;
+    for(var i = 0; i < n; i++){ await seek(v, Math.max(0.05, Math.min(v.duration - 0.05, sc.s + len * (i + 0.5) / n))); cx3.drawImage(v, 0, 0, GOD_W, h); out.push(cv3.toDataURL("image/jpeg", 0.78)); }
+    return out;
+  }
   function diff(a, b){ var s = 0; for(var i = 0; i < a.length; i++) s += Math.abs(a[i] - b[i]); return s / a.length / 255; }
 
   /* สุ่มเฟรมทุก 1 วิ → หาจุดตัดฉาก → รวมฉากสั้น/ฉากเกินเพดาน → จับเฟรมกลางฉาก
      คืน { duration, w, h, cover, scenes:[{s,e,thumb,img,aiImg,nf}] } (aiImg = รูปเรียงเฟรมให้ AI ดู ไม่เก็บลงฐานข้อมูล) */
-  var STEP = 1, MIN_SCENE = 1;
+  var STEP = 1, MIN_SCENE = 1; /* cfg.fine = เฟรมทุก 0.5 วิ + ฉากสั้นสุด 0.5 วิ (คลิปตัดไว) · ช้าลงราว 2 เท่า */
   var IMG = { cover:240, thumb:240, big:480, v:2 }; /* ขนาดรูปที่เก็บ (px กว้าง) · v = รุ่นของรูป (รุ่น 1 เล็กกว่า เบลอบนจอมือถือ) */
-  var AI_V = 2; /* รุ่นของดัชนี: 1 = AI ดู 1 เฟรม/ฉาก · 2 = ดูเฟรมต้น/กลาง/ท้าย + ป้ายระยะภาพ/ความแรง/อารมณ์/เหตุการณ์/ปัญหาภาพ */
+  var AI_V = 2, AI_GOD = 3; /* 3 = ขั้นเทพ: เฟรมแยก 2-5 รูปต่อฉาก + รายชื่อตัวละครพร้อมลักษณะเด่นในคำสั่งหลัก + โมเดลที่ตั้งไว้ (godModel) + ป้ายคุณภาพ/หลายช็อตปน/เฟรมต่อเฟรม */ /* รุ่นของดัชนี: 1 = AI ดู 1 เฟรม/ฉาก · 2 = ดูเฟรมต้น/กลาง/ท้าย + ป้ายระยะภาพ/ความแรง/อารมณ์/เหตุการณ์/ปัญหาภาพ */
   async function scan(v, file, onStep){
     await openVideo(v, file);
-    var dur = v.duration, ts = [];
-    for(var t = 0.05; t < dur - 0.05; t += STEP) ts.push(t);
+    var dur = v.duration, ts = [], step = cfg.fine ? 0.5 : STEP, minScene = cfg.fine ? 0.5 : MIN_SCENE;
+    for(var t = 0.05; t < dur - 0.05; t += step) ts.push(t);
     if(!ts.length) ts.push(Math.min(0.05, dur / 2));
     await seek(v, ts[0]);
     var cover = jpeg(v, IMG.cover, 0.75), gs = [gray(v)], scenes = [{ s:0, score:1, idx:0 }];
@@ -103,7 +111,7 @@
     scenes.forEach(function(sc, k){ sc.e = k + 1 < scenes.length ? scenes[k+1].s : dur; });
     function mergeAt(k){ scenes[k-1].e = scenes[k].e; scenes.splice(k, 1); } /* รวมฉาก k เข้าฉากก่อนหน้า */
     for(var k = scenes.length - 1; k >= 0 && scenes.length > 1; k--){
-      if(scenes[k].e - scenes[k].s < MIN_SCENE) mergeAt(k > 0 ? k : 1);
+      if(scenes[k].e - scenes[k].s < minScene) mergeAt(k > 0 ? k : 1);
     }
     while(scenes.length > cfg.maxScenes){ /* เกินเพดาน → รวมจุดตัดที่ต่างกันน้อยที่สุด */
       var m = 1; for(k = 2; k < scenes.length; k++) if(scenes[k].score < scenes[m].score) m = k;
@@ -123,7 +131,7 @@
       var sc = scenes[k], mid = Math.min(dur - 0.05, (sc.s + sc.e) / 2);
       await seek(v, Math.max(0.05, mid));
       sc.img = jpeg(v, IMG.big, 0.78); sc.thumb = jpeg(v, IMG.thumb, 0.75); delete sc.score; delete sc.idx;
-      var st = await strip(v, sc); sc.aiImg = st.img; sc.nf = st.n;
+      if(cfg.godNew){ sc.aiFrames = await godFrames(v, sc); sc.nf = sc.aiFrames.length; } else { var st = await strip(v, sc); sc.aiImg = st.img; sc.nf = st.n; }
       if(onStep) onStep(0.7 + (k + 1) / scenes.length * 0.3);
     }
     return { duration:dur, w:v.videoWidth, h:v.videoHeight, cover:cover, scenes:scenes };
@@ -143,9 +151,9 @@
   }
 
   /* อัปเกรดคลิปที่ทำดัชนีไว้แล้วเป็นรุ่นละเอียด: ใช้ช่วงฉากเดิม แค่จับเฟรมใหม่ให้ AI ดู · src = File หรือลิงก์คลัง → [{ aiImg, nf }] ต่อฉาก */
-  async function deepFrames(v, src, rec, onStep){
+  async function deepFrames(v, src, rec, onStep, god){ /* god = ขั้นเทพ: คืน { frames:[...], n } ต่อฉาก · ปกติ { img, n } (strip) */
     await openVideo(v, src); var out = [];
-    for(var k = 0; k < rec.scenes.length; k++){ out.push(await strip(v, rec.scenes[k])); if(onStep) onStep((k + 1) / rec.scenes.length); }
+    for(var k = 0; k < rec.scenes.length; k++){ if(god){ var fr = await godFrames(v, rec.scenes[k]); out.push({ frames:fr, n:fr.length }); } else out.push(await strip(v, rec.scenes[k])); if(onStep) onStep((k + 1) / rec.scenes.length); }
     return out;
   }
 
@@ -198,7 +206,26 @@
     "List every notable visible character. One entry per scene number."
   ].join("\n");
   /* ส่งหลายฉากในคำขอเดียว (ประหยัดกว่า และ AI เห็นบริบทต่อเนื่องของคลิป) */
+  function godPrompt(album, dur, n){
+    return [
+      "You are the best possible frame-by-frame analyst of One Piece anime footage (mostly Thai dub) for an AI film director and a video editor's search tool. Be exhaustive and precise.",
+      "Album label set loosely by the user (often WRONG): \"" + (album || "-") + "\". Clip length: " + dur.toFixed(1) + "s. Identify characters ONLY from what you see.",
+      "Known roster with distinguishing looks (use these names exactly when you recognize them; other characters: use their English name if you are sure, else describe them in tags):\n" + ROSTER.map(function(r){ return r[0] + ": " + r[1]; }).join("\n"),
+      "Below are " + n + " scenes. Each scene gives several frames in order (start→end of the scene), each labelled. Look at EVERY frame of every scene: a character may appear only in some frames, in the background, or small. List all of them.",
+      "Return ONLY JSON: {\"clip_summary_th\":\"one short Thai sentence\",\"scenes\":[{\"i\":<scene number>,",
+      " \"characters\":[\"English names of EVERY recognizable character in any frame\"],\"characters_th\":[\"same in Thai as Thai fans write\"],",
+      " \"frames\":[{\"c\":[\"characters visible in this frame\"],\"d\":\"≤8 English words: what is shown\"}] (one entry per frame, same order),",
+      " \"action\":\"short English\",\"emotion\":\"main character's emotion, short English\",\"location\":\"short English\",",
+      " \"shot\":\"close|medium|wide\",\"intensity\":<1 calm..5 explosive>,\"motion\":\"still|slow|fast\",\"mood\":\"one English word\",",
+      " \"arc\":\"arc name if sure else empty\",\"event\":\"canon moment if sure else empty\",",
+      " \"usable\":<1 unusable..5 perfect for editing: sharp, clean, well framed>,\"multi\":<true if frames show clearly different shots/cuts inside this scene>,",
+      " \"issues\":[\"watermark|subtitles|blurry|text|black\"],\"objects\":[\"key props/vehicles: sword, ship, hat...\"],\"text\":\"readable on-screen text or empty\",",
+      " \"tags_en\":[\"3-8 lowercase tags\"],\"tags_th\":[\"3-8 Thai tags\"],\"summary_th\":\"one short Thai sentence: WHO does or feels WHAT, and how it changes from start to end; start with the character's Thai name\"}]}",
+      "Never guess arc/event: leave empty if unsure. One entry per scene number."
+    ].join("\n");
+  }
   async function describe(chunk, album, dur){
+    if(chunk.length && chunk[0].aiFrames) return describeGod(chunk, album, dur);
     var content = [{ type:"text", text: PROMPT.replace("{album}", album || "-").replace("{dur}", dur.toFixed(1)).replace("{n}", chunk.length) }];
     chunk.forEach(function(sc){
       content.push({ type:"text", text:"Scene " + sc.n + " (" + sc.s.toFixed(1) + "-" + sc.e.toFixed(1) + "s):" });
@@ -284,5 +311,18 @@
     return r;
   }
 
-  window.FT = { cfg:cfg, saveCfg:saveCfg, orKey:orKey, store:store, clipId:clipId, scan:scan, refreshImages:refreshImages, IMG_V:IMG.v, AI_V:AI_V, deepFrames:deepFrames, describe:describe, beats:beats, direct:direct, recognize:recognize };
+  async function describeGod(chunk, album, dur){
+    var model = cfg.godModel || cfg.model, content = [{ type:"text", text:godPrompt(album, dur, chunk.length) }];
+    chunk.forEach(function(sc){
+      content.push({ type:"text", text:"\nScene " + sc.n + " (" + sc.s.toFixed(1) + "-" + sc.e.toFixed(1) + "s), " + sc.aiFrames.length + " frames:" });
+      sc.aiFrames.forEach(function(u, k){ content.push({ type:"text", text:"frame " + (k + 1) + "/" + sc.aiFrames.length + ":" }); content.push({ type:"image_url", image_url:{ url:u } }); });
+    });
+    var body = { model:model, messages:[{ role:"user", content:content }], usage:{ include:true } };
+    if(/^google\//.test(model)) body.reasoning = { effort:"medium" };
+    var r = await post(body), j;
+    try{ j = parseJSON(r.text); }catch(err){ err.raw = r.text; err.cost = r.cost; throw err; }
+    r.json = j; return r;
+  }
+
+  window.FT = { cfg:cfg, saveCfg:saveCfg, orKey:orKey, store:store, clipId:clipId, scan:scan, refreshImages:refreshImages, IMG_V:IMG.v, AI_V:AI_V, AI_GOD:AI_GOD, deepFrames:deepFrames, describe:describe, beats:beats, direct:direct, recognize:recognize };
 })();
