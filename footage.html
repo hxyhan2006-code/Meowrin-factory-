@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600&family=Mitr:wght@500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="footage.css?v=20261016g">
+<link rel="stylesheet" href="footage.css?v=20261017a">
 </head>
 <body>
 <header>
@@ -34,6 +34,12 @@
       <p class="hint" id="progTxt"></p>
       <p class="hint" id="wakeInfo" hidden></p>
       <p class="hint">⚠ เปิดหน้านี้ค้างไว้ระหว่างทำ ถ้าสลับแอพ เบราว์เซอร์จะหยุดอ่านวิดีโอ (กลับมาแล้วกด เริ่ม/ทำต่อ ได้)</p>
+    </div>
+    <div class="panel">
+      <h2>🔬 ดัชนีละเอียด</h2>
+      <p class="hint" style="margin-top:0">AI ดูเฟรมต้น/กลาง/ท้ายของทุกฉาก + ติดป้ายระยะภาพ (ใกล้/กลาง/ไกล) ความแรงของฉาก อารมณ์ เหตุการณ์ในเรื่อง และภาพมีลายน้ำ/ซับ/เบลอไหม → ค้นหาและผู้กำกับเลือกฉากแม่นขึ้น · คลิปใหม่ทำแบบนี้ให้เองแล้ว · คลิปเก่าอัปเกรดได้จากคลังโดยไม่ต้องเลือกไฟล์ (อ่านเฉพาะช่วงที่ใช้ ไม่โหลดทั้งไฟล์)</p>
+      <p class="hint" id="deepInfo"></p>
+      <button class="btn" id="deepBtn" style="width:100%;margin-top:8px" disabled>🔬 อัปเกรดคลิปเก่า</button>
     </div>
     <div class="panel">
       <h2>คลังบนคลาวด์</h2>
@@ -197,6 +203,6 @@
 <input id="pickDocs" type="file" multiple hidden><!-- ไม่ใส่ accept → Android เปิดแอพไฟล์ (เข้าโฟลเดอร์ + เลือกทั้งหมดได้) แทนตัวเลือกรูป -->
 <video id="vid" muted playsinline preload="auto" style="position:fixed;left:-9999px;width:2px;height:2px"></video>
 
-<script src="store.js?v=20261016g" data-boot="budget.js?v=20261016g footage-core.js?v=20261016g r2.js?v=20261016g footage.js?v=20261016g footage-find.js?v=20261016g footage-audit.js?v=20261016g footage-cloud.js?v=20261016g mp4fix.js?v=20261016g footage-stitch.js?v=20261016g voicestore.js?v=20261016g footage-plan.js?v=20261016g gdrive.js?v=20261016g"></script>
+<script src="store.js?v=20261017a" data-boot="budget.js?v=20261017a footage-core.js?v=20261017a r2.js?v=20261017a footage.js?v=20261017a footage-find.js?v=20261017a footage-audit.js?v=20261017a footage-cloud.js?v=20261017a mp4fix.js?v=20261017a footage-stitch.js?v=20261017a voicestore.js?v=20261017a footage-plan.js?v=20261017a gdrive.js?v=20261017a"></script>
 </body>
 </html>

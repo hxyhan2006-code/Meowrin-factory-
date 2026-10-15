@@ -77,6 +77,8 @@
       ts.forEach(function(v){ var w = [3, 2, 1].find(function(_, k){ return v.some(function(n){ return h[k].indexOf(n) >= 0; }); }); if(w) score += w; });
       if(want.length){ score += hitC * 8; if(!hitC) score -= 6; } /* สไตล์ช่อง: เอ่ยชื่อใคร ต้องเห็นคนนั้น */
       var len = sc.e - sc.s; score += len >= shot.dur ? 1.5 : len / shot.dur * 1.5; /* ฉากยาวพอกับประโยค */
+      var a = sc.ai || {}; if(a.shot && a.shot === shot.shot) score += 1.5; /* ดัชนีรุ่นละเอียด: ระยะภาพตรงที่ผู้กำกับอยากได้ */
+      (a.issues || []).forEach(function(x){ if(/watermark|subtitle|blurry|black/.test(x)) score -= 2; }); /* ภาพมีลายน้ำ/ซับ/เบลอ = ใช้ยาก */
       if(used[c.id + "#" + si]) score -= 5; /* ใช้ไปแล้วในบทนี้ */
       if(score > 0) out.push({ c:c, sc:sc, si:si, score:score });
     }); });
@@ -113,7 +115,7 @@
         if(!part.length) continue;
         var items = part.map(function(x){ var n = shots.indexOf(x) + 1;
           return { n:n, t:x.t, want:x.want, chars:x.chars, cands:x.pool.map(function(p, j){ var a = p.sc.ai || {};
-            return { id:n + "abcdefgh"[j], who:(a.characters_th && a.characters_th.length ? a.characters_th : a.characters || []).join(","), sum:a.summary_th || "", img:p.sc.thumb }; }) }; });
+            return { id:n + "abcdefgh"[j], who:(a.characters_th && a.characters_th.length ? a.characters_th : a.characters || []).join(","), sum:(a.summary_th || "") + (a.shot || a.event ? " [" + [a.shot, a.intensity ? "intensity " + a.intensity : "", a.event].filter(Boolean).join(", ") + "]" : ""), img:p.sc.thumb }; }) }; });
         try{
           var r = await FT.direct(script, items, prev ? (prev.sc.ai && prev.sc.ai.summary_th || "") : ""); cost += r.cost;
           r.picks.forEach(function(p){

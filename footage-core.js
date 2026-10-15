@@ -54,10 +54,11 @@
     });
   }
   function seek(v, t){ var p = once(v, "seeked", 10000, "เลื่อนวิดีโอ"); v.currentTime = t; return p; }
-  async function openVideo(v, file){
-    if(v.src) URL.revokeObjectURL(v.src);
-    var p = once(v, "loadeddata", 20000, "เปิดวิดีโอ");
-    v.src = URL.createObjectURL(file); v.load(); await p;
+  async function openVideo(v, file){ /* file = File ในเครื่อง หรือ string = ลิงก์สตรีมจากคลัง (อ่านเฉพาะช่วงที่ seek ไม่โหลดทั้งไฟล์) */
+    if(v.src && v.src.indexOf("blob:") === 0) URL.revokeObjectURL(v.src);
+    var p = once(v, "loadeddata", 30000, "เปิดวิดีโอ");
+    v.crossOrigin = "anonymous"; /* ลิงก์คลัง: ให้วาดลง canvas ได้ (R2 ตั้ง CORS แล้ว) */
+    v.src = typeof file === "string" ? file : URL.createObjectURL(file); v.load(); await p;
     if(!isFinite(v.duration)){ await seek(v, 1e7); await seek(v, 0.05); } /* บางไฟล์ไม่บอกความยาว ต้องเลื่อนไปท้ายก่อน */
     if(!(v.duration > 0) || !v.videoWidth) throw new Error("อ่านความยาว/ขนาดวิดีโอไม่ได้");
   }
@@ -69,12 +70,23 @@
   function jpeg(v, w, q){ grab(v, w); return cv.toDataURL("image/jpeg", q); }
   function gray(v){ grab(v, 64); var d = cx.getImageData(0, 0, cv.width, cv.height).data, g = new Uint8Array(d.length / 4);
     for(var i = 0, j = 0; i < d.length; i += 4, j++) g[j] = (d[i] * 3 + d[i+1] * 6 + d[i+2]) / 10; return g; }
+  /* ภาพให้ AI ดู: เฟรมต้น/กลาง/ท้ายของฉาก (1-3 เฟรมตามความยาว) วางเรียงซ้าย→ขวาในรูปเดียว (ประหยัดกว่าส่งหลายรูป) */
+  var cv2 = document.createElement("canvas"), cx2 = cv2.getContext("2d"), FW = 320;
+  function frameTimes(sc, dur){ var len = sc.e - sc.s, n = len < 1.5 ? 1 : len < 4 ? 2 : 3, out = [];
+    for(var i = 0; i < n; i++) out.push(Math.max(0.05, Math.min(dur - 0.05, sc.s + len * (i + 0.5) / n))); return out; }
+  async function strip(v, sc){
+    var ts = frameTimes(sc, v.duration), h = Math.max(1, Math.round(FW * v.videoHeight / v.videoWidth));
+    cv2.width = FW * ts.length + 6 * (ts.length - 1); cv2.height = h; cx2.fillStyle = "#fff"; cx2.fillRect(0, 0, cv2.width, h); /* เส้นขาวคั่นเฟรม */
+    for(var i = 0; i < ts.length; i++){ await seek(v, ts[i]); cx2.drawImage(v, i * (FW + 6), 0, FW, h); }
+    return { img:cv2.toDataURL("image/jpeg", 0.72), n:ts.length };
+  }
   function diff(a, b){ var s = 0; for(var i = 0; i < a.length; i++) s += Math.abs(a[i] - b[i]); return s / a.length / 255; }
 
   /* สุ่มเฟรมทุก 1 วิ → หาจุดตัดฉาก → รวมฉากสั้น/ฉากเกินเพดาน → จับเฟรมกลางฉาก
-     คืน { duration, w, h, cover, scenes:[{s,e,thumb,img,ai512}] } (ai512 ใช้ส่ง AI ไม่เก็บลงฐานข้อมูล) */
+     คืน { duration, w, h, cover, scenes:[{s,e,thumb,img,aiImg,nf}] } (aiImg = รูปเรียงเฟรมให้ AI ดู ไม่เก็บลงฐานข้อมูล) */
   var STEP = 1, MIN_SCENE = 1;
   var IMG = { cover:240, thumb:240, big:480, v:2 }; /* ขนาดรูปที่เก็บ (px กว้าง) · v = รุ่นของรูป (รุ่น 1 เล็กกว่า เบลอบนจอมือถือ) */
+  var AI_V = 2; /* รุ่นของดัชนี: 1 = AI ดู 1 เฟรม/ฉาก · 2 = ดูเฟรมต้น/กลาง/ท้าย + ป้ายระยะภาพ/ความแรง/อารมณ์/เหตุการณ์/ปัญหาภาพ */
   async function scan(v, file, onStep){
     await openVideo(v, file);
     var dur = v.duration, ts = [];
@@ -110,7 +122,8 @@
     for(k = 0; k < scenes.length; k++){
       var sc = scenes[k], mid = Math.min(dur - 0.05, (sc.s + sc.e) / 2);
       await seek(v, Math.max(0.05, mid));
-      sc.ai512 = jpeg(v, 512, 0.75); sc.img = jpeg(v, IMG.big, 0.78); sc.thumb = jpeg(v, IMG.thumb, 0.75); delete sc.score; delete sc.idx;
+      sc.img = jpeg(v, IMG.big, 0.78); sc.thumb = jpeg(v, IMG.thumb, 0.75); delete sc.score; delete sc.idx;
+      var st = await strip(v, sc); sc.aiImg = st.img; sc.nf = st.n;
       if(onStep) onStep(0.7 + (k + 1) / scenes.length * 0.3);
     }
     return { duration:dur, w:v.videoWidth, h:v.videoHeight, cover:cover, scenes:scenes };
@@ -127,6 +140,13 @@
       if(onStep) onStep((k + 1) / rec.scenes.length);
     }
     return { cover:cover, imgs:imgs };
+  }
+
+  /* อัปเกรดคลิปที่ทำดัชนีไว้แล้วเป็นรุ่นละเอียด: ใช้ช่วงฉากเดิม แค่จับเฟรมใหม่ให้ AI ดู · src = File หรือลิงก์คลัง → [{ aiImg, nf }] ต่อฉาก */
+  async function deepFrames(v, src, rec, onStep){
+    await openVideo(v, src); var out = [];
+    for(var k = 0; k < rec.scenes.length; k++){ out.push(await strip(v, rec.scenes[k])); if(onStep) onStep((k + 1) / rec.scenes.length); }
+    return out;
   }
 
   /* ---------- OpenRouter ---------- */
@@ -162,16 +182,19 @@
     return JSON.parse(s.slice(a, b + 1));
   }
   var PROMPT = [
-    "You are indexing anime footage clips (mostly One Piece, Thai dub) for a video editor's search tool.",
-    "Album label set loosely by the user (often WRONG: a Luffy scene may sit in a Zoro album, and scenes mix many characters): \"{album}\". Identify characters ONLY from what you see in each frame; use the label just to break ties. Clip length: {dur}s.",
-    "Below are {n} frames, one per scene, in order. Each image is preceded by its scene number.",
+    "You are indexing anime footage clips (mostly One Piece, Thai dub) for a video editor's search tool and an AI director that picks shots for narration.",
+    "Album label set loosely by the user (often WRONG: a Luffy scene may sit in a Zoro album, and scenes mix many characters): \"{album}\". Identify characters ONLY from what you see; use the label just to break ties. Clip length: {dur}s.",
+    "Below are {n} scenes in order. Each scene is ONE image showing 1-3 frames side by side (left = start, middle, right = end of the scene, separated by white lines). Describe what happens across the frames, not just one frame. Each image is preceded by its scene number.",
     "Return ONLY JSON, no markdown:",
     "{\"clip_summary_th\":\"one short Thai sentence about what happens in these scenes\",",
     " \"scenes\":[{\"i\":<scene number>,\"characters\":[\"English common names e.g. Luffy, Zoro, Nami, Usopp, Sanji, Chopper, Robin, Franky, Brook, Jinbe, Ace, Sabo, Shanks, Garp, Buggy, Hancock, Law\"],",
     " \"characters_th\":[\"same characters in Thai as Thai fans write, e.g. ลูฟี่, โซโร, นามิ, อุซป, ซันจิ, ช็อปเปอร์, โรบิน, แฟรงกี้, บรู๊ค, จินเบ, เอส, ซาโบ้, แชงคูส, การ์ป\"],",
-    " \"action\":\"short English\",\"emotion\":\"short English\",\"location\":\"short English\",",
-    " \"tags_en\":[\"3-8 lowercase tags\"],\"tags_th\":[\"3-8 Thai tags e.g. ตกใจ, หัวเราะ, ต่อสู้, ร้องไห้, กิน\"],\"summary_th\":\"one short Thai sentence saying WHO does or feels WHAT, starting with that character's Thai name, e.g. ลูฟี่ตกใจเมื่อเห็นศัตรู (do not bury the subject: if a marine is shocked by Luffy, say ทหารเรือตกใจ, not ลูฟี่ตกใจ)\"}]}",
-    "Rules: name a character only when reasonably sure, otherwise describe them in tags (e.g. marine soldier).",
+    " \"action\":\"short English\",\"emotion\":\"short English (the main character's)\",\"location\":\"short English\",",
+    " \"shot\":\"close|medium|wide (framing of the main subject)\",\"intensity\":<1 calm .. 5 explosive action>,\"motion\":\"still|slow|fast\",\"mood\":\"one English word e.g. funny, tense, sad, heroic, scary, warm\",",
+    " \"arc\":\"One Piece arc name if you recognize it, else empty\",\"event\":\"short English name of the canon moment if you recognize it (e.g. Luffy punches Arlong), else empty\",",
+    " \"issues\":[\"only those present: watermark, subtitles, blurry, text, black\"],",
+    " \"tags_en\":[\"3-8 lowercase tags\"],\"tags_th\":[\"3-8 Thai tags e.g. ตกใจ, หัวเราะ, ต่อสู้, ร้องไห้, กิน\"],\"summary_th\":\"one short Thai sentence saying WHO does or feels WHAT (and how it changes from start to end if it does), starting with that character's Thai name, e.g. ลูฟี่ตกใจแล้วหัวเราะ (do not bury the subject: if a marine is shocked by Luffy, say ทหารเรือตกใจ, not ลูฟี่ตกใจ)\"}]}",
+    "Rules: name a character only when reasonably sure, otherwise describe them in tags (e.g. marine soldier). Never guess arc/event: leave empty if unsure.",
     "List every notable visible character. One entry per scene number."
   ].join("\n");
   /* ส่งหลายฉากในคำขอเดียว (ประหยัดกว่า และ AI เห็นบริบทต่อเนื่องของคลิป) */
@@ -179,7 +202,7 @@
     var content = [{ type:"text", text: PROMPT.replace("{album}", album || "-").replace("{dur}", dur.toFixed(1)).replace("{n}", chunk.length) }];
     chunk.forEach(function(sc){
       content.push({ type:"text", text:"Scene " + sc.n + " (" + sc.s.toFixed(1) + "-" + sc.e.toFixed(1) + "s):" });
-      content.push({ type:"image_url", image_url:{ url: sc.ai512 } });
+      content.push({ type:"image_url", image_url:{ url: sc.aiImg } });
     });
     var body = { model:cfg.model, messages:[{ role:"user", content:content }], usage:{ include:true } };
     if(/^google\//.test(cfg.model)) body.reasoning = { effort:"low" }; /* งานติดป้ายไม่ต้องคิดนาน ประหยัดโทเคน */
@@ -235,5 +258,5 @@
     return r;
   }
 
-  window.FT = { cfg:cfg, saveCfg:saveCfg, orKey:orKey, store:store, clipId:clipId, scan:scan, refreshImages:refreshImages, IMG_V:IMG.v, describe:describe, beats:beats, direct:direct };
+  window.FT = { cfg:cfg, saveCfg:saveCfg, orKey:orKey, store:store, clipId:clipId, scan:scan, refreshImages:refreshImages, IMG_V:IMG.v, AI_V:AI_V, deepFrames:deepFrames, describe:describe, beats:beats, direct:direct };
 })();

@@ -130,3 +130,4 @@ pre{white-space:pre-wrap;word-break:break-word;font-size:11px;margin:6px 0 0;col
 .auditimg{width:100%;border-radius:10px;display:block;margin-top:8px}
 [hidden]{display:none!important}
 .pl .ln small.dur{color:var(--muted);font-weight:400;font-size:12px}
+.card .meta{color:var(--muted);font-size:12px}
