@@ -38,20 +38,28 @@
   /* ช่องติ๊กบนการ์ด (footage-find.js เรียกผ่าน U.pickHtml) */
   U.pickHtml = function(c, sc){
     if(!mode) return ""; var k = keyOf(c, sc); map[k] = { c:c, sc:sc };
-    return '<label class="chk pk"><input type="checkbox" data-pk="' + esc(k) + '"' + (sel.some(function(x){ return x.id === c.id && x.si === c.scenes.indexOf(sc); }) ? " checked" : "") + "> เลือกฉากนี้</label>";
+    return '<label class="chk pk"><input type="checkbox" data-pk="' + esc(k) + '"' + (isSel(c, sc) ? " checked" : "") + "> เลือกฉากนี้</label>";
   };
-  document.querySelector("main").addEventListener("change", function(e){
-    var cb = e.target.closest("[data-pk]"), h = cb && map[cb.dataset.pk]; if(!h) return;
-    var si = h.c.scenes.indexOf(h.sc), i = sel.findIndex(function(x){ return x.id === h.c.id && x.si === si; });
-    if(cb.checked && i < 0) sel.push({ id:h.c.id, si:si }); else if(!cb.checked && i >= 0) sel.splice(i, 1);
-    save(); bar(); if(!$("pickSheet").hidden) sheet();
+  document.querySelector("main").addEventListener("change", function(e){ /* ช่องติ๊กบนการ์ดฉาก */
+    var cb = e.target.closest("[data-pk]"), h = cb && map[cb.dataset.pk]; if(h) toggle(h.c, h.sc, cb.checked);
+  });
+  document.querySelector("main").addEventListener("click", function(e){ /* แตะรูปย่อในแถบฉาก = ติ๊ก (ปุ่ม 🔍 ไปเปิดรูปใหญ่ที่ footage-find.js) */
+    var st = e.target.closest("[data-ps]"), h = st && !e.target.closest("[data-k]") && map[st.dataset.ps]; if(!h) return;
+    st.classList.toggle("sel", toggle(h.c, h.sc));
   });
   $("pickMode").addEventListener("click", function(){
     mode = !mode; this.textContent = mode ? "✔ เสร็จการเลือก (ปิดช่องติ๊ก)" : "☑ เลือกฉากไปทำวิดีโอ";
     $("pickHint").hidden = !mode; if(U.search) U.search();
   });
 
-  U.pickOn = function(){ return mode; }; /* footage-find.js: โหมดเลือกเปิดอยู่ → แสดงเป็นฉากทั้งหมดให้ติ๊กได้ */
+  function isSel(c, sc){ var si = c.scenes.indexOf(sc); return sel.some(function(x){ return x.id === c.id && x.si === si; }); }
+  function toggle(c, sc, want){ /* want ว่าง = สลับ · คืนสถานะใหม่ (true = เลือกอยู่) */
+    var si = c.scenes.indexOf(sc), i = sel.findIndex(function(x){ return x.id === c.id && x.si === si; });
+    if(want === undefined) want = i < 0;
+    if(want && i < 0) sel.push({ id:c.id, si:si }); else if(!want && i >= 0) sel.splice(i, 1);
+    save(); bar(); if(!$("pickSheet").hidden) sheet(); return want;
+  }
+  U.pickSt = function(c, sc){ if(!mode) return null; var k = keyOf(c, sc); map[k] = { c:c, sc:sc }; return { key:k, on:isSel(c, sc) }; }; /* รูปย่อในแถบฉากของการ์ดคลิป (footage-find.js strip) */
   function clearAll(){
     if(!sel.length || !window.confirm("ล้างฉากที่เลือกไว้ทั้งหมด " + sel.length + " ฉาก?")) return;
     sel = []; save(); if(out){ URL.revokeObjectURL(out.url); out = null; } bar(); if(!$("pickSheet").hidden) sheet(); if(mode && U.search) U.search();

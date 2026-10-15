@@ -155,10 +155,10 @@
   });
   function browse(clips){ /* ไม่พิมพ์คำค้น = โชว์ทุกคลิปพร้อมสรุป · เลือกชิป หรือเปิดโหมดเลือกฉาก = โชว์เป็นฉาก (ใหม่สุดก่อน) ให้ทุกฉากมีช่องติ๊ก */
     lastHits = [];
-    if(filtering() || (U.pickOn && U.pickOn())){
+    if(filtering()){
       var sc = []; clips.forEach(function(c){ c.scenes.forEach(function(s){ if(passSc(s)) sc.push({ c:c, sc:s }); }); });
       sc.sort(function(a, b){ return (b.c.lastModified || 0) - (a.c.lastModified || 0) || a.sc.s - b.sc.s; });
-      $("findInfo").textContent = sc.length + " ฉาก" + (filtering() ? "ตามชิปที่เลือก (จากป้ายตัวละครที่ AI ติดให้)" : "ทั้งหมดในคลัง") + " · พิมพ์คำค้นเพื่อกรองต่อ" + (sc.length > chipMax ? " · โชว์ " + chipMax + " ฉากแรก" : "");
+      $("findInfo").textContent = sc.length + " ฉากตามชิปที่เลือก (จากป้ายตัวละครที่ AI ติดให้) · พิมพ์คำค้นเพื่อกรองต่อ" + (sc.length > chipMax ? " · โชว์ " + chipMax + " ฉากแรก" : "");
       $("results").innerHTML = sc.slice(0, chipMax).map(function(h){ return card(h.c, h.sc); }).join("")
         + (sc.length > chipMax ? '<button class="btn ghost small" id="moreBtn" style="width:100%">ดูเพิ่ม 40 ฉาก</button>' : "") || '<p class="empty">ไม่มีฉาก</p>';
       return;
@@ -169,7 +169,8 @@
   }
   function strip(c){
     return '<div class="strip">' + c.scenes.map(function(s){
-      var k = shown.push({ c:c, sc:s }) - 1;
+      var k = shown.push({ c:c, sc:s }) - 1, ps = U.pickSt && U.pickSt(c, s); /* โหมดเลือกฉาก: แตะรูปย่อ = ติ๊กเลือก (footage-pick.js) · ปุ่ม 🔍 = ดูรูปใหญ่ */
+      if(ps) return '<div class="st pks' + (ps.on ? " sel" : "") + '" data-ps="' + esc(ps.key) + '"><img src="' + s.thumb + '" alt="ฉาก"><em>' + tm(s.s) + '</em><i class="tick">✓</i><button class="zm" data-k="' + k + '" aria-label="ดูรูปใหญ่">🔍</button></div>';
       return '<div class="st" data-k="' + k + '"><img src="' + s.thumb + '" alt="ฉาก"><em>' + tm(s.s) + "</em></div>";
     }).join("") + "</div>";
   }

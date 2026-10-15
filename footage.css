@@ -144,3 +144,7 @@ body.hasbar{padding-bottom:84px}
 .pkrow .mv button:disabled{opacity:.35}
 .pkrow .cvr{position:relative;flex:none;width:64px;height:64px;border-radius:8px;overflow:hidden;background:#000}.pkrow .cvr img{width:100%;height:100%;object-fit:cover}.pkrow .cvr em{position:absolute;right:3px;bottom:2px;font-style:normal;font-size:11px;font-weight:600;color:#fff;text-shadow:0 0 3px #000}
 .pickbar span{flex:1;min-width:0;line-height:1.3}.pickbar .btn.ghost{padding:0 12px}
+.strip .st.pks{cursor:pointer}.strip .st.pks img{border:2px solid var(--line-strong)}.strip .st.sel img{border-color:var(--accent)}
+.strip .tick{position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:rgba(0,0,0,.55);border:2px solid #fff;color:transparent;display:flex;align-items:center;justify-content:center;font-style:normal;font-size:13px;font-weight:700}
+.strip .st.sel .tick{background:var(--accent);border-color:var(--accent);color:#000}
+.strip .zm{position:absolute;top:1px;right:1px;min-width:26px;min-height:26px;padding:0;border:0;border-radius:50%;background:rgba(0,0,0,.55);font-size:13px;line-height:1}
