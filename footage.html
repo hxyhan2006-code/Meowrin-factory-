@@ -4,15 +4,17 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="theme-color" content="#0b0e0d" />
-<title>ฟุตเทจ · meowrin factory</title>
+<title>ฟุตเทจ · Meowrin factory</title>
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600&family=Mitr:wght@500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="footage.css?v=2.1">
+<link rel="stylesheet" href="footage.css?v=2.2">
 </head>
 <body>
 <header>
-  <div class="wrap"><h1>ดัชนีฟุตเทจ</h1><a href="./">← กลับแอพ</a></div>
+  <div class="wrap"><a class="back" href="./" aria-label="กลับแอพ"><svg class="ic" aria-hidden="true"><use href="#i-back"/></svg></a><h1>ดัชนีฟุตเทจ</h1></div>
   <nav class="tabs"><button data-p="find" class="on">คลัง</button><button data-p="idx">อัปโหลด</button><button data-p="plan">ผู้กำกับ</button><button data-p="set">ตั้งค่า</button></nav>
 </header>
 
@@ -230,6 +232,6 @@
 <input id="pickDocs" type="file" multiple hidden><!-- ไม่ใส่ accept → Android เปิดแอพไฟล์ (เข้าโฟลเดอร์ + เลือกทั้งหมดได้) แทนตัวเลือกรูป -->
 <video id="vid" muted playsinline preload="auto" style="position:fixed;left:-9999px;width:2px;height:2px"></video>
 
-<script src="store.js?v=2.1" data-boot="icons.js?v=2.1 dialog.js?v=2.1 budget.js?v=2.1 footage-core.js?v=2.1 r2.js?v=2.1 footage.js?v=2.1 footage-find.js?v=2.1 footage-dup.js?v=2.1 footage-audit.js?v=2.1 footage-cloud.js?v=2.1 mp4fix.js?v=2.1 footage-stitch.js?v=2.1 voicestore.js?v=2.1 footage-plan.js?v=2.1 gdrive.js?v=2.1"></script>
+<script src="store.js?v=2.2" data-boot="icons.js?v=2.2 dialog.js?v=2.2 budget.js?v=2.2 footage-core.js?v=2.2 r2.js?v=2.2 footage.js?v=2.2 footage-find.js?v=2.2 footage-dup.js?v=2.2 footage-audit.js?v=2.2 footage-cloud.js?v=2.2 mp4fix.js?v=2.2 footage-stitch.js?v=2.2 voicestore.js?v=2.2 footage-plan.js?v=2.2 gdrive.js?v=2.2"></script>
 </body>
 </html>

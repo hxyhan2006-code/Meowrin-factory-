@@ -27,6 +27,7 @@
     x:       '<path d="M18 6L6 18M6 6l12 12"/>',
     play:    '<path fill="currentColor" stroke="none" d="M8 5v14l11-7z"/>',
     pause:   '<path fill="currentColor" stroke="none" d="M7 5h4v14H7zM13 5h4v14h-4z"/>',
+    back:    '<path d="M15 18l-6-6 6-6"/>',
     sliders: '<path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/>'
   };
   function svg(name){ return '<svg class="ic" aria-hidden="true"><use href="#i-' + name + '"/></svg>'; }

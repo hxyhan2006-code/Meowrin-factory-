@@ -30,6 +30,10 @@ const subSyms = new Set([...text('sub/index.html').matchAll(/<symbol id="i-([a-z
 for (const f of ['sub/index.html', ...files('sub', '.js')]) for (const m of text(f).matchAll(/#i-([a-z]+)/g)) subUsed.add(m[1]);
 const missing = [...used].filter((n) => !defined.has(n)); const subMissing = [...subUsed].filter((n) => !subSyms.has(n));
 check('ชื่อไอคอนที่เรียกใช้มีครบ (icons.js + sprite ของ sub)', !missing.length && !subMissing.length, 'ขาด: ' + [...missing, ...subMissing].join(', '));
+// ไอคอนแอพ: ทุกไฟล์ใน manifest.json ต้องมีจริงและเป็น PNG ขนาดตรงที่ประกาศไว้
+const man = JSON.parse(text('manifest.json')); const badIcons = [];
+for (const ic of man.icons) { try { const b = readFileSync(join(ROOT, ic.src)); const w = b.readUInt32BE(16), h = b.readUInt32BE(20); if (b.toString('latin1', 1, 4) !== 'PNG' || `${w}x${h}` !== ic.sizes) badIcons.push(ic.src + ' ขนาด ' + w + 'x' + h); } catch { badIcons.push(ic.src + ' ไม่มีไฟล์'); } }
+check('ไอคอนแอพใน manifest.json มีจริงและขนาดตรง', !badIcons.length, badIcons.join(', '));
 const dialogs = [];
 for (const f of jsAll.filter((x) => x !== 'dialog.js')) text(f).split('\n').forEach((l, i) => { if (/window\.(confirm|alert|prompt)\b|(?<![.\w])(alert|confirm)\(/.test(l)) dialogs.push(f + ':' + (i + 1)); });
 check('ไม่มี confirm/alert/prompt ของเบราว์เซอร์ (ใช้ MWDialog)', !dialogs.length, dialogs.join(', '));
@@ -67,7 +71,7 @@ try {
   const main = await open('/index.html', 'หน้าหลัก');
   await main.page.click('nav [data-tab=settings]'); await main.page.waitForTimeout(300);
   const label = await main.page.textContent('#appVersion'); const ver = /var VERSION = "([\w.]+)"/.exec(text('version.js'))[1];
-  check('ท้ายตั้งค่าโชว์เลขรุ่นตรง version.js', label === 'meowrin factory v' + ver, `ได้ "${label}"`);
+  check('ท้ายตั้งค่าโชว์เลขรุ่นตรง version.js', label === 'Meowrin factory v' + ver, `ได้ "${label}"`);
   await main.page.evaluate(`(async () => { const mk = ${wavBlobJs}; await MWVoice.put({ id: 1700000000001, text: 'บทของเทคนี้', name: 'take.mp3', blob: mk(80000, 8000) }); })()`);
   await main.page.reload(); await main.page.waitForTimeout(2000);
   await main.page.click('nav [data-tab=voice]'); await main.page.click('#vSavedBtn'); await main.page.waitForTimeout(1500);

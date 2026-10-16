@@ -83,20 +83,20 @@ header{
   position:sticky;top:0;z-index:15;
   display:flex;align-items:center;gap:12px;
   margin:0 -14px;
-  padding:calc(10px + env(safe-area-inset-top)) 14px 10px;
-  background:rgba(9,9,11,.88);
+  padding:calc(8px + env(safe-area-inset-top)) 14px 8px;
+  background:rgba(11,14,13,.88);
   -webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);
   border-bottom:1px solid var(--line);
 }
-header h1{font-size:20px;line-height:1.2;color:var(--text)}
-header p{color:var(--muted);font-size:12.5px;margin-top:1px}
+header h1{font:500 18px/1.2 Mitr,sans-serif;letter-spacing:.01em;color:var(--text)}
 .logo{
-  flex:none;width:38px;height:38px;border-radius:11px;
+  flex:none;width:36px;height:36px;border-radius:11px;
   display:grid;place-items:center;
-  font:500 22px/1 Mitr,sans-serif;color:var(--accent-ink);
-  background:linear-gradient(145deg,#7ef0b5,#39d98a 55%,#1f9d62);
-  box-shadow:0 4px 16px var(--accent-glow);
+  background:linear-gradient(180deg,#121917,#070a09);
+  border:1px solid rgba(57,217,138,.32);
+  box-shadow:0 0 14px rgba(57,217,138,.16);
 }
+.logo svg{width:24px;height:21px;display:block}
 h2{font-size:16px;margin-bottom:2px}
 
 section{display:none;padding-top:16px}

@@ -184,7 +184,7 @@ select[data-sheet]{display:none}
 /* ---------- 10g. ประวัติบท ---------- */
 .hbtn{
   position:relative;margin-left:auto;flex:none;
-  width:44px;height:44px;padding:0;
+  width:40px;height:40px;padding:0;
   display:grid;place-items:center;
   border-radius:12px;
   border:1px solid var(--line-strong);
