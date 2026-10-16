@@ -435,12 +435,10 @@
   }
   $("albPickBtn").addEventListener("click", function(){
     var n = albumCounts();
-    $("albList").innerHTML = Object.keys(n).sort().map(function(a){ return '<button type="button" class="alrow' + (a === renFrom ? " on" : "") + '" data-a="' + esc(a) + '">' + MWIcon("folder") + "<b>" + esc(a) + "</b><i>" + n[a] + " คลิป</i></button>"; }).join("") || '<p class="hint">ยังไม่มีอัลบั้ม</p>';
-    $("albSheet").hidden = false;
+    FT.pick.open({ title:"เลือกอัลบั้ม", placeholder:"พิมพ์ชื่ออัลบั้มเพื่อหา", icon:"folder",
+      items:function(q){ return Object.keys(n).sort().filter(function(a){ return !q || a.toLowerCase().indexOf(q) >= 0; }).map(function(a){ return { k:a, name:a, sub:n[a] + " คลิป", on:a === renFrom }; }); },
+      onPick:function(a){ renFrom = a; $("albumNew").value = a; renderAlbums(); $("albumNew").focus(); $("albumNew").select(); } });
   });
-  $("albList").addEventListener("click", function(e){ var b = e.target.closest("[data-a]"); if(!b) return; renFrom = b.dataset.a; $("albumNew").value = renFrom; $("albSheet").hidden = true; renderAlbums(); $("albumNew").focus(); $("albumNew").select(); });
-  $("albClose").addEventListener("click", function(){ $("albSheet").hidden = true; });
-  $("albSheet").addEventListener("click", function(e){ if(e.target === this) this.hidden = true; });
   $("albumNew").addEventListener("input", renderAlbums);
   $("albumRenBtn").addEventListener("click", async function(){ /* แก้ป้ายอัลบั้มของทุกคลิป (ไฟล์ในคลังคลาวด์ไม่ย้าย) · ชื่อซ้ำกับที่มี = รวมกัน */
     var old = renFrom, nw = $("albumNew").value.trim(); if(!old || !nw || nw === old) return;
