@@ -1,7 +1,7 @@
 // voicepick.js — เลือกเสียงที่เจนไว้ในแอพหลัก (MWVoice ในเครื่อง + คลัง R2 ที่ยังไม่ได้ดึงมา) แยกออกจาก app.js (v1.16)
 // ทางเข้า 2 ทาง: ปุ่ม "เลือกจากเสียงที่เจนไว้ในแอพ" และลิงก์ ?voice=รหัส จากปุ่ม "ทำซับ" ในแท็บเสียงของแอพหลัก
 // loadAudioFile = ตัวเดียวกับตอนแนบไฟล์ (app.js) · rawScriptInput = ช่องสคริปต์ดิบ · fileInfo = กล่องชื่อไฟล์
-import { escapeHtml } from './ui.js?v=4.2';
+import { escapeHtml } from './ui.js?v=4.3';
 
 export function setupVoicePicker({ loadAudioFile, rawScriptInput, fileInfo }){
   const pickVoiceBtn = document.getElementById('pickVoiceBtn');

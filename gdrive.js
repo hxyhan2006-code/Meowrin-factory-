@@ -135,6 +135,83 @@
     return { up:todo.length, fresh:p.fresh, changed:p.changed, why:p.why, dups:p.dups, total:Object.keys(have).length + p.fresh };
   }
   function whyText(r){ var w = Object.keys(r.why).map(function(k){ return k + " " + r.why[k]; }).join(", "); return "ใหม่ " + r.fresh + " · เปลี่ยน " + r.changed + (w ? " (" + w + ")" : "") + (r.dups ? " · ไฟล์ซ้ำบน Drive " + r.dups : ""); }
+  async function restoreFootage(lib, putMany, onProg){
+    var dir = await folder("footage", await folder(FOLDER)), mine = {};
+    lib.forEach(function(c){ mine[cid(c)] = sig(c); });
+    var files = (await list(dir)).filter(function(f){ var a = f.appProperties || {}; return !a.cid || mine[a.cid] !== a.sig; }), got = [], done = 0;
+    onProg(0, files.length);
+    await pool(files, 4, async function(f){
+      try{ var c = JSON.parse(await download(f.id)); if(c && c.id && Array.isArray(c.scenes)) got.push(c); }catch(e){}
+      done++; onProg(done, files.length);
+      if(got.length >= 20){ var b = got.splice(0); await putMany(b); }
+    });
+    if(got.length) await putMany(got);
+    return { n:done };
+  }
+
+  /* ---------- หน้าจอ (ปุ่มที่มีในหน้านั้นๆ) ---------- */
+  function ago(t){ if(!t) return "ยังไม่เคย"; var m = Math.round((Date.now() - t) / 60000); return m < 1 ? "เมื่อกี้" : m < 60 ? m + " นาทีที่แล้ว" : m < 1440 ? Math.round(m / 60) + " ชม.ที่แล้ว" : Math.round(m / 1440) + " วันที่แล้ว"; }
+  function show(text, kind){ var html = text ? '<div class="msg ' + (kind || "") + '">' + text.replace(/</g, "&lt;") + "</div>" : ""; ["gdMsg", "gdQuickMsg", "gdFootQuickMsg"].forEach(function(id){ var el = $(id); if(el) el.innerHTML = html; }); }
+  /* ---------- สถานะ (ป้ายสี: เขียว = ปกติ · เหลือง = ควรดู/ต้องกดอะไรสักอย่าง · แดง = มีปัญหา · เทา = ยังไม่ได้ตั้ง) ---------- */
+  function pill(kind, text){ return '<span class="pill ' + kind + '">' + text + "</span>"; }
+  function row(label, kind, text, extra){ return '<div class="strow"><span>' + label + "</span>" + pill(kind, text) + (extra ? '<small>' + extra + "</small>" : "") + "</div>"; }
+  function tag(id, kind, text){ var el = $(id); if(el){ el.className = "state " + kind; el.textContent = text; } }
+  var RANK = { idle:1, ok:0, warn:2, err:3 };
+  function worst(list){ return list.reduce(function(a, b){ return RANK[b] > RANK[a] ? b : a; }, "ok"); }
+  function driveStatus(){
+    if(lastErr) return { kind:"err", text:"มีปัญหา", why:lastErr };
+    if(!cfg.client) return { kind:"idle", text:"ยังไม่ได้ตั้ง", why:"ใส่ Client ID แล้วกด เชื่อม" };
+    if(!ready()) return { kind:"warn", text:"ต้องเชื่อมรอบนี้", why:"กด เชื่อม Google Drive (ทุกครั้งที่เปิดแอพรอบใหม่)" };
+    return { kind:"ok", text:"เชื่อมอยู่", why:"สำรองเองเมื่อข้อมูลเปลี่ยน" };
+  }
+  function ageKind(t){ return !t ? "idle" : Date.now() - t > 3 * 864e5 ? "warn" : "ok"; }
+  function ageText(t){ return !t ? "ยังไม่เคยสำรอง" : ageKind(t) === "warn" ? ago(t) + " (นานแล้ว)" : ago(t); }
+  function render(){
+    ["gdNow", "gdQuick", "gdRestore", "gdFootNow", "gdFootQuick", "gdFootRestore"].forEach(function(id){ if($(id)) $(id).disabled = busy; });
+    if($("gdConnect")) $("gdConnect").innerHTML = ready() ? MWIcon("check") + "เชื่อมแล้ว" : "เชื่อม Google Drive";
+    var d = driveStatus(), kd = ageKind(cfg.last), kf = ageKind(cfg.lastFoot);
+    tag("gdTag", d.kind === "ok" && kd === "warn" ? "warn" : d.kind, d.kind === "ok" && kd === "warn" ? "สำรองนานแล้ว" : d.text);
+    var st = $("gdState");
+    if(st) st.innerHTML = row("การเชื่อมต่อ", d.kind, d.text, d.why) + row("ข้อมูลแอพ", kd, ageText(cfg.last))
+      + row("ดัชนีฟุตเทจ", kf, ageText(cfg.lastFoot), kf === "idle" ? "สำรองที่หน้าฟุตเทจ" : "");
+    var qi = $("gdQuickInfo"); /* แถบสำรองด่วนในหน้าตั้งค่า */
+    if(qi) qi.textContent = !cfg.client ? "ยังไม่ได้ตั้ง Client ID (ตั้งที่ ระบบ > สำรองข้อมูล)" : "ล่าสุด " + ageText(cfg.last) + (ready() ? "" : " · แตะแล้วจะเชื่อมให้ก่อน");
+    var fi = $("gdFootQuickInfo"); /* แถบสำรองด่วนของหน้าฟุตเทจ (สำรองดัชนีคลิป) */
+    if(fi) fi.textContent = !cfg.client ? "ยังไม่ได้ตั้ง Client ID (ตั้งที่ตั้งค่า > สำรอง / กู้คืนดัชนี)" : "ดัชนีฟุตเทจ ล่าสุด " + ageText(cfg.lastFoot) + (ready() ? "" : " · แตะแล้วจะเชื่อมให้ก่อน");
+    renderStorage(d, kd);
+  }
+  function renderStorage(d, kd){
+    MWStore.info().then(function(i){
+      var idb = i.mode === "idb", full = i.quota && i.used / i.quota > 0.8, kinds = [];
+      var html = row("เก็บในเครื่อง", idb ? "ok" : "err", idb ? "IndexedDB" : "ใช้ได้แค่ localStorage", idb ? "" : "เบราว์เซอร์นี้ใช้ IndexedDB ไม่ได้ (โหมดส่วนตัว?) พื้นที่จำกัด")
+        + row("กันเบราว์เซอร์ลบเอง", i.persisted ? "ok" : "warn", i.persisted ? "ได้แล้ว" : "ยังไม่ได้", i.persisted ? "" : "เพิ่มแอพลงหน้าจอหลักช่วยได้")
+        + row("พื้นที่", full ? "warn" : "ok", (i.used / 1048576).toFixed(1) + " MB" + (i.quota ? " / " + (i.quota / 1073741824).toFixed(1) + " GB" : ""), full ? "ใกล้เต็ม" : "");
+      kinds = [idb ? "ok" : "err", i.persisted ? "ok" : "warn", full ? "warn" : "ok"];
+      var el = $("stInfo"); if(el) el.innerHTML = html;
+      /* Drive: ยังไม่ได้เชื่อมในรอบนี้เป็นเรื่องปกติ (ต้องกดเชื่อมทุกครั้งที่เปิดแอพ) เตือนเฉพาะตอนสำรองล่าสุดนานเกิน 3 วันหรือไม่เคยสำรอง */
+      var dk = d.kind === "idle" ? "warn" : d.kind === "ok" ? (kd === "warn" ? "warn" : "ok") : d.kind === "warn" ? (kd === "ok" ? "ok" : "warn") : d.kind;
+      var all = worst(kinds.concat([dk]));
+      tag("stTag", all, all === "ok" ? "ปกติ" : all === "err" ? "มีปัญหา" : "ควรดูแล");
+    });
+  }
+  async function act(btn, fn){
+    if(busy) return; busy = true; render(); var t = btn.textContent;
+    try{ if(!ready()) await connect(); show(await fn(), "ok"); lastErr = ""; }catch(err){ lastErr = err.message; show(err.message, "err"); }
+    busy = false; render(); btn.textContent = t;
+  }
+  function bind(id, fn){ var el = $(id); if(el) el.addEventListener("click", function(){ act(el, fn); }); }
+  if($("gdClient")){
+    $("gdClient").value = cfg.client || "";
+    $("gdClient").addEventListener("change", function(){ cfg.client = this.value.trim(); cfg.ok = false; tok = null; saveCfg(); render(); if(cfg.client) gis().catch(function(){}); });
+  }
+  if($("gdConnect")) $("gdConnect").addEventListener("click", function(){ connect().then(function(){ show("เชื่อมแล้ว", "ok"); }, function(err){ show(err.message, "err"); }); });
+  var backupNow = async function(){ var r = await backupData(); return "สำรองขึ้น Drive แล้ว (" + r.keys + " รายการ · " + r.kb.toFixed(0) + " KB)"; };
+  bind("gdNow", backupNow); bind("gdQuick", backupNow);
+  bind("gdRestore", async function(){
+    if(!await MWDialog.confirm("กู้คืนจาก Drive? ข้อมูลในเครื่อง (ประวัติ/prompt/ช่อง/ตั้งค่า) จะถูกแทนด้วยของบน Drive · API key ไม่ถูกแตะ", { ok:"กู้คืน" })) return "ยกเลิก";
+    var r = await restoreData(); setTimeout(function(){ location.reload(); }, 1200);
+    return "กู้คืนแล้ว " + r.keys + " รายการ (สำรองเมื่อ " + new Date(r.at).toLocaleString("th-TH") + ") กำลังโหลดใหม่...";
+  });
   var footNow = async function(){
     if(!window.FT || !FT.ui) throw new Error("ดัชนียังโหลดไม่เสร็จ");
     var r = await backupFootage(FT.ui.lib(), function(d, n, p){ show("กำลังอัปดัชนี " + d + "/" + n + " คลิป · " + whyText(p)); });
