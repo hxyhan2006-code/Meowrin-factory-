@@ -113,6 +113,9 @@ try {
   await main.page.click('#histBtn'); await main.page.waitForTimeout(600);
   check('ประวัติบท: บทที่เคยสร้างเสียงมีป้าย "มีเสียง"', await main.page.evaluate(() => { const t = document.querySelector('#histList [data-vo="smokeclip"]'); return !!t && !t.hidden && t.textContent.includes('มีเสียง'); }));
   await main.page.click('#histClose');
+  await main.page.click('#histBtn'); await main.page.waitForTimeout(300);
+  check('ประวัติบท: ปุ่มลบซ่อนไว้ แตะสามจุดเปิด แตะซ้ำปิด', await main.page.evaluate(async () => { const r = document.querySelector('#histList .hrow'), d = r.querySelector('.hdel'), m = r.querySelector('[data-more]'); const hid = getComputedStyle(d).display === 'none'; m.click(); const sh = getComputedStyle(d).display !== 'none'; m.click(); return hid && sh && getComputedStyle(d).display === 'none'; }));
+  await main.page.click('#histClose');
   await finishPage(main);
   // หน้าซับ (?voice=)
   const sub = await open('/sub/?voice=1700000000001', 'หน้าซับ');

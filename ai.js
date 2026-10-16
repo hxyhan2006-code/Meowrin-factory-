@@ -450,8 +450,8 @@
       var done = h.vers.filter(function(v){ return v.s2; }).length;
       return '<div class="hrow"><div class="hopen"><button class="hthumb" data-play="'+esc(h.id)+'" aria-label="ดูวิดีโอ"><img loading="lazy" alt="" src="'+MW.thumbUrl(h.id)+'"><i><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg></i></button>' /* แตะรูป = ดูวิดีโอในแอพ · แตะข้อความ = เปิดบท */
         + '<button class="hmain" data-open="'+esc(h.id)+'"><span class="ht"><b>'+esc(h.clip.title)+'</b><small>'+esc(histMeta(h))+'</small></span>'
-        + '<span class="htags"><span class="sel-tag">'+(done ? "บทเสร็จ" + (done > 1 ? " ×" + done : "") : "State 1")+'</span><span class="sel-tag vo" data-vo="'+esc(h.id)+'" hidden></span></span></button></div>'
-        + '<button class="btn small ghost hmore" data-more="'+esc(h.id)+'" aria-label="เมนูรายการนี้">'+MWIcon("more")+'</button>'
+        + '<span class="htags"><span class="sel-tag">'+(done ? "บทเสร็จ" + (done > 1 ? " ×" + done : "") : "State 1")+'</span><span class="sel-tag vo" data-vo="'+esc(h.id)+'" hidden></span></span></button>'
+        + '<button class="hmore" data-more="'+esc(h.id)+'" aria-label="เมนูรายการนี้">'+MWIcon("more")+'</button></div>'
         + '<button class="btn small ghost hdel" data-del="'+esc(h.id)+'">ลบรายการนี้</button></div>';
     }).join("") : '<div class="empty"><div class="empty-ico">'+MWIcon("clock")+'</div>ยังไม่มีประวัติ ทำบทแล้วจะมาอยู่ตรงนี้</div>';
     $("histClear").hidden = !hist.length;
@@ -472,7 +472,11 @@
   document.addEventListener("keydown", function(e){ if(e.key === "Escape" && !$("histSheet").hidden) MW.closeModal("histSheet"); });
   $("histList").addEventListener("click", function(e){
     var b = e.target.closest("button"); if(!b) return;
-    if(b.dataset.more){ b.closest(".hrow").classList.toggle("open"); return; } /* ปุ่มลบซ่อนไว้ แตะสามจุดถึงโผล่ */
+    if(b.dataset.more){ /* ปุ่มลบซ่อนไว้ แตะสามจุดถึงโผล่ · เปิดได้ทีละรายการ แตะที่เดิมซ้ำ = ปิด */
+      var row = b.closest(".hrow"), was = row.classList.contains("open");
+      $("histList").querySelectorAll(".hrow.open").forEach(function(r){ r.classList.remove("open"); });
+      if(!was) row.classList.add("open"); return;
+    }
     if(b.dataset.play){ var ph = findHist(b.dataset.play); if(ph) MW.openPlayer(ph.clip); return; }
     if(b.dataset.open){
       var h = findHist(b.dataset.open); if(!h) return;

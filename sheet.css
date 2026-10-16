@@ -221,7 +221,7 @@ select[data-sheet]{display:none}
   overflow:hidden;font-weight:500;font-size:14px;line-height:1.35;overflow-wrap:anywhere;
 }
 .ht small{display:block;color:var(--muted);font-size:12px;margin-top:2px}
-.hmore{flex:none;align-self:center;width:44px;min-width:44px;padding:0}.hmore .ic{margin:0}
+.hmore{flex:none;align-self:center;width:32px;height:40px;margin-right:-6px;border:0;background:none;color:var(--muted);display:grid;place-items:center;cursor:pointer}.hmore .ic{margin:0}.hrow.open .hmore{color:var(--accent)}
 .hdel{display:none;flex:1 0 100%}.hrow.open .hdel{display:block}
 .vmore{flex:none;margin-left:auto;width:40px;height:40px;border-radius:50%;border:0;background:none;color:var(--muted);display:grid;place-items:center;cursor:pointer}.vmore .ic{margin:0}.vcard.open .vmore{color:var(--accent)}
 .vcard .vact{display:none}.vcard.open .vact{display:flex}
