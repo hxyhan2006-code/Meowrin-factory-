@@ -94,10 +94,19 @@ try {
   await main.page.evaluate(() => document.querySelector('#quickFb [data-q=lines]').click()); await main.page.waitForTimeout(300);
   check('จัดบรรทัดใหม่: รวมบรรทัดที่ถูกตัดในท่อนเดียวกัน คงบรรทัดว่างคั่นท่อน', (await main.page.inputValue('#vText')) === 'ลูฟี่เคยสร้างอุบัติเหตุ พุ่งชนหน้าอกสาว\n\nรอบแรกเกิดขึ้นที่เกาะ', await main.page.inputValue('#vText'));
   check('หน้าบทยังโชว์ต้นฉบับ แม้แก้ในหน้าเสียงแล้ว', (await main.page.textContent('#s2View')) === orig);
-  check('มีปุ่มกลับไปบทต้นฉบับหลังแก้', await main.page.evaluate(() => !document.querySelector('#s2Orig').hidden));
-  await main.page.evaluate(() => document.querySelector('#s2Orig').click()); await main.page.waitForTimeout(300);
-  check('กดกลับไปบทต้นฉบับ: บทในหน้าเสียงกลับเป็นต้นฉบับ', (await main.page.inputValue('#vText')) === orig);
-  check('แท็บเสียง: แถวปุ่มคัดลอก/กลับต้นฉบับ/สลับบทก่อนแก้ ไม่ล้นจอ', await main.page.evaluate(() => { ['s2Orig', 's2Undo'].forEach((i) => { document.getElementById(i).hidden = false; }); const bs = ['copyBtn', 's2Orig', 's2Undo'].map((i) => document.getElementById(i).getBoundingClientRect()); return bs.every((b) => b.width > 0 && b.right <= innerWidth + 1); }));
+  const st = () => main.page.evaluate(() => ({ back: !document.querySelector('#s2Back').disabled, fwd: !document.querySelector('#s2Fwd').disabled }));
+  const s1 = await st();
+  check('ย้อน/ไปข้างหน้า: หลังแก้ ย้อนได้ ไปข้างหน้าไม่ได้ (ปุ่มเทา)', s1.back && !s1.fwd);
+  await main.page.evaluate(() => document.querySelector('#s2Back').click()); await main.page.waitForTimeout(300);
+  const s2 = await st();
+  check('กดย้อน: บทกลับเป็นต้นฉบับ และปุ่มย้อนเป็นสีเทา (สุดทาง) ปุ่มไปข้างหน้ากดได้', (await main.page.inputValue('#vText')) === orig && !s2.back && s2.fwd);
+  await main.page.evaluate(() => document.querySelector('#s2Fwd').click()); await main.page.waitForTimeout(300);
+  const s3 = await st();
+  check('กดไปข้างหน้า: บทกลับเป็นฉบับแก้ และปุ่มไปข้างหน้าเป็นสีเทา', (await main.page.inputValue('#vText')).startsWith('ลูฟี่เคยสร้างอุบัติเหตุ พุ่ง') && s3.back && !s3.fwd);
+  await main.page.fill('#vText', 'พิมพ์แก้เองหนึ่งรอบ'); await main.page.dispatchEvent('#vText', 'change'); await main.page.evaluate(() => document.querySelector('#s2Back').click()); await main.page.waitForTimeout(300);
+  check('พิมพ์แก้เองแล้วแตะออก = หนึ่งขั้น ย้อนได้ทีละขั้น', (await main.page.inputValue('#vText')).startsWith('ลูฟี่เคยสร้างอุบัติเหตุ พุ่ง'));
+  check('หน้าบทยังโชว์ต้นฉบับหลังย้อน/แก้หลายรอบ', (await main.page.textContent('#s2View')) === orig);
+  check('แท็บเสียง: แถวปุ่มคัดลอก/ย้อน/ไปข้างหน้า ไม่ล้นจอ', await main.page.evaluate(() => { const bs = ['copyBtn', 's2Back', 's2Fwd'].map((i) => document.getElementById(i).getBoundingClientRect()); return bs.every((b) => b.width > 0 && b.right <= innerWidth + 1); }));
   await finishPage(main);
   // หน้าซับ (?voice=)
   const sub = await open('/sub/?voice=1700000000001', 'หน้าซับ');

@@ -51,7 +51,7 @@
     var vs = c.vers.filter(function(v){ return v.s1Len; });
     if(!vs.length) return;
     var e = { id:c.clip.id, clip:c.clip, at:Date.now(), trans:c.trans, active:Math.max(0, vs.indexOf(c.vers[c.active])),
-              vers: vs.map(function(v){ return { pid:v.pid, pname:v.pname, eye:v.eye, writer:v.writer, chat:v.chat, s1Len:v.s1Len, s1:v.s1, s2:v.s2, prev:v.prev || "", orig:v.orig || "", cost:v.cost || 0, free:v.free || 0, at:v.at }; }) };
+              vers: vs.map(function(v){ return { pid:v.pid, pname:v.pname, eye:v.eye, writer:v.writer, chat:v.chat, s1Len:v.s1Len, s1:v.s1, s2:v.s2, orig:v.orig || "", hist:v.hist || [], hi:v.hi || 0, cost:v.cost || 0, free:v.free || 0, at:v.at }; }) };
     hist = [e].concat(hist.filter(function(h){ return h.id !== e.id; })).slice(0, HIST_MAX);
     if(!save(HIST, hist)) MW.toast("พื้นที่เก็บเต็ม บันทึกประวัติไม่ได้", true);
     renderHistCount();
@@ -117,7 +117,7 @@
       v.s1 = await callAI(ch, sys, v.eye, v);
       v.chat = ch.concat([{ role:"assistant", content: v.s1 }]); v.s1Len = v.chat.length;
       saveHist(c); v.step = "กำลังเขียนบท..."; paint(c, v);
-      v.s2 = await callAI(chatS1(v).concat([{ role:"user", content:"รัน" }]), sys, v.writer, v); tidy(v); v.orig = v.s2;
+      v.s2 = await callAI(chatS1(v).concat([{ role:"user", content:"รัน" }]), sys, v.writer, v); tidy(v); startHist(v);
     });
   }
 
@@ -126,7 +126,7 @@
     var vs = cfg.sel.map(function(pid){
       var p = prompt(pid), v = c.vers.find(function(x){ return x.pid === pid; });
       if(!v){ v = { pid:pid }; c.vers.push(v); }
-      return Object.assign(v, { pname:p.name, eye:cfg.eye, writer:cfg.model, chat:[], s1Len:0, s1:"", s2:"", prev:"", cost:0, free:0, busy:false, step:"", err:"" });
+      return Object.assign(v, { pname:p.name, eye:cfg.eye, writer:cfg.model, chat:[], s1Len:0, s1:"", s2:"", orig:"", hist:[], hi:0, cost:0, free:0, busy:false, step:"", err:"" });
     });
     c.active = c.vers.indexOf(vs[0]); renderVersion();
     await Promise.all(vs.map(function(v){ return runFull(c, v); }));
@@ -163,8 +163,7 @@
     $("vStatus").innerHTML = v.busy ? '<div class="msg">'+esc(v.step)+'</div>' : v.err ? '<div class="msg err">'+esc(v.err)+'</div>' : "";
     ["s1FbBtn","s1Run","s2FbBtn"].forEach(function(id){ $(id).disabled = v.busy || !v.s1Len; });
     $("s2Wrap").hidden = !v.s2;
-    $("s2Undo").hidden = !v.prev;
-    $("s2Orig").hidden = !edited(v);
+    renderUndo(v);
     $("vBody").hidden = !v.s2; $("vNo").hidden = !!v.s2;
     $("vMsg").innerHTML = $("vStatus").innerHTML; /* แก้บทด้วย AI จากหน้าเสียงก็เห็นสถานะ */
     $("vText").readOnly = v.busy;
@@ -212,8 +211,9 @@
   /* แก้บทในหน้าเสียง = แก้เฉพาะ PART 2 ของเวอร์ชันที่เปิดอยู่ (PART 1 คงเดิม) */
   $("vText").addEventListener("input", function(){
     var v = activeV(); if(!v) return;
-    keepOrig(v); setScript(v, this.value); fit(); renderCount(); $("s2Orig").hidden = !edited(v);
+    ensureHist(v); setScript(v, this.value); fit(); renderCount(); renderUndo(v);
   });
+  $("vText").addEventListener("change", function(){ var v = activeV(); if(v){ commit(v); renderUndo(v); } }); /* พิมพ์แก้เสร็จ (แตะออกจากช่อง) = หนึ่งขั้นให้ย้อนได้ */
   ["s1Out","vText","sTrans"].forEach(function(id){ $(id).addEventListener("change", function(){ if(cur) saveHist(cur); }); }); /* แก้เองแล้วเก็บให้ด้วย */
 
   $("s1FbBtn").addEventListener("click", function(){
@@ -229,17 +229,17 @@
     var c = cur, v = activeV(); if(!v || !v.s1Len) return;
     v.writer = cfg.model; /* เขียนใหม่ด้วยตัวเขียนบทที่ตั้งไว้ตอนนี้ */
     step(c, v, "กำลังเขียนบท...", async function(){
-      v.s2 = await callAI(chatS1(v).concat([{ role:"user", content:"รัน" }]), promptText(v), v.writer, v); tidy(v); v.orig = v.s2;
+      v.s2 = await callAI(chatS1(v).concat([{ role:"user", content:"รัน" }]), promptText(v), v.writer, v); tidy(v); startHist(v);
     }).then(function(){ finishMade(c); });
   });
-  /* แก้บท: อันเดิมเก็บไว้ใน v.prev ให้สลับกลับได้ */
+  /* แก้บท: ทุกขั้นเก็บใน v.hist ให้ย้อนกลับ/ไปข้างหน้าได้ (v.hist[0] = ต้นฉบับ) */
   var QUICK = { short:"ตัดให้สั้นลงประมาณ 20% โดยคงใจความและมุกสำคัญไว้", long:"ขยายให้ยาวขึ้นเล็กน้อย เพิ่มรายละเอียดและจังหวะให้เนื้อเรื่องเต็มขึ้น",
                 punch:"ปรับให้แรงขึ้น เปิดประโยคแรกให้ดึงดูด จังหวะกระชับ ตัดคำฟุ่มเฟือย", funny:"ปรับให้ตลกขึ้น เพิ่มมุกและจังหวะ punchline ให้ชัด" };
   function editScript(fb){
     var c = cur, v = activeV(), txt = v ? parts(v.s2 || "").script : ""; if(!v || v.busy || !fb || !txt) return;
     step(c, v, "กำลังแก้บท...", async function(){
       var out = await callAI([{ role:"user", content: "แก้บทพากย์ด้านล่างตามคำสั่ง แล้วตอบกลับมาเฉพาะบทพากย์ฉบับแก้ทั้งหมด ไม่ต้องมีหัวข้อ ชื่อคลิป หรือคำอธิบายเพิ่ม\nคงการเว้นบรรทัดว่างคั่นท่อนแบบเดิม ภายในท่อนให้เขียนต่อเนื่องเป็นบรรทัดเดียว ห้ามขึ้นบรรทัดใหม่กลางประโยค\n\nคำสั่ง: " + fb + "\n\n----\n" + txt }], "", v.writer, v, true);
-      keepOrig(v); v.prev = v.s2; setScript(v, reflow(parts(out).script));
+      commit(v); setScript(v, reflow(parts(out).script)); commit(v);
     });
   }
   $("s2FbBtn").addEventListener("click", function(){ var fb = $("s2Fb").value.trim(); if(!fb) return; $("s2Fb").value = ""; editScript(fb); });
@@ -247,18 +247,34 @@
     var b = e.target.closest("button[data-q]"); if(!b) return;
     if(b.dataset.q !== "lines") return editScript(QUICK[b.dataset.q]);
     var v = activeV(); if(!v || v.busy || !v.s2) return; /* จัดบรรทัดด้วยโค้ด ฟรี ไม่เรียก AI */
-    keepOrig(v); v.prev = v.s2; tidy(v); saveHist(cur); renderVersion();
+    commit(v); tidy(v); commit(v); saveHist(cur); renderVersion();
   });
-  function keepOrig(v){ if(!v.orig) v.orig = v.s2; } /* บทที่ยังไม่เคยแก้ (หรือเก็บก่อนมีระบบนี้) = ต้นฉบับ เก็บไว้ก่อนแก้ครั้งแรก */
-  function edited(v){ return !!(v && v.orig && parts(v.orig).script.trim() !== parts(v.s2 || "").script.trim()); }
-  $("s2Orig").addEventListener("click", function(){
-    var v = activeV(); if(!v || v.busy || !edited(v)) return;
-    v.prev = v.s2; v.s2 = v.orig; saveHist(cur); renderVersion(); /* ไม่พอใจที่แก้ → กลับไปบทต้นฉบับ กดสลับกับบทก่อนแก้เพื่อเอาที่แก้คืนได้ */
-  });
-  $("s2Undo").addEventListener("click", function(){
-    var v = activeV(); if(!v || v.busy || !v.prev) return;
-    var t = v.s2; v.s2 = v.prev; v.prev = t; saveHist(cur); renderVersion(); /* กดอีกครั้งจะสลับกลับมา */
-  });
+  /* ย้อนกลับ/ไปข้างหน้า: v.hist = บททุกขั้น (ตัวแรก = ต้นฉบับที่ AI เขียน) · v.hi = ขั้นที่ใช้อยู่ · ขั้นใหม่ = AI แก้หนึ่งครั้ง หรือพิมพ์แก้เองแล้วแตะออกจากช่อง */
+  var HIST_STEPS = 20;
+  function startHist(v){ v.orig = v.s2; v.hist = [v.s2]; v.hi = 0; } /* AI เขียนบทใหม่ = เริ่มประวัติใหม่ */
+  function ensureHist(v){ /* บทเก่าที่ยังไม่มีประวัติ: ถือบทตอนนี้เป็นต้นฉบับ */
+    if(!v.hist || !v.hist.length){ if(!v.orig) v.orig = v.s2; v.hist = [v.orig]; v.hi = 0; }
+    if(!v.orig) v.orig = v.hist[0];
+  }
+  function commit(v){ /* บทตอนนี้ต่างจากขั้นที่ใช้อยู่ → ตัดขั้นข้างหน้าทิ้ง แล้วเพิ่มเป็นขั้นใหม่ */
+    ensureHist(v);
+    if(v.s2 === v.hist[v.hi]) return;
+    v.hist = v.hist.slice(0, v.hi + 1); v.hist.push(v.s2);
+    if(v.hist.length > HIST_STEPS + 1) v.hist.splice(1, 1); /* เกินแล้วทิ้งขั้นเก่าสุด เก็บต้นฉบับไว้เสมอ */
+    v.hi = v.hist.length - 1;
+  }
+  function renderUndo(v){
+    var n = v && v.hist ? v.hist.length : 0, dirty = !!(v && v.s2 && v.hist && v.hist.length && v.s2 !== v.hist[v.hi]); /* ยังพิมพ์ค้าง = ย้อนได้ทันที */
+    $("s2Back").disabled = !v || v.busy || !(v.hi > 0 || dirty);
+    $("s2Fwd").disabled = !v || v.busy || !(n && v.hi < n - 1 && !dirty);
+  }
+  function stepHist(d){
+    var v = activeV(); if(!v || v.busy) return;
+    commit(v); var i = v.hi + d; if(i < 0 || i >= v.hist.length) return;
+    v.hi = i; v.s2 = v.hist[i]; saveHist(cur); renderVersion();
+  }
+  $("s2Back").addEventListener("click", function(){ stepHist(-1); });
+  $("s2Fwd").addEventListener("click", function(){ stepHist(1); });
 
   /* ---------- แยกชื่อคลิป (PART 1) กับบท (PART 2) ---------- */
   function parts(t){
