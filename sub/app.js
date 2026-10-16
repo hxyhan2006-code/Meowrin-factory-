@@ -1,8 +1,8 @@
-import { alignLinesToWords, refineSegmentBoundariesWithEnergy } from './aligner.js?v=1.12';
-import { buildSrt } from './srt.js?v=1.12';
-import { callGroqWhisper, buildTranscriptForGemini, callGeminiSplit, GEMINI_MODELS, DEFAULT_GEMINI_MODEL } from './ai.js?v=1.12';
-import { loadMediabunny, decodeAudioFile, isVideoFile, extractAudioFromVideo, computePeaks, buildTrimmedAudioBuffer, audioBufferToWavBlob } from './media.js?v=1.12';
-import { CANVAS_W, FONT_FAMILY, BOTTOM_MARGIN_RATIO, renderVideo } from './render.js?v=1.12';
+import { alignLinesToWords, refineSegmentBoundariesWithEnergy } from './aligner.js?v=1.13';
+import { buildSrt } from './srt.js?v=1.13';
+import { callGroqWhisper, buildTranscriptForGemini, callGeminiSplit, removeThaiSpaces, GEMINI_MODELS, DEFAULT_GEMINI_MODEL } from './ai.js?v=1.13';
+import { loadMediabunny, decodeAudioFile, isVideoFile, extractAudioFromVideo, computePeaks, buildTrimmedAudioBuffer, audioBufferToWavBlob } from './media.js?v=1.13';
+import { CANVAS_W, FONT_FAMILY, BOTTOM_MARGIN_RATIO, renderVideo } from './render.js?v=1.13';
 
 // ===== ที่เก็บข้อมูลร่วมกับแอพหลัก (MWStore จาก ../store.js) — service worker ของแอพหลักคุมหน้านี้อยู่แล้ว =====
   const S = window.MWStore;
@@ -1238,12 +1238,12 @@ import { CANVAS_W, FONT_FAMILY, BOTTOM_MARGIN_RATIO, renderVideo } from './rende
       autoSplitProgressTo(85); // Gemini phase
       showAutoSplitStatus('กำลังแยกบรรทัดด้วย Gemini ตามจังหวะเสียงจริง...');
       const transcriptText = buildTranscriptForGemini(whisperWords);
-      const splitLines = await callGeminiSplit(geminiKey, raw, transcriptText, SCRIPT_FILL_MODE, WORD_RANGE_MIN, WORD_RANGE_MAX, GEMINI_MODEL_ID, orKey ? {
+      const splitLines = removeThaiSpaces(await callGeminiSplit(geminiKey, raw, transcriptText, SCRIPT_FILL_MODE, WORD_RANGE_MIN, WORD_RANGE_MAX, GEMINI_MODEL_ID, orKey ? {
         orKey,
         check: () => window.MWBudget && window.MWBudget.check(), // เพดานค่า AI ต่อวัน/เดือนของแอพหลัก
         add: (usd) => window.MWBudget && window.MWBudget.add(usd),
         onFallback: (why) => showAutoSplitStatus(`${why.replace(/ \(\d+\):.*$/s, '')} → ใช้ OpenRouter แทน (คิดเงิน)`)
-      } : null);
+      } : null));
 
       editedScript.value = splitLines;
       updateLineCount();
@@ -1280,7 +1280,7 @@ import { CANVAS_W, FONT_FAMILY, BOTTOM_MARGIN_RATIO, renderVideo } from './rende
     // flag lines it pulled from audio rather than the user's own script) —
     // it's a review aid for the textarea only and must never end up as
     // literal burned-in subtitle text.
-    const lines = editedScript.value.split('\n').map(l => l.trim().replace(/^\[AI\]\s*/, '')).filter(l => l.length > 0);
+    const lines = editedScript.value.split('\n').map(l => removeThaiSpaces(l.trim().replace(/^\[AI\]\s*/, ''))).filter(l => l.length > 0);
 
     if (!groqKey){ showError('ใส่ Groq API key ก่อน ที่แอพหลัก > ตั้งค่า > API key'); return; }
     if (!selectedFile){ showError('เลือกไฟล์เสียงพากย์ก่อน (แท็บ "เสียง & ตัดต่อ")'); return; }

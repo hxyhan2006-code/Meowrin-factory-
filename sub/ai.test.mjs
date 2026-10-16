@@ -1,7 +1,7 @@
 // รันด้วย: node ai.test.mjs
 // ทดสอบการเลือกโมเดล Gemini ใน ai.js (จำลอง fetch ไม่ได้เรียก API จริง ไม่เสียเงิน)
 import assert from 'node:assert/strict';
-import { GEMINI_MODELS, DEFAULT_GEMINI_MODEL, callGeminiSplit } from './ai.js';
+import { GEMINI_MODELS, DEFAULT_GEMINI_MODEL, callGeminiSplit, removeThaiSpaces } from './ai.js';
 
 let passed = 0;
 async function test(name, fn) { await fn(); passed++; console.log('ผ่าน:', name); }
@@ -34,6 +34,15 @@ await test('ไม่ระบุหรือชื่อที่ไม่ร�
   assert.equal(await urlUsed(undefined), expected);
   assert.equal(await urlUsed('gemini-ที่ไม่มี'), expected);
   assert.equal(await urlUsed('../evil'), expected);
+});
+
+await test('ตัดเว้นวรรคระหว่างไทยกับไทย แต่คงข้างตัวเลข/อังกฤษ', () => {
+  assert.equal(removeThaiSpaces('เริ่มจาก นามิ'), 'เริ่มจากนามิ');
+  assert.equal(removeThaiSpaces('โบอา  แฮนค็อก'), 'โบอาแฮนค็อก');
+  assert.equal(removeThaiSpaces('2 ครั้งที่'), '2 ครั้งที่');
+  assert.equal(removeThaiSpaces('ลูฟี่ Gear 5'), 'ลูฟี่ Gear 5');
+  assert.equal(removeThaiSpaces('[AI] กับ โรบิน'), '[AI] กับโรบิน');
+  assert.equal(removeThaiSpaces(null), '');
 });
 
 // ---------- สำรอง OpenRouter ----------
