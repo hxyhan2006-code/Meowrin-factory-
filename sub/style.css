@@ -22,8 +22,8 @@ button{font-family:inherit;color:var(--text);touch-action:manipulation;}
 .top-container{flex:0 0 auto;position:sticky;top:0;z-index:100;background:var(--bg);} /* solid bg: nothing shows through while content scrolls behind */
 .topbar{flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:calc(10px + env(safe-area-inset-top)) 16px 8px;}
 .ic{width:1.1em;height:1.1em;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;vertical-align:-0.18em;margin-right:6px;flex:0 0 auto;}
-.topbar-title{min-width:0;display:grid;grid-template-columns:auto minmax(0,1fr);column-gap:8px;align-items:center;}
-.back-link{grid-row:span 2;display:flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:10px;background:var(--surface);border:1px solid var(--line);color:var(--text);}
+.topbar-title{min-width:0;display:flex;align-items:center;gap:10px;}
+.back-link{flex:none;display:flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:10px;background:var(--surface);border:1px solid var(--line);color:var(--text);}
 .back-link .ic{margin:0;}
 .modal-box a{color:var(--accent);}
 .voice-list{display:flex;flex-direction:column;gap:8px;max-height:50vh;overflow-y:auto;margin:4px 0 0;}

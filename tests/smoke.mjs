@@ -85,11 +85,15 @@ try {
   const sub = await open('/sub/?voice=1700000000001', 'หน้าซับ');
   await sub.page.waitForTimeout(1500);
   check('หน้าซับ: ?voice= ใส่เสียงและบทให้', (await sub.page.textContent('#fileInfo')).includes('take.mp3') && (await sub.page.inputValue('#rawScript')) === 'บทของเทคนี้');
+  const subAlign = await sub.page.evaluate(() => { const c = (e) => { const r = e.getBoundingClientRect(); return r.top + r.height / 2; }; return Math.abs(c(document.querySelector('.back-link')) - c(document.querySelector('.topbar h1'))); });
+  check('หน้าซับ: ปุ่มย้อนกลับกับชื่อหน้าอยู่กึ่งกลางแนวเดียวกัน', subAlign < 3, `ต่างกัน ${subAlign.toFixed(1)}px`);
   await finishPage(sub);
   // หน้าฟุตเทจ (?voice=)
   const foot = await open('/footage.html?voice=1700000000001', 'หน้าฟุตเทจ');
   await foot.page.waitForTimeout(1200);
   check('หน้าฟุตเทจ: ?voice= ไปแท็บผู้กำกับ เลือกเสียงให้', (await foot.page.evaluate(() => document.querySelector('#p-plan').classList.contains('on'))) && (await foot.page.inputValue('#plVoice')) === '1700000000001');
+  const footAlign = await foot.page.evaluate(() => { const c = (e) => { const r = e.getBoundingClientRect(); return r.top + r.height / 2; }; return Math.abs(c(document.querySelector('header a.back')) - c(document.querySelector('header h1'))); });
+  check('หน้าฟุตเทจ: ปุ่มย้อนกลับกับชื่อหน้าอยู่กึ่งกลางแนวเดียวกัน', footAlign < 3, `ต่างกัน ${footAlign.toFixed(1)}px`);
   await foot.page.click('nav button[data-p="set"]'); await foot.page.waitForTimeout(300);
   await finishPage(foot);
 } finally { await browser.close(); server.close(); }
