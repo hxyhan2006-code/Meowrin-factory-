@@ -213,6 +213,7 @@ select[data-sheet]{display:none}
 .hthumb{position:relative;flex:none;padding:0;border:0;border-radius:8px;background:none;cursor:pointer}
 .hthumb i{position:absolute;inset:0;display:grid;place-items:center;border-radius:8px;background:rgba(0,0,0,.28)}
 .hthumb i svg{width:22px;height:22px;fill:#fff;filter:drop-shadow(0 1px 3px rgba(0,0,0,.6))}
+.htags{display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex:none}.htags .sel-tag.vo{display:inline-flex;align-items:center;gap:4px;background:transparent;box-shadow:inset 0 0 0 1px rgba(57,217,138,.55)}.htags .sel-tag.vo .ic{margin:0;width:12px;height:12px}
 .hmain{flex:1;min-width:0;display:flex;align-items:center;gap:12px;padding:0;border:0;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer}
 .ht{flex:1;min-width:0}
 .ht b{

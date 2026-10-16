@@ -450,10 +450,20 @@
       var done = h.vers.filter(function(v){ return v.s2; }).length;
       return '<div class="hrow"><div class="hopen"><button class="hthumb" data-play="'+esc(h.id)+'" aria-label="ดูวิดีโอ"><img loading="lazy" alt="" src="'+MW.thumbUrl(h.id)+'"><i><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg></i></button>' /* แตะรูป = ดูวิดีโอในแอพ · แตะข้อความ = เปิดบท */
         + '<button class="hmain" data-open="'+esc(h.id)+'"><span class="ht"><b>'+esc(h.clip.title)+'</b><small>'+esc(histMeta(h))+'</small></span>'
-        + '<span class="sel-tag">'+(done ? "บทเสร็จ" + (done > 1 ? " ×" + done : "") : "State 1")+'</span></button></div>'
+        + '<span class="htags"><span class="sel-tag">'+(done ? "บทเสร็จ" + (done > 1 ? " ×" + done : "") : "State 1")+'</span><span class="sel-tag vo" data-vo="'+esc(h.id)+'" hidden></span></span></button></div>'
         + '<button class="btn small ghost hdel" data-del="'+esc(h.id)+'" aria-label="ลบรายการนี้">ลบ</button></div>';
     }).join("") : '<div class="empty"><div class="empty-ico">'+MWIcon("clock")+'</div>ยังไม่มีประวัติ ทำบทแล้วจะมาอยู่ตรงนี้</div>';
     $("histClear").hidden = !hist.length;
+    markVoiced();
+  }
+  async function markVoiced(){ /* ป้าย "มีเสียง" ต่อรายการ: เวอร์ชันของบทที่ข้อความตรงกับเสียงที่เก็บไว้ (MWVoice) */
+    var vs = []; try{ if(window.MWVoice) vs = await MWVoice.list(); }catch(err){}
+    var norm = function(s){ return String(s || "").replace(/\s+/g, ""); }, el = $("histList");
+    hist.forEach(function(h){
+      var tag = el.querySelector('[data-vo="' + h.id + '"]'); if(!tag) return;
+      var n = h.vers.filter(function(v){ var t = norm(parts(v.s2 || "").script); return t && vs.some(function(x){ var y = norm(x.text); return y && (y === t || y.indexOf(t) >= 0 || t.indexOf(y) >= 0); }); }).length;
+      tag.hidden = !n; tag.innerHTML = MWIcon("speaker") + (h.vers.length > 1 ? "มีเสียง " + n + "/" + h.vers.length : "มีเสียง");
+    });
   }
   $("histBtn").addEventListener("click", function(){ renderHist(); MW.openModal("histSheet"); });
   $("histClose").addEventListener("click", function(){ MW.closeModal("histSheet"); });
