@@ -165,6 +165,12 @@ html:not(.tips) .hint.tip{display:none}
 .abox h3{margin:0 0 10px;font:500 17px Mitr,sans-serif}
 .alrow{display:flex;align-items:center;gap:10px;width:100%;min-height:52px;margin-bottom:6px;padding:0 14px;border-radius:var(--rc);border:1px solid var(--line-strong);background:var(--field);color:var(--text);font:inherit;text-align:left}
 .alrow b{flex:1;font-weight:500;overflow-wrap:anywhere}.alrow i{font-style:normal;color:var(--muted);font-size:13px}.alrow .ic{margin:0;flex:none}
+.alrow .tx{flex:1;min-width:0;padding:8px 0}.alrow .tx b{display:block;font-weight:500;overflow-wrap:anywhere}.alrow small{display:block;margin-top:2px;color:var(--muted);font-size:13px;line-height:1.35}.alrow.on small{color:inherit;opacity:.8}
+.alrow:active{border-color:rgba(57,217,138,.55)}
+/* ช่องเลือกที่เปิดชีตของแอพ (แทน select ของเบราว์เซอร์) */
+.fsel{display:flex;align-items:center;gap:10px;width:100%;min-height:48px;padding:0 14px;border-radius:var(--rc);border:1px solid var(--line-strong);background:var(--field);color:var(--text);font:inherit;text-align:left;cursor:pointer}
+.fsel span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.fsel .ic{margin:0;flex:none;color:var(--muted)}.fsel.empty span{color:var(--muted)}.fsel:active{border-color:rgba(57,217,138,.55)}.fsel:disabled{opacity:.45}
+.mrow{display:flex;gap:8px}.mrow input{flex:1;min-width:0}.mrow .btn{flex:none}
 .alrow.on{background:var(--accent-soft);border-color:rgba(57,217,138,.55);color:var(--accent)}
 /* ชีตเลือก (footage-pick.js): รายการเลื่อนเองให้ช่องค้นหากับปุ่มล่างอยู่กับที่ */
 #pkQ{margin-bottom:8px}#pkList{max-height:46vh;overflow-y:auto;overscroll-behavior:contain}

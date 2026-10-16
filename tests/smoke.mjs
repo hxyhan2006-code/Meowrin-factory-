@@ -118,7 +118,9 @@ try {
   // หน้าฟุตเทจ (?voice=)
   const foot = await open('/footage.html?voice=1700000000001', 'หน้าฟุตเทจ');
   await foot.page.waitForTimeout(1200);
-  check('หน้าฟุตเทจ: ?voice= ไปแท็บผู้กำกับ เลือกเสียงให้', (await foot.page.evaluate(() => document.querySelector('#p-plan').classList.contains('on'))) && (await foot.page.inputValue('#plVoice')) === '1700000000001');
+  check('หน้าฟุตเทจ: ?voice= ไปแท็บผู้กำกับ เลือกเสียงให้', (await foot.page.evaluate(() => document.querySelector('#p-plan').classList.contains('on'))) && (await foot.page.textContent('#plVoiceBtn')).includes('take.mp3') && !(await foot.page.textContent('#plVoiceBtn')).includes('ไม่ใส่เสียง'));
+  check('หน้าฟุตเทจ: ไม่มี select/datalist ของเบราว์เซอร์', (await foot.page.evaluate(() => document.querySelectorAll('select,datalist,[list]').length)) === 0);
+  await foot.page.click('#plModeBtn'); check('หน้าฟุตเทจ: ช่องเลือกแบบเปิดชีตของแอพ', (await foot.page.evaluate(() => document.querySelectorAll('#pkList .alrow').length)) === 2); await foot.page.click('#pkDone');
   const footAlign = await foot.page.evaluate(() => { const c = (e) => { const r = e.getBoundingClientRect(); return r.top + r.height / 2; }; return Math.abs(c(document.querySelector('header a.back')) - c(document.querySelector('header h1'))); });
   check('หน้าฟุตเทจ: ปุ่มย้อนกลับกับชื่อหน้าอยู่กึ่งกลางแนวเดียวกัน', footAlign < 3, `ต่างกัน ${footAlign.toFixed(1)}px`);
   await foot.page.click('nav button[data-p="set"]'); await foot.page.waitForTimeout(300);

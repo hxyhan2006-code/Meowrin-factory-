@@ -367,6 +367,11 @@
   }
   setNum("budget", "budget", 0.05, 100); setNum("par", "par", 1, 4); setNum("maxScenes", "maxScenes", 1, 60);
   $("model").addEventListener("change", function(){ cfg.model = this.value.trim() || "google/gemini-3.8-flash"; this.value = cfg.model; FT.saveCfg(); });
+  document.querySelectorAll("[data-models]").forEach(function(b){ b.addEventListener("click", function(){ /* โมเดลแนะนำ (ชีตของแอพ) · พิมพ์ชื่ออื่นเองในช่องได้ */
+    var inp = $(b.dataset.models), list = ["google/gemini-3.8-flash", "google/gemini-4-argon"];
+    FT.pick.open({ title:"โมเดลแนะนำ", icon:"spark", search:false, items:function(){ return list.map(function(m){ return { k:m, name:m, on:inp.value.trim() === m }; }); },
+      onPick:function(m){ inp.value = m; inp.dispatchEvent(new Event("change")); } });
+  }); });
   $("thr").addEventListener("input", function(){ cfg.thr = Number(this.value); $("thrVal").textContent = cfg.thr.toFixed(2); FT.saveCfg(); });
   $("thrVal").textContent = Number(cfg.thr).toFixed(2);
   $("godModel").value = cfg.godModel; $("godNew").checked = !!cfg.godNew; $("fine").checked = !!cfg.fine;

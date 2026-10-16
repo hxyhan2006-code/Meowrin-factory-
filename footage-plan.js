@@ -13,22 +13,47 @@
   var plan = load(KEY, null); /* { mode, at, cost, ms, script, shots:[{ t, want, chars, keys, shot, dur, cands:[{ id, si }], why, use }] } (cands[0] = ที่ใช้อยู่) */
   var say = function(t, k){ U.msg("plShareMsg", t, k); };
   function isLong(){ return !plan || plan.mode !== "fast"; }
-  if(plan && plan.mode) $("plMode").value = plan.mode;
+  var MODES = [
+    { k:"long", name:"แบบ 1: ไปตัดเอง", desc:"ช็อตละประโยค คลิปละ ≤10 วิ คั่นจอเขียว + ตื๊ด", icon:"scissors" },
+    { k:"fast", name:"แบบ 2: AI ตัดให้", desc:"สับไว 1–3 วิ ตามวลี ต่อกันเลย", icon:"film" }
+  ];
+  var mode = plan && plan.mode === "fast" ? "fast" : "long";
+  function fsel(id, text, empty, icon){ $(id).className = "fsel" + (empty ? " empty" : ""); $(id).innerHTML = (icon ? MWIcon(icon) : "") + "<span>" + U.esc(text) + "</span>" + MWIcon("chev"); } /* ช่องเลือกที่เปิดชีตของแอพ (ไม่ใช้ select ของเบราว์เซอร์) */
+  function showMode(){ var m = MODES.find(function(x){ return x.k === mode; }); fsel("plModeBtn", m.name, false, m.icon); }
+  function setMode(k){ mode = k; showMode(); refreshVoices(); }
+  $("plModeBtn").addEventListener("click", function(){
+    FT.pick.open({ title:"แบบการตัดต่อ", search:false, items:function(){ return MODES.map(function(m){ return { k:m.k, name:m.name, desc:m.desc, icon:m.icon, on:m.k === mode }; }); }, onPick:setMode });
+  });
+  showMode();
 
   /* ---------- เสียงพากย์ (เทคล่าสุดจากแท็บเสียงของแอพหลัก เก็บใน MWVoice) ---------- */
   function norm(s){ return String(s || "").replace(/\s+/g, ""); }
-  var voices = [];
-  async function refreshVoices(){
-    var on = $("plMode").value === "fast"; $("plVoiceRow").hidden = !on; if(!on || !window.MWVoice) return;
-    try{ voices = await MWVoice.list(); }catch(err){ voices = []; }
-    var cl = []; if(MWVoice.cloudOn()){ try{ cl = (await MWVoice.cloudList()).filter(function(c){ return !voices.some(function(v){ return v.id === c.id; }); }); }catch(err){} } /* เสียงที่อยู่ในคลังแต่ยังไม่ได้ดึงมาเครื่องนี้ */
-    var t = norm($("plText").value), keep = $("plVoice").value;
-    var match = function(v){ var x = norm(v.text); return t && x && (x === t || x.indexOf(t) >= 0 || t.indexOf(x) >= 0); };
-    $("plVoice").innerHTML = '<option value="">— ไม่ใส่เสียง (ประมาณเวลาจากตัวอักษร) —</option>' + voices.map(function(v){
-      return '<option value="' + v.id + '">' + (match(v) ? "(ตรงกับบทนี้) · " : "") + U.esc(v.name || "เสียง") + " · " + new Date(v.id).toLocaleTimeString("th-TH", { hour:"2-digit", minute:"2-digit" }) + (v.align ? " · มีเวลาคำพูด" : " · ไม่มีเวลาคำพูด (ประมาณตามตัวอักษร)") + "</option>"; }).join("") + cl.map(function(c){ return '<option value="' + c.id + '">(ในคลัง) · ' + new Date(c.id).toLocaleString("th-TH", { day:"numeric", month:"short", hour:"2-digit", minute:"2-digit" }) + " (ดึงมาให้ตอนกำกับ)</option>"; }).join("");
-    var m = voices.find(match); $("plVoice").value = voices.concat(cl).some(function(v){ return String(v.id) === keep; }) ? keep : (m ? String(m.id) : "");
+  var voices = [], cl = [], voiceSel = "";
+  var matchText = function(t){ return function(v){ var x = norm(v.text); return t && x && (x === t || x.indexOf(t) >= 0 || t.indexOf(x) >= 0); }; };
+  function showVoice(){
+    var v = voices.find(function(x){ return String(x.id) === voiceSel; }), c = cl.find(function(x){ return String(x.id) === voiceSel; });
+    fsel("plVoiceBtn", v ? (v.name || "เสียง") + " · " + new Date(v.id).toLocaleTimeString("th-TH", { hour:"2-digit", minute:"2-digit" }) : c ? "(ในคลัง) " + new Date(c.id).toLocaleString("th-TH", { day:"numeric", month:"short", hour:"2-digit", minute:"2-digit" }) : "ไม่ใส่เสียง (ประมาณเวลาจากตัวอักษร)", !voiceSel, "speaker");
     $("plVoiceInfo").textContent = voices.length ? "" : "ยังไม่มีเสียง · สร้างเสียงในแอพหลัก (แท็บ เสียง) ก่อน แล้วกลับมาเลือกที่นี่";
   }
+  function autoVoice(){ /* เสียงที่เลือกไว้ยังอยู่ก็คงไว้ ไม่งั้นเลือกเทคที่ตรงกับบทให้ */
+    var m = voices.find(matchText(norm($("plText").value)));
+    if(!voices.concat(cl).some(function(v){ return String(v.id) === voiceSel; })) voiceSel = m ? String(m.id) : "";
+    showVoice();
+  }
+  async function refreshVoices(){
+    var on = mode === "fast"; $("plVoiceRow").hidden = !on; if(!on || !window.MWVoice) return;
+    try{ voices = await MWVoice.list(); }catch(err){ voices = []; }
+    cl = []; if(MWVoice.cloudOn()){ try{ cl = (await MWVoice.cloudList()).filter(function(c){ return !voices.some(function(v){ return v.id === c.id; }); }); }catch(err){} } /* เสียงที่อยู่ในคลังแต่ยังไม่ได้ดึงมาเครื่องนี้ */
+    autoVoice();
+  }
+  $("plVoiceBtn").addEventListener("click", function(){
+    var t = norm($("plText").value), match = matchText(t), time = function(id){ return new Date(id).toLocaleTimeString("th-TH", { hour:"2-digit", minute:"2-digit" }); };
+    FT.pick.open({ title:"เสียงพากย์", search:false, icon:"speaker", items:function(){
+      return [{ k:"", name:"ไม่ใส่เสียง", desc:"ประมาณเวลาจากตัวอักษร", icon:"x", on:!voiceSel }]
+        .concat(voices.map(function(v){ return { k:String(v.id), name:(match(v) ? "ตรงกับบทนี้ · " : "") + (v.name || "เสียง"), desc:time(v.id) + (v.align ? " · มีเวลาคำพูด" : " · ไม่มีเวลาคำพูด (ประมาณตามตัวอักษร)"), on:String(v.id) === voiceSel }; }))
+        .concat(cl.map(function(c){ return { k:String(c.id), name:"(ในคลัง) " + new Date(c.id).toLocaleString("th-TH", { day:"numeric", month:"short", hour:"2-digit", minute:"2-digit" }), desc:"ดึงมาให้ตอนกำกับ", icon:"cloud", on:String(c.id) === voiceSel }; })); },
+      onPick:function(k){ voiceSel = k; showVoice(); } });
+  });
   /* เปิดจากปุ่ม "ตัดต่อภาพ" ในแอพหลัก (footage.html?voice=รหัสเทค): ไปแท็บผู้กำกับ โหมด AI ตัดให้ ใส่บทและเลือกเสียงของเทคนั้นให้ */
   var voiceQ = new URLSearchParams(location.search).get("voice");
   if(voiceQ && window.MWVoice) (async function(){
@@ -36,12 +61,11 @@
     try{
       var rec = await MWVoice.get(+voiceQ) || await MWVoice.pull(+voiceQ);
       document.querySelector('nav button[data-p="plan"]').click();
-      $("plMode").value = "fast"; if(rec.text) $("plText").value = rec.text;
-      await refreshVoices(); $("plVoice").value = String(rec.id);
+      mode = "fast"; showMode(); if(rec.text) $("plText").value = rec.text;
+      voiceSel = String(rec.id); await refreshVoices(); voiceSel = String(rec.id); showVoice();
     }catch(err){ say("เปิดเสียงที่เลือกไม่ได้: " + err.message, "err"); }
   })();
-  $("plMode").addEventListener("change", refreshVoices);
-  $("plText").addEventListener("input", refreshVoices);
+  $("plText").addEventListener("input", function(){ if(mode === "fast") autoVoice(); });
   async function audioDur(blob){ return new Promise(function(ok){ var a = new Audio(), u = URL.createObjectURL(blob); a.preload = "metadata"; a.src = u;
     a.onloadedmetadata = function(){ URL.revokeObjectURL(u); ok(isFinite(a.duration) ? a.duration : 0); }; a.onerror = function(){ URL.revokeObjectURL(u); ok(0); }; }); }
   function timeShots(shots, al, total){ /* หาเวลาเริ่ม (x.at) กับความยาว (x.dur) ของแต่ละช็อตให้ตรงเสียง: จับข้อความช็อตกับเวลาตัวอักษร ที่จับไม่ได้ประมาณตามจำนวนตัวอักษร */
@@ -64,17 +88,25 @@
 
   /* ---------- บทจากประวัติของแอพหลัก (mw_history_v1) ---------- */
   function part2(t){ var m = /^[^\n]*PART\s*2[^\n]*$/im.exec(t || ""); return (m ? t.slice(m.index + m[0].length) : (t || "")).trim(); }
-  var srcs = [];
-  function renderSrc(){
-    var h = load("mw_history_v1", []); srcs = [];
+  var srcs = [], srcSel = -1;
+  async function renderSrc(){ /* ให้เลือกได้เฉพาะบทที่เคยสร้างเสียงแล้ว (จับคู่ข้อความบทกับเสียงที่เก็บไว้) */
+    var h = load("mw_history_v1", []), vs = []; srcs = [];
+    try{ if(window.MWVoice) vs = await MWVoice.list(); }catch(err){}
     (Array.isArray(h) ? h : []).forEach(function(e){
       (e && Array.isArray(e.vers) ? e.vers : []).forEach(function(v){
-        var t = part2(v.s2); if(t) srcs.push({ label:(e.clip && e.clip.title || "คลิป") + " · " + (v.pname || ""), text:t });
+        var t = part2(v.s2), n = norm(t), hit = t ? vs.filter(matchText(n)) : [];
+        if(hit.length) srcs.push({ title:e.clip && e.clip.title || "คลิป", pname:v.pname || "", n:hit.length, text:t });
       });
     });
-    $("plSrc").innerHTML = '<option value="">— เลือกบท (' + srcs.length + ') —</option>' + srcs.map(function(s, i){ return '<option value="' + i + '">' + U.esc(s.label) + "</option>"; }).join("");
+    if(srcSel >= srcs.length) srcSel = -1;
+    fsel("plSrcBtn", srcSel >= 0 ? srcs[srcSel].title + " · " + srcs[srcSel].pname : "เลือกบท (" + srcs.length + ")", srcSel < 0, "film");
   }
-  $("plSrc").addEventListener("change", function(){ var s = srcs[+this.value]; if(this.value !== "" && s) $("plText").value = s.text; });
+  $("plSrcBtn").addEventListener("click", function(){
+    FT.pick.open({ title:"บทที่เคยสร้างเสียง", placeholder:"พิมพ์ชื่อคลิปเพื่อหา", icon:"speaker",
+      items:function(q){ return srcs.map(function(x, i){ return { k:String(i), name:x.title, desc:(x.pname ? x.pname + " · " : "") + "เสียง " + x.n + " เทค", on:i === srcSel, x:x }; })
+        .filter(function(it){ return !q || (it.name + " " + it.desc).toLowerCase().indexOf(q) >= 0; }); },
+      onPick:function(k){ srcSel = +k; var s = srcs[srcSel]; $("plText").value = s.text; renderSrc(); if(mode === "fast"){ voiceSel = ""; autoVoice(); } } });
+  });
   document.querySelector(".tabs").addEventListener("click", function(e){ var b = e.target.closest("button[data-p]"); if(b && b.dataset.p === "plan"){ renderSrc(); render(); } });
 
   /* ---------- ช็อต → ผู้สมัครจากดัชนี (ในเครื่อง ฟรี) ---------- */
@@ -105,13 +137,13 @@
   $("plGo").addEventListener("click", async function(){
     if(busy) return;
     var script = $("plText").value.trim().slice(0, MAX_CHARS);
-    if(!script){ U.msg("plMsg", "ใส่บทก่อน (เลือกจากประวัติ หรือวางเอง)", "err"); return; }
+    if(!script){ U.msg("plMsg", "ใส่บทก่อน (เลือกจากบทที่เคยสร้างเสียง หรือวางเอง)", "err"); return; }
     if(!U.lib().some(function(c){ return c.status === "done"; })){ U.msg("plMsg", "คลังยังว่าง ไปอัปโหลดฟุตเทจก่อน", "err"); return; }
     if(!FT.orKey()){ U.msg("plMsg", "ยังไม่มี OpenRouter key ในเบราว์เซอร์นี้", "err"); return; }
     busy = true; this.disabled = true; var cost = 0, t0 = Date.now(), errs = 0;
     try{
       U.msg("plMsg", "AI กำลังแบ่งบทเป็นช็อต...");
-      var mode = $("plMode").value === "fast" ? "fast" : "long", voice = mode === "fast" && $("plVoice").value && window.MWVoice ? (await MWVoice.get(+$("plVoice").value) || await MWVoice.pull(+$("plVoice").value)) : null;
+      var voice = mode === "fast" && voiceSel && window.MWVoice ? (await MWVoice.get(+voiceSel) || await MWVoice.pull(+voiceSel)) : null;
       var b = await FT.beats(script, mode); cost += b.cost;
       if(!b.shots.length) throw new Error("AI แบ่งช็อตไม่ได้ ลองใหม่อีกครั้ง");
       var vdur = voice ? (await audioDur(voice.blob) || (voice.align ? voice.align.en[voice.align.en.length - 1] : 0)) : 0;
@@ -252,6 +284,6 @@
       .catch(function(){ MWDialog.copy(txt); });
   });
 
-  renderSrc();
+  renderSrc(); refreshVoices();
   /* ดัชนีโหลดจาก IndexedDB หลังหน้าเปิด → วาดตารางเดิมเมื่อเข้าแท็บนี้ (render ตอนกดแท็บ) */
 })();
