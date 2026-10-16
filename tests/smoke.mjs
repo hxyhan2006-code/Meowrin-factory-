@@ -32,7 +32,7 @@ const missing = [...used].filter((n) => !defined.has(n)); const subMissing = [..
 check('ชื่อไอคอนที่เรียกใช้มีครบ (icons.js + sprite ของ sub)', !missing.length && !subMissing.length, 'ขาด: ' + [...missing, ...subMissing].join(', '));
 // ไอคอนแอพ: ทุกไฟล์ใน manifest.json ต้องมีจริงและเป็น PNG ขนาดตรงที่ประกาศไว้
 const man = JSON.parse(text('manifest.json')); const badIcons = [];
-for (const ic of man.icons) { try { const b = readFileSync(join(ROOT, ic.src)); const w = b.readUInt32BE(16), h = b.readUInt32BE(20); if (b.toString('latin1', 1, 4) !== 'PNG' || `${w}x${h}` !== ic.sizes) badIcons.push(ic.src + ' ขนาด ' + w + 'x' + h); } catch { badIcons.push(ic.src + ' ไม่มีไฟล์'); } }
+for (const ic of man.icons) { try { const b = readFileSync(join(ROOT, ic.src.split('?')[0])); const w = b.readUInt32BE(16), h = b.readUInt32BE(20); if (b.toString('latin1', 1, 4) !== 'PNG' || `${w}x${h}` !== ic.sizes) badIcons.push(ic.src + ' ขนาด ' + w + 'x' + h); } catch { badIcons.push(ic.src + ' ไม่มีไฟล์'); } }
 check('ไอคอนแอพใน manifest.json มีจริงและขนาดตรง', !badIcons.length, badIcons.join(', '));
 const dialogs = [];
 for (const f of jsAll.filter((x) => x !== 'dialog.js')) text(f).split('\n').forEach((l, i) => { if (/window\.(confirm|alert|prompt)\b|(?<![.\w])(alert|confirm)\(/.test(l)) dialogs.push(f + ':' + (i + 1)); });
