@@ -7,7 +7,7 @@
 (function(){
   "use strict";
   var KEY = "mw_gdrive_v1", SCOPE = "https://www.googleapis.com/auth/drive.file", API = "https://www.googleapis.com/drive/v3", UP = "https://www.googleapis.com/upload/drive/v3";
-  var FOLDER = "meowrin factory", DATA = "meowrin-data.json", SKIP = /^mw_(key|openrouter_key|gemini_key|eleven_key|gemini_last|gdrive|r2)_v1$/;
+  var FOLDER = "meowrin factory", DATA = "meowrin-data.json", SKIP = /^mw_(key|openrouter_key|gemini_key|groq_key|eleven_key|gemini_last|gdrive|r2)_v1$/;
   var $ = function(id){ return document.getElementById(id); };
   var cfg = MWStore.get(KEY, {}) || {}, tok = null, tokExp = 0, tc = null, folders = {}, dirty = false, timer = 0, busy = false, lastErr = "";
   function saveCfg(){ MWStore.set(KEY, cfg); }

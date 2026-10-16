@@ -38,6 +38,12 @@
   - `footage-audit.js` พับ "🎯 ตรวจความแม่นของ AI" ในแท็บตั้งค่า: สุ่ม 30 ฉาก Han แตะเฉพาะข้อที่ผิด → % ต่อหมวด · ไม่เรียก AI · `mw_footage_audit_v1` (รอบแรก: ตัวละครถูก 100% จาก 30 ฉาก)
   - `footage.css` (ธีมเดียวกันแต่ไม่พึ่ง style.css)
 
+- หน้าแยก `sub/` (ซับจอเขียว, ย้ายมาจาก repo Meowrin-subtitles- เมื่อ 2026-10-16, เปิดจากลิงก์ท้ายแท็บตั้งค่า) ทำคลิปพื้นเขียว 1080×1080 + .srt จากเสียงพากย์ + สคริปต์: Groq Whisper จับเวลาคำ → Gemini แยกบรรทัด → `aligner.js` จับคู่/ขยับขอบตามคลื่นเสียง → `render.js` เรนเดอร์ mp4 ด้วย mediabunny (`sub/vendor/` + ไฟล์ลิขสิทธิ์ ห้ามลบ)
+  - เป็น ES module คนละสไตล์กับไฟล์อื่น (`sub/app.js` import `ai/aligner/media/render/srt.js?v=1.x`) มี `style.css` ของตัวเอง (ธีม/ฟอนต์ Kanit เดิม) · โหลด `../store.js` (ไม่มี data-boot) แล้ว `await MWStore.ready` ใช้ manifest + service worker ของแอพหลัก
+  - key: Gemini ใช้ `mw_gemini_key_v1` ร่วมกับแอพหลัก · Groq `mw_groq_key_v1` (ตั้งที่แท็บตั้งค่า `#grKey` บันทึกใน ai.js `saveAi`, ไม่ขึ้น Drive) · ครั้งแรกย้าย `groq_api_key`/`gemini_api_key` จาก localStorage ของแอปเก่าถ้ามี · ค่าตั้งค่าหน้าซับ `mw_sub_cfg_v1` {wordRange, scriptMode, geminiModel, fontPx, strokePx, syncOffsetMs} · หน้านี้มีแค่เลือกโมเดล Gemini (`GEMINI_MODELS` ใน `sub/ai.js` ที่เดียว ไม่มีช่องพิมพ์ชื่อเอง)
+  - เทสต์: `cd sub && node aligner.energy.test.mjs && node ai.test.mjs` · เลขเวอร์ชัน: `cd sub && node bump-version.mjs 1.x` แล้ว `--check` (ไม่ใช่ `?v=` แบบวันที่ของแอพหลัก) · `sub/app.js` ~1,310 บรรทัด เกินเกณฑ์ แยกต่อได้ถ้า Han อนุญาต
+  - ขอบ "ซับหาย" ทดสอบกับเสียงจำลองเท่านั้น ถ้าเพี้ยนปรับ `OFFSET_*` ใน `sub/aligner.js` · เรนเดอร์จริงทดสอบในเครื่อง cloud ไม่ได้ (ไม่มีตัวเข้ารหัส H.264)
+
 ## ข้อกำหนดเทคนิค
 - Vanilla HTML/CSS/JS ล้วน ไม่มี build step ไม่มี framework ไม่มี npm
 - ข้อมูลทั้งหมดอยู่ใน `MWStore` (store.js → IndexedDB `mw_store_v1`, ชื่อ key เดิมจากสมัยใช้ localStorage): `mw_key_v1` (YouTube key), `mw_data_v1` (ช่อง/ทำแล้ว/คลิปที่เลือก), `mw_cache_v1` (คลิปที่ดึงมา), `mw_ai_cfg_v1` (model=ตัวเขียนบท, eye=ตัวดูคลิป, prompts[], sel[] — A/B เก็บสำเนาไว้เผื่อย้อนโค้ด), `mw_openrouter_key_v1`, `mw_gemini_key_v1` (Gemini API key ฟรี ไม่บังคับ), `mw_history_v1` (ประวัติบท ต่อคลิปมี vers[] หลายเวอร์ชัน), `mw_cost_v1` (ค่าใช้จ่าย OpenRouter รายเดือน + `g` = จำนวนคำขอฟรีผ่าน Gemini), `mw_eleven_key_v1` (ElevenLabs key), `mw_tts_cfg_v1` (voices[] = เสียงของฉัน, voice = Voice ID ที่เลือกอยู่, model/stability/warm/trim/tsOff/ยอดตัวอักษรรายเดือน) · `mw_data_v1` มี `saved` (เก็บไว้ทำทีหลัง) กับ `cols` (2/3 คอลัมน์)

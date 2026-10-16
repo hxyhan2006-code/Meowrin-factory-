@@ -350,7 +350,8 @@
 
   /* ---------- ตั้งค่า AI ---------- */
   function pickModel(selId, val, fallback){ $(selId).value = val; if($(selId).value !== val){ $(selId).value = fallback; return fallback; } return val; } /* โมเดลที่เซฟไว้แต่ไม่อยู่ในรายการ → ค่าเริ่มต้น */
-  $("gKey").value = load(OR_KEY, ""); $("gmKey").value = load(GM_KEY, "");
+  var GR_KEY = "mw_groq_key_v1"; /* Groq ใช้ในหน้าซับจอเขียว (sub/) อย่างเดียว */
+  $("gKey").value = load(OR_KEY, ""); $("gmKey").value = load(GM_KEY, ""); $("grKey").value = load(GR_KEY, "");
   $("gmOn").checked = cfg.gem !== false; L.setOn($("gmOn").checked); /* ติ๊ก "ใช้ Gemini ฟรี" เก็บใน mw_ai_cfg_v1 (gem) */
   cfg.model = pickModel("gModel", cfg.model, DEFAULT_MODEL);
   cfg.eye = pickModel("gEye", cfg.eye, DEFAULT_MODEL);
@@ -358,7 +359,7 @@
   var THINK_TH = { low:"ต่ำสุด", medium:"ปานกลาง", high:"สูงสุด" };
   function updateModelLine(){ $("sModel").textContent = "ดูคลิป: " + short(cfg.eye) + " · เขียนบท: " + short(cfg.model) + " · คิด" + (THINK_TH[cfg.think] || cfg.think); }
   function orState(){
-    [["gKey","gState"],["gmKey","gmState"]].forEach(function(x){
+    [["gKey","gState"],["gmKey","gmState"],["grKey","grState"]].forEach(function(x){
       var on = !!$(x[0]).value.trim(); $(x[1]).textContent = on ? "✓ ตั้งแล้ว" : "ยังไม่ได้ตั้ง"; $(x[1]).classList.toggle("ok", on);
     });
   }
@@ -366,11 +367,11 @@
   function saveAi(){
     cfg.gem = $("gmOn").checked; L.setOn(cfg.gem);
     cfg.model = $("gModel").value || DEFAULT_MODEL; cfg.eye = $("gEye").value || DEFAULT_MODEL; cfg.think = $("gThink").value;
-    var ok = saveCfg() && save(OR_KEY, $("gKey").value.trim()) && save(GM_KEY, $("gmKey").value.trim());
+    var ok = saveCfg() && save(OR_KEY, $("gKey").value.trim()) && save(GM_KEY, $("gmKey").value.trim()) && save(GR_KEY, $("grKey").value.trim());
     MW.toast(ok ? "บันทึกแล้ว" : "บันทึกไม่ได้", !ok);
     updateModelLine(); orState();
   }
-  ["gKey","gmKey","gmOn","gModel","gEye","gThink"].forEach(function(id){ $(id).addEventListener("change", saveAi); }); /* บันทึกอัตโนมัติทุกครั้งที่แก้ */
+  ["gKey","gmKey","grKey","gmOn","gModel","gEye","gThink"].forEach(function(id){ $(id).addEventListener("change", saveAi); }); /* บันทึกอัตโนมัติทุกครั้งที่แก้ */
   $("saveAi").addEventListener("click", saveAi);
   $("gmTest").addEventListener("click", async function(){
     var b = this; b.disabled = true; b.textContent = "กำลังทดสอบ...";

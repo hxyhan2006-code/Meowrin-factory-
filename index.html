@@ -201,7 +201,15 @@
           <input id="gmKey" type="password" placeholder="AIza..." autocomplete="off" aria-label="Gemini API key">
           <div class="row" style="margin-top:10px"><button type="button" class="btn small ghost" id="gmTest">ทดสอบ Gemini</button></div>
           <pre class="hint" id="gmTestOut" style="white-space:pre-wrap;margin-top:8px"></pre>
-          <p class="hint">ใช้กับงานเล็กๆ ข้อความล้วน เช่น แก้บทด้วย AI ในหน้าเสียง (ฟรี) · ทำบท/ดูคลิปใช้ OpenRouter เสมอ เพราะ Gemini ฟรีกับวิดีโอช้า/ล่มบ่อย · ถ้า Gemini ใช้ไม่ได้ จะใช้ OpenRouter ให้เอง · ปิดติ๊กด้านบน = ไม่ใช้ Gemini เลย · สร้าง key ได้ที่ Google AI Studio · บันทึกอัตโนมัติ</p>
+          <p class="hint">ใช้กับงานเล็กๆ ข้อความล้วน เช่น แก้บทด้วย AI ในหน้าเสียง (ฟรี) · ทำบท/ดูคลิปใช้ OpenRouter เสมอ เพราะ Gemini ฟรีกับวิดีโอช้า/ล่มบ่อย · ถ้า Gemini ใช้ไม่ได้ จะใช้ OpenRouter ให้เอง · ปิดติ๊กด้านบน = ไม่ใช้ Gemini เลย · หน้าซับจอเขียวก็ใช้ key นี้แยกบรรทัดสคริปต์ · สร้าง key ได้ที่ Google AI Studio · บันทึกอัตโนมัติ</p>
+        </div>
+      </details>
+      <details class="fold">
+        <summary><span>Groq API key (ซับจอเขียว)</span><em class="state" id="grState"></em></summary>
+        <div class="fbody">
+          <div class="ftools"><button type="button" class="btn small ghost" data-paste="grKey" data-trim>วาง</button><button type="button" class="btn small ghost" data-clear="grKey">ลบ</button></div>
+          <input id="grKey" type="password" placeholder="gsk_..." autocomplete="off" aria-label="Groq API key">
+          <p class="hint">ใช้ในหน้าซับจอเขียว ถอดเสียงพากย์เป็นคำพร้อมเวลา (Whisper) · สร้าง key ได้ที่ console.groq.com · บันทึกอัตโนมัติ</p>
         </div>
       </details>
     </div></details>
@@ -303,6 +311,7 @@
     </div></details>
 
     <a class="fold top go" href="footage.html"><span>ดัชนีฟุตเทจ</span><em class="state idle">ทดสอบ</em></a>
+    <a class="fold top go" href="sub/"><span>ซับจอเขียว</span><em class="state idle">ทำซับจากเสียง</em></a>
 
   </section>
 </div>
@@ -376,6 +385,6 @@
   </div>
 </div>
 
-<script src="store.js?v=20261015e" data-boot="budget.js?v=20261016a sync.js?v=20261015e app.js?v=20261015e llm.js?v=20261015e ai.js?v=20261015e r2.js?v=20261016d voicestore.js?v=20261016e tts.js?v=20261016e gdrive.js?v=20261015e"></script>
+<script src="store.js?v=20261015e" data-boot="budget.js?v=20261016a sync.js?v=20261015e app.js?v=20261015e llm.js?v=20261015e ai.js?v=20261016f r2.js?v=20261016d voicestore.js?v=20261016e tts.js?v=20261016e gdrive.js?v=20261016f"></script>
 </body>
 </html>
