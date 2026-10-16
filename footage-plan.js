@@ -90,22 +90,25 @@
   function part2(t){ var m = /^[^\n]*PART\s*2[^\n]*$/im.exec(t || ""); return (m ? t.slice(m.index + m[0].length) : (t || "")).trim(); }
   var srcs = [], srcSel = -1;
   async function renderSrc(){ /* ให้เลือกได้เฉพาะบทที่เคยสร้างเสียงแล้ว (จับคู่ข้อความบทกับเสียงที่เก็บไว้) */
-    var h = load("mw_history_v1", []), vs = []; srcs = [];
+    var h = load("mw_history_v1", []), vs = [], used = {}; srcs = [];
     try{ if(window.MWVoice) vs = await MWVoice.list(); }catch(err){}
     (Array.isArray(h) ? h : []).forEach(function(e){
       (e && Array.isArray(e.vers) ? e.vers : []).forEach(function(v){
         var t = part2(v.s2), n = norm(t), hit = t ? vs.filter(matchText(n)) : [];
-        if(hit.length) srcs.push({ title:e.clip && e.clip.title || "คลิป", pname:v.pname || "", n:hit.length, text:t });
+        if(hit.length){ hit.forEach(function(x){ used[x.id] = 1; }); srcs.push({ title:e.clip && e.clip.title || "คลิป", pname:v.pname || "", n:hit.length, text:t }); }
       });
+    });
+    vs.forEach(function(x){ /* เสียงที่บทในประวัติถูกแก้/เขียนใหม่/ลบไปหลังสร้างเสียง = ใช้บทที่เก็บไว้กับเสียงนั้นเอง ไม่ให้เสียงไม่มีบท */
+      if(!used[x.id] && norm(x.text)) srcs.push({ title:String(x.name || "เสียง").replace(/\.mp3$/i, ""), pname:"บทที่ใช้สร้างเสียงนี้ · " + new Date(x.id).toLocaleTimeString("th-TH", { hour:"2-digit", minute:"2-digit" }), n:1, text:x.text, vid:String(x.id) });
     });
     if(srcSel >= srcs.length) srcSel = -1;
     fsel("plSrcBtn", srcSel >= 0 ? srcs[srcSel].title + " · " + srcs[srcSel].pname : "เลือกบท (" + srcs.length + ")", srcSel < 0, "film");
   }
   $("plSrcBtn").addEventListener("click", function(){
     FT.pick.open({ title:"บทที่เคยสร้างเสียง", placeholder:"พิมพ์ชื่อคลิปเพื่อหา", icon:"speaker",
-      items:function(q){ return srcs.map(function(x, i){ return { k:String(i), name:x.title, desc:(x.pname ? x.pname + " · " : "") + "เสียง " + x.n + " เทค", on:i === srcSel, x:x }; })
+      items:function(q){ return srcs.map(function(x, i){ return { k:String(i), name:x.title, desc:(x.pname ? x.pname + " · " : "") + (x.vid ? "" : "เสียง " + x.n + " เทค"), on:i === srcSel, x:x }; })
         .filter(function(it){ return !q || (it.name + " " + it.desc).toLowerCase().indexOf(q) >= 0; }); },
-      onPick:function(k){ srcSel = +k; var s = srcs[srcSel]; $("plText").value = s.text; renderSrc(); if(mode === "fast"){ voiceSel = ""; autoVoice(); } } });
+      onPick:function(k){ srcSel = +k; var s = srcs[srcSel]; $("plText").value = s.text; renderSrc(); if(mode === "fast"){ voiceSel = s.vid || ""; autoVoice(); } } });
   });
   document.querySelector(".tabs").addEventListener("click", function(e){ var b = e.target.closest("button[data-p]"); if(b && b.dataset.p === "plan"){ renderSrc(); render(); } });
 
