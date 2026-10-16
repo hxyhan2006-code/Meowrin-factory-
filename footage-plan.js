@@ -25,7 +25,7 @@
     var t = norm($("plText").value), keep = $("plVoice").value;
     var match = function(v){ var x = norm(v.text); return t && x && (x === t || x.indexOf(t) >= 0 || t.indexOf(x) >= 0); };
     $("plVoice").innerHTML = '<option value="">— ไม่ใส่เสียง (ประมาณเวลาจากตัวอักษร) —</option>' + voices.map(function(v){
-      return '<option value="' + v.id + '">' + (match(v) ? "✓ ตรงกับบทนี้ · " : "") + U.esc(v.name || "เสียง") + " · " + new Date(v.id).toLocaleTimeString("th-TH", { hour:"2-digit", minute:"2-digit" }) + (v.align ? " · มีเวลาคำพูด" : " · ไม่มีเวลาคำพูด (ประมาณตามตัวอักษร)") + "</option>"; }).join("") + cl.map(function(c){ return '<option value="' + c.id + '">(ในคลัง) · ' + new Date(c.id).toLocaleString("th-TH", { day:"numeric", month:"short", hour:"2-digit", minute:"2-digit" }) + " (ดึงมาให้ตอนกำกับ)</option>"; }).join("");
+      return '<option value="' + v.id + '">' + (match(v) ? "(ตรงกับบทนี้) · " : "") + U.esc(v.name || "เสียง") + " · " + new Date(v.id).toLocaleTimeString("th-TH", { hour:"2-digit", minute:"2-digit" }) + (v.align ? " · มีเวลาคำพูด" : " · ไม่มีเวลาคำพูด (ประมาณตามตัวอักษร)") + "</option>"; }).join("") + cl.map(function(c){ return '<option value="' + c.id + '">(ในคลัง) · ' + new Date(c.id).toLocaleString("th-TH", { day:"numeric", month:"short", hour:"2-digit", minute:"2-digit" }) + " (ดึงมาให้ตอนกำกับ)</option>"; }).join("");
     var m = voices.find(match); $("plVoice").value = voices.concat(cl).some(function(v){ return String(v.id) === keep; }) ? keep : (m ? String(m.id) : "");
     $("plVoiceInfo").textContent = voices.length ? "" : "ยังไม่มีเสียง · สร้างเสียงในแอพหลัก (แท็บ เสียง) ก่อน แล้วกลับมาเลือกที่นี่";
   }

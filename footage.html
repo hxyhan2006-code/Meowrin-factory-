@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600&family=Mitr:wght@500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="footage.css?v=20261017o">
+<link rel="stylesheet" href="footage.css?v=20261017p">
 </head>
 <body>
 <header>
@@ -214,14 +214,14 @@
 </main>
 
 <div class="big" id="big" hidden>
-  <button class="bigx" id="bigX" aria-label="ปิด">✕</button>
+  <button class="bigx" id="bigX" aria-label="ปิด"><svg class="ic" aria-hidden="true"><use href="#i-x"/></svg></button>
   <img id="bigImg" alt="">
   <video id="bigVid" controls playsinline hidden></video>
   <p id="bigTxt"></p>
   <p class="hint" id="bigCharsHint" hidden style="margin:0">ตัวละครในฉากนี้ (แตะเพื่อเพิ่ม/เอาออก · ที่แก้เองจะไม่ถูกทับตอนอัปเกรดดัชนี)</p>
   <div class="chips wrap" id="bigChars" hidden></div>
   <div class="bigact">
-    <button class="btn" id="playBtn">▶ ดูฉากนี้</button>
+    <button class="btn" id="playBtn"><svg class="ic" aria-hidden="true"><use href="#i-play"/></svg>ดูฉากนี้</button>
     <label class="chk"><input type="checkbox" id="loopSc" checked> วนซ้ำฉากนี้</label>
   </div>
   <p class="bigmsg" id="playMsg"></p>
@@ -230,6 +230,6 @@
 <input id="pickDocs" type="file" multiple hidden><!-- ไม่ใส่ accept → Android เปิดแอพไฟล์ (เข้าโฟลเดอร์ + เลือกทั้งหมดได้) แทนตัวเลือกรูป -->
 <video id="vid" muted playsinline preload="auto" style="position:fixed;left:-9999px;width:2px;height:2px"></video>
 
-<script src="store.js?v=20261017j" data-boot="icons.js?v=20261017o dialog.js?v=20261017o budget.js?v=20261017j footage-core.js?v=20261017j r2.js?v=20261017j footage.js?v=20261017o footage-find.js?v=20261017o footage-dup.js?v=20261017o footage-audit.js?v=20261017l footage-cloud.js?v=20261017j mp4fix.js?v=20261017j footage-stitch.js?v=20261017j voicestore.js?v=20261017j footage-plan.js?v=20261017o gdrive.js?v=20261017n"></script>
+<script src="store.js?v=20261017j" data-boot="icons.js?v=20261017p dialog.js?v=20261017p budget.js?v=20261017j footage-core.js?v=20261017j r2.js?v=20261017j footage.js?v=20261017p footage-find.js?v=20261017p footage-dup.js?v=20261017p footage-audit.js?v=20261017p footage-cloud.js?v=20261017p mp4fix.js?v=20261017j footage-stitch.js?v=20261017j voicestore.js?v=20261017j footage-plan.js?v=20261017p gdrive.js?v=20261017p"></script>
 </body>
 </html>

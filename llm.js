@@ -178,8 +178,8 @@
           body: JSON.stringify({ contents:[{ role:"user", parts:[{ text:"ตอบคำเดียวว่า ok" }] }], generationConfig: think ? { thinkingConfig:{ thinkingLevel: think } } : undefined })
         });
         var j = await res.json().catch(function(){ return {}; });
-        line += res.ok ? "✓ ใช้ได้ (HTTP " + res.status + ")" : "✗ HTTP " + res.status + " " + ((j.error && j.error.message) || "").slice(0, 200);
-      }catch(err){ line += "✗ ต่อไม่ได้ (" + err.message + ")"; }
+        line += res.ok ? "ใช้ได้ (HTTP " + res.status + ")" : "ใช้ไม่ได้ HTTP " + res.status + " " + ((j.error && j.error.message) || "").slice(0, 200);
+      }catch(err){ line += "ต่อไม่ได้ (" + err.message + ")"; }
       out.push(line);
     }
     return out;

@@ -565,3 +565,8 @@ label{
 
 /* ไอคอนเส้น (icons.js) แทนอีโมจิ: สีตามตัวอักษร */
 .ic{width:1.1em;height:1.1em;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;vertical-align:-.18em;margin-right:.4em;flex:none}
+
+.phead .btn .ic,.bm .ic,.actions .ico .ic,#pickClear .ic{margin:0} /* ปุ่มที่มีแต่ไอคอน (ปิด, ดาว, เล่น, ทำแล้ว) ไม่ต้องมีช่องไฟ */
+.bm .ic{width:20px;height:20px}.bm.on .ic,.svbtn.on .ic{fill:currentColor}
+.pbtn .ic{width:20px;height:20px;margin:0}
+.chip.done .ic{width:1em;height:1em;margin-right:.25em}

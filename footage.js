@@ -115,8 +115,8 @@
     var el = $("wakeInfo"); if(!el) return;
     el.hidden = !running && !wakeMode;
     el.className = "hint " + (wakeMode === "none" ? "bad" : "");
-    el.innerHTML = wakeMode === "lock" ? MWIcon("sun") + "จอไม่ดับระหว่างทำ ✓ (ต่อให้ตั้งเวลาปิดจอของเครื่องไว้สั้นก็ไม่ดับ)"
-      : wakeMode === "video" ? MWIcon("sun") + "จอไม่ดับระหว่างทำ ✓ (ใช้วิธีเล่นวิดีโอเปล่าแทน เพราะเครื่องไม่ให้ใช้ Wake Lock)"
+    el.innerHTML = wakeMode === "lock" ? MWIcon("sun") + "จอไม่ดับระหว่างทำ (ต่อให้ตั้งเวลาปิดจอของเครื่องไว้สั้นก็ไม่ดับ)"
+      : wakeMode === "video" ? MWIcon("sun") + "จอไม่ดับระหว่างทำ (ใช้วิธีเล่นวิดีโอเปล่าแทน เพราะเครื่องไม่ให้ใช้ Wake Lock)"
       : wakeMode === "none" ? MWIcon("warn") + "กันจอดับไม่ได้ ตั้งเวลาปิดจอของมือถือให้นานสุด และอย่าให้จอล็อก ไม่งั้นจะพักเอง" : "";
   }
   document.addEventListener("visibilitychange", function(){
@@ -379,7 +379,7 @@
     setTag("tagCut", "idle", "ไว " + Number(cfg.thr).toFixed(2) + " · ≤" + cfg.maxScenes + " ฉาก");
   }
   ["model", "thr", "maxScenes"].forEach(function(id){ $(id).addEventListener("input", tagsSet); }); tagsSet();
-  $("keyInfo").innerHTML = FT.orKey() ? "✓ ใช้ OpenRouter key จากแอพหลักในเบราว์เซอร์นี้" : MWIcon("warn") + "ยังไม่เจอ OpenRouter key ในเบราว์เซอร์นี้ ใส่ที่แอพหลัก (ตั้งค่า) ก่อน";
+  $("keyInfo").innerHTML = FT.orKey() ? MWIcon("check") + "ใช้ OpenRouter key จากแอพหลักในเบราว์เซอร์นี้" : MWIcon("warn") + "ยังไม่เจอ OpenRouter key ในเบราว์เซอร์นี้ ใส่ที่แอพหลัก (ตั้งค่า) ก่อน";
 
   /* ---------- ลบคลิปซ้ำ: ชื่อไฟล์+ขนาดเดียวกัน เก็บตัวที่ทำล่าสุด ---------- */
   function findDupes(){ /* คืน { del:[id ที่จะลบ], fix:[รายการที่ต้องแก้อัลบั้ม] } */

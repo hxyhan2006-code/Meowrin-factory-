@@ -1,7 +1,7 @@
 // waveform.js — กล่องตัดท่อนเสียง: วาดคลื่นเสียง ซูม/บีบนิ้ว แบ่ง/ลบท่อน (ลบแล้วเสียงที่เหลือต่อกันแบบ CapCut) เลิกทำ/ทำซ้ำ
 // แยกออกจาก app.js (v1.16) · state ทั้งหมดของคลื่นเสียงอยู่ในนี้ที่เดียว app.js คุยผ่านค่าที่ createTrimEditor คืนให้
 // audioEl = <audio> ตัวเดียวกับที่ app.js ใช้ (เล่น/กรอ) · trimCard = <details> กล่องตัดท่อนเสียง
-import { computePeaks, buildTrimmedAudioBuffer, audioBufferToWavBlob } from './media.js?v=1.17';
+import { computePeaks, buildTrimmedAudioBuffer, audioBufferToWavBlob } from './media.js?v=1.19';
 
 export function createTrimEditor({ audioEl, trimCard }){
   const waveformScroll = document.getElementById('waveformScroll');
@@ -517,14 +517,16 @@ export function createTrimEditor({ audioEl, trimCard }){
     });
   }
 
+  const ICON_PLAY = '<svg class="ic" aria-hidden="true"><use href="#i-play"/></svg>';
+  const ICON_PAUSE = '<svg class="ic" aria-hidden="true"><use href="#i-pause"/></svg>';
   wfPlayBtn.addEventListener('click', () => {
     if (!audioBuffer) return;
     loopSelection = false; // the main ▶ button always plays the whole clip forward
     if (audioEl.paused) audioEl.play(); else audioEl.pause();
   });
-  audioEl.addEventListener('play', () => { wfPlayBtn.textContent = '❚❚'; startWfRaf(); });
-  audioEl.addEventListener('pause', () => { wfPlayBtn.textContent = '▶'; stopWfRaf(); });
-  audioEl.addEventListener('ended', () => { wfPlayBtn.textContent = '▶'; loopSelection = false; stopWfRaf(); updatePlayheadAndTime(); });
+  audioEl.addEventListener('play', () => { wfPlayBtn.innerHTML = ICON_PAUSE; startWfRaf(); });
+  audioEl.addEventListener('pause', () => { wfPlayBtn.innerHTML = ICON_PLAY; stopWfRaf(); });
+  audioEl.addEventListener('ended', () => { wfPlayBtn.innerHTML = ICON_PLAY; loopSelection = false; stopWfRaf(); updatePlayheadAndTime(); });
 
   function startWfRaf(){
     stopWfRaf();

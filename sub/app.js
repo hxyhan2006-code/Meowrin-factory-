@@ -1,11 +1,11 @@
-import { alignLinesToWords, refineSegmentBoundariesWithEnergy } from './aligner.js?v=1.17';
-import { buildSrt } from './srt.js?v=1.17';
-import { callGroqWhisper, buildTranscriptForGemini, callGeminiSplit, removeThaiSpaces, GEMINI_MODELS, DEFAULT_GEMINI_MODEL } from './ai.js?v=1.17';
-import { loadMediabunny, decodeAudioFile, isVideoFile, extractAudioFromVideo, audioBufferToWavBlob } from './media.js?v=1.17';
-import { CANVAS_W, FONT_FAMILY, BOTTOM_MARGIN_RATIO, renderVideo } from './render.js?v=1.17';
-import { createTrimEditor } from './waveform.js?v=1.17';
-import { setupFineSlider, createStagedProgress, escapeHtml, getReliableDuration } from './ui.js?v=1.17';
-import { setupVoicePicker } from './voicepick.js?v=1.17';
+import { alignLinesToWords, refineSegmentBoundariesWithEnergy } from './aligner.js?v=1.19';
+import { buildSrt } from './srt.js?v=1.19';
+import { callGroqWhisper, buildTranscriptForGemini, callGeminiSplit, removeThaiSpaces, GEMINI_MODELS, DEFAULT_GEMINI_MODEL } from './ai.js?v=1.19';
+import { loadMediabunny, decodeAudioFile, isVideoFile, extractAudioFromVideo, audioBufferToWavBlob } from './media.js?v=1.19';
+import { CANVAS_W, FONT_FAMILY, BOTTOM_MARGIN_RATIO, renderVideo } from './render.js?v=1.19';
+import { createTrimEditor } from './waveform.js?v=1.19';
+import { setupFineSlider, createStagedProgress, escapeHtml, getReliableDuration } from './ui.js?v=1.19';
+import { setupVoicePicker } from './voicepick.js?v=1.19';
 
 // ===== ที่เก็บข้อมูลร่วมกับแอพหลัก (MWStore จาก ../store.js) — service worker ของแอพหลักคุมหน้านี้อยู่แล้ว =====
   const S = window.MWStore;

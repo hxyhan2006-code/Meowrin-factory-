@@ -39,7 +39,7 @@
     R2.setCfg(c); fill(); renderState();
     if(!R2.ready()){ msg("r2Msg", "บันทึกแล้ว แต่ยังกรอกไม่ครบ (Account ID, ชื่อ bucket, Access Key ID, Secret)", "err"); return; }
     msg("r2Msg", "กำลังทดสอบ...");
-    try{ await R2.test(); msg("r2Msg", "เชื่อมคลังได้แล้ว ✓", "ok"); listCloud(); }catch(err){ tag("err", "เชื่อมไม่ได้"); msg("r2Msg", "ยังเชื่อมไม่ได้: " + err.message, "err"); }
+    try{ await R2.test(); msg("r2Msg", "เชื่อมคลังได้แล้ว", "ok"); listCloud(); }catch(err){ tag("err", "เชื่อมไม่ได้"); msg("r2Msg", "ยังเชื่อมไม่ได้: " + err.message, "err"); }
   });
 
   /* ---------- คลังบนคลาวด์ (แท็บทำดัชนี) ---------- */
@@ -62,9 +62,9 @@
       + (local ? " · ดัชนีที่ไฟล์ยังไม่อยู่ในคลัง " + local + " คลิป" : "");
     var files = {}; vids.forEach(function(o){ var a = albumOf(o.key); (files[a] = files[a] || []).push(o); });
     $("cloudAlbums").innerHTML = Object.keys(alb).sort().map(function(a){ var x = alb[a], fl = files[a].sort(function(p, q){ return q.at - p.at; });
-      return '<li><details><summary><b>' + U.esc(a) + "</b> · " + x.n + " คลิป · " + gb(x.size) + (x.todo ? ' · <span style="color:var(--accent)">ยังไม่ทำดัชนี ' + x.todo + "</span>" : " · ✓ ครบ") + "</summary><ul class=\"cf\">"
+      return '<li><details><summary><b>' + U.esc(a) + "</b> · " + x.n + " คลิป · " + gb(x.size) + (x.todo ? ' · <span style="color:var(--accent)">ยังไม่ทำดัชนี ' + x.todo + "</span>" : " · " + MWIcon("check") + "ครบ") + "</summary><ul class=\"cf\">"
         + fl.slice(0, 100).map(function(o){ var c = byKey[o.key] || byNs[base(o.key) + "|" + o.size], ok = c && c.status === "done";
-            return "<li><span>" + U.esc(base(o.key)) + "</span><small>" + gb(o.size) + " · " + (ok ? "✓ ทำดัชนีแล้ว" : '<i style="color:var(--accent);font-style:normal">ยังไม่ทำ</i>') + "</small></li>"; }).join("")
+            return "<li><span>" + U.esc(base(o.key)) + "</span><small>" + gb(o.size) + " · " + (ok ? MWIcon("check") + "ทำดัชนีแล้ว" : '<i style="color:var(--accent);font-style:normal">ยังไม่ทำ</i>') + "</small></li>"; }).join("")
         + (fl.length > 100 ? "<li><small>…และอีก " + (fl.length - 100) + " ไฟล์</small></li>" : "") + "</ul></details></li>"; }).join("");
     $("cloudQueue").hidden = !todo.length; $("cloudQueue").textContent = "เอาคลิปที่ยังไม่ทำเข้าคิว (" + todo.length + ")";
     $("cloudQueue").onclick = function(){

@@ -35,9 +35,9 @@
         + '<img class="auditimg" src="' + (sc.img || sc.thumb) + '" data-k="' + k + '" alt="ฉากที่ตรวจ">'
         + '<p><b>ตัวละคร:</b> ' + (who.length ? esc(who.join(", ")) : "(AI ไม่ได้ระบุ)") + "<br><b>อารมณ์/การกระทำ:</b> " + esc([a.emotion, a.action].filter(Boolean).join(" · ") || "-")
         + "<br><b>คำอธิบาย:</b> " + esc(a.summary_th || "-") + "<br><b>ช่วง:</b> " + tm(sc.s) + "–" + tm(sc.e) + " (" + (sc.e - sc.s).toFixed(1) + " วิ) · " + esc(c.album) + "</p>"
-        + '<div class="chips wrap">' + FIELDS.map(function(f){ return '<button class="chip' + (run.flags[f[0]] ? " bad" : "") + '" data-f="' + f[0] + '">' + (run.flags[f[0]] ? "✗ " : "") + f[1] + "</button>"; }).join("") + "</div>"
+        + '<div class="chips wrap">' + FIELDS.map(function(f){ return '<button class="chip' + (run.flags[f[0]] ? " bad" : "") + '" data-f="' + f[0] + '">' + (run.flags[f[0]] ? MWIcon("x") : "") + f[1] + "</button>"; }).join("") + "</div>"
         + (run.flags.ch ? '<input id="auditFix" type="text" placeholder="ที่ถูกคือใคร (ไม่บังคับ) เช่น โซโร, นามิ" autocomplete="off" value="' + esc(run.fix || "") + '">' : "")
-        + '<div class="row" style="margin-top:12px"><button class="btn" id="auditNext">' + (run.i + 1 < run.list.length ? "ถัดไป ›" : "จบ ✓") + '</button><button class="btn ghost" id="auditSkip">ข้าม</button><button class="btn ghost" id="auditStop">หยุด</button></div>';
+        + '<div class="row" style="margin-top:12px"><button class="btn" id="auditNext">' + (run.i + 1 < run.list.length ? "ถัดไป ›" : MWIcon("check") + "จบ") + '</button><button class="btn ghost" id="auditSkip">ข้าม</button><button class="btn ghost" id="auditStop">หยุด</button></div>';
       return;
     }
     el.innerHTML = (run ? summary(run.mine, "ผลรอบนี้") + "<hr>" : "") + summary(log, "ผลรวมทุกรอบ")

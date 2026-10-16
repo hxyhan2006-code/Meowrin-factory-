@@ -155,7 +155,7 @@
     $("goBtn").textContent = busy ? "กำลังทำบท..." : cur.vers.length ? (n > 1 ? "ทำใหม่ " + n + " เวอร์ชัน" : "ทำบทใหม่") : (n > 1 ? "ทำบท " + n + " เวอร์ชัน" : "ทำบทเลย");
     $("vWrap").hidden = !cur.vers.length;
     $("vTabs").innerHTML = cur.vers.length < 2 ? "" : cur.vers.map(function(v, i){
-      var ic = v.busy ? MWIcon("clock") : v.err ? MWIcon("warn") : v.s2 ? "✓ " : "";
+      var ic = v.busy ? MWIcon("clock") : v.err ? MWIcon("warn") : v.s2 ? MWIcon("check") : "";
       return '<button class="fchip'+(i === cur.active ? ' on' : '')+'" data-v="'+i+'">'+ic+esc(v.pname)+'</button>';
     }).join("");
     var v = activeV();
@@ -331,7 +331,7 @@
     var b = e.target.closest("button.p1row"); if(!b) return;
     var txt = b.dataset.k === "h" ? pk.hook : pk.titles[+b.dataset.i];
     (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(function(){
-      MW.toast("คัดลอกแล้ว"); b.classList.add("done"); b.querySelector("em").textContent = "✓ คัดลอกแล้ว";
+      MW.toast("คัดลอกแล้ว"); b.classList.add("done"); b.querySelector("em").innerHTML = MWIcon("check") + "คัดลอกแล้ว";
       setTimeout(function(){ b.classList.remove("done"); b.querySelector("em").textContent = "คัดลอก"; }, 1500);
     }).catch(function(){ MWDialog.copy(txt); });
   });
@@ -360,7 +360,7 @@
   function updateModelLine(){ $("sModel").textContent = "ดูคลิป: " + short(cfg.eye) + " · เขียนบท: " + short(cfg.model) + " · คิด" + (THINK_TH[cfg.think] || cfg.think); }
   function orState(){
     [["gKey","gState"],["gmKey","gmState"],["grKey","grState"]].forEach(function(x){
-      var on = !!$(x[0]).value.trim(); $(x[1]).textContent = on ? "✓ ตั้งแล้ว" : "ยังไม่ได้ตั้ง"; $(x[1]).classList.toggle("ok", on);
+      var on = !!$(x[0]).value.trim(); $(x[1]).innerHTML = on ? MWIcon("check") + "ตั้งแล้ว" : "ยังไม่ได้ตั้ง"; $(x[1]).classList.toggle("ok", on);
     });
   }
   orState();

@@ -400,7 +400,7 @@
   };
 
   /* ---------- ตั้งค่า (แท็บตั้งค่า: key + รายการเสียงของฉัน) ---------- */
-  function keyState(){ var on = !!load(KEY, ""); $("elState").textContent = on ? "✓ ตั้งแล้ว" : "ยังไม่ได้ตั้ง"; $("elState").classList.toggle("ok", on); }
+  function keyState(){ var on = !!load(KEY, ""); $("elState").innerHTML = on ? MWIcon("check") + "ตั้งแล้ว" : "ยังไม่ได้ตั้ง"; $("elState").classList.toggle("ok", on); }
   function renderUsage(){
     var u = cfg.usage.m === monthKey() ? cfg.usage : { chars:0, n:0 };
     $("ttsUsage").textContent = u.n ? "เดือนนี้ส่งไปสร้างเสียงแล้ว " + u.chars.toLocaleString() + " ตัวอักษร (" + u.n + " ครั้ง จากแอพนี้) ยอดเครดิตจริงดูในเว็บ ElevenLabs" : "เดือนนี้ยังไม่ได้สร้างเสียงจากแอพนี้";

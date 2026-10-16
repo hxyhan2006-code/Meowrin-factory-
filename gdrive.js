@@ -149,7 +149,7 @@
   function ageText(t){ return !t ? "ยังไม่เคยสำรอง" : ageKind(t) === "warn" ? ago(t) + " (นานแล้ว)" : ago(t); }
   function render(){
     ["gdNow", "gdQuick", "gdRestore", "gdFootNow", "gdFootQuick", "gdFootRestore"].forEach(function(id){ if($(id)) $(id).disabled = busy; });
-    if($("gdConnect")) $("gdConnect").textContent = ready() ? "✓ เชื่อมแล้ว" : "เชื่อม Google Drive";
+    if($("gdConnect")) $("gdConnect").innerHTML = ready() ? MWIcon("check") + "เชื่อมแล้ว" : "เชื่อม Google Drive";
     var d = driveStatus(), kd = ageKind(cfg.last), kf = ageKind(cfg.lastFoot);
     tag("gdTag", d.kind === "ok" && kd === "warn" ? "warn" : d.kind, d.kind === "ok" && kd === "warn" ? "สำรองนานแล้ว" : d.text);
     var st = $("gdState");

@@ -13,8 +13,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600&family=Mitr:wght@500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=20261016r">
-<link rel="stylesheet" href="sheet.css?v=20261016r">
+<link rel="stylesheet" href="style.css?v=20261016s">
+<link rel="stylesheet" href="sheet.css?v=20261016s">
 </head>
 <body>
 <div class="wrap">
@@ -51,8 +51,8 @@
     <div class="fchips" id="chanChips"></div>
     <div class="listbar">
       <label class="chk"><input type="checkbox" id="hideMade" checked> ซ่อนคลิปที่ทำแล้ว</label>
-      <button class="btn small ghost svbtn" id="madeBtn" aria-label="ดูเฉพาะคลิปที่ทำแล้ว">✓ 0</button>
-      <button class="btn small ghost svbtn" id="savedBtn" aria-label="ดูเฉพาะคลิปที่เก็บไว้ทำทีหลัง">★ 0</button>
+      <button class="btn small ghost svbtn" id="madeBtn" aria-label="ดูเฉพาะคลิปที่ทำแล้ว"><svg class="ic" aria-hidden="true"><use href="#i-check"/></svg>0</button>
+      <button class="btn small ghost svbtn" id="savedBtn" aria-label="ดูเฉพาะคลิปที่เก็บไว้ทำทีหลัง"><svg class="ic" aria-hidden="true"><use href="#i-star"/></svg>0</button>
       <button class="btn small ghost vbtn" id="viewBtn" aria-label="สลับมุมมองการ์ด"></button>
     </div>
     <div class="listinfo" id="listInfo"></div>
@@ -307,7 +307,7 @@
           <div id="gdMsg"></div>
         </div>
       </details>
-      <p class="hint">ไฟล์สำรองแบบโหลดลงเครื่อง: ช่อง รายการ "ทำแล้ว" ★ ประวัติบท prompt และรายการเสียง (ไม่รวม API key และคลิปที่ดึงมา ซึ่งดึงใหม่ได้)</p>
+      <p class="hint">ไฟล์สำรองแบบโหลดลงเครื่อง: ช่อง รายการ "ทำแล้ว" รายการที่เก็บไว้ ประวัติบท prompt และรายการเสียง (ไม่รวม API key และคลิปที่ดึงมา ซึ่งดึงใหม่ได้)</p>
       <div class="row">
         <button class="btn ghost" id="exportBtn">โหลดไฟล์สำรอง</button>
         <button class="btn ghost" id="importBtn">นำเข้า</button>
@@ -329,7 +329,7 @@
 <!-- ชีตเลือกตัวเลือก (ใช้กับ select[data-sheet]) -->
 <div class="modal" id="selSheet" hidden>
   <div class="sheet">
-    <div class="phead"><span class="sel-title" id="selTitle"></span><button class="btn small ghost" id="selClose" aria-label="ปิด">✕</button></div>
+    <div class="phead"><span class="sel-title" id="selTitle"></span><button class="btn small ghost" id="selClose" aria-label="ปิด"><svg class="ic" aria-hidden="true"><use href="#i-x"/></svg></button></div>
     <div class="sel-list" id="selList"></div>
   </div>
 </div>
@@ -337,7 +337,7 @@
 <!-- ประวัติบท -->
 <div class="modal" id="histSheet" hidden>
   <div class="sheet">
-    <div class="phead"><span class="sel-title">ประวัติบทที่ทำไว้</span><button class="btn small ghost" id="histClear">ล้างทั้งหมด</button><button class="btn small ghost" id="histClose" aria-label="ปิด">✕</button></div>
+    <div class="phead"><span class="sel-title">ประวัติบทที่ทำไว้</span><button class="btn small ghost" id="histClear">ล้างทั้งหมด</button><button class="btn small ghost" id="histClose" aria-label="ปิด"><svg class="ic" aria-hidden="true"><use href="#i-x"/></svg></button></div>
     <div class="sel-list" id="histList"></div>
   </div>
 </div>
@@ -345,7 +345,7 @@
 <!-- เสียงที่เก็บไว้ (ปุ่มสามขีดมุมขวาบนของแท็บเสียง) -->
 <div class="modal" id="vSavedSheet" hidden>
   <div class="sheet">
-    <div class="phead"><span class="sel-title">เสียงที่เก็บไว้</span><button class="btn small ghost" id="vSavedClose" aria-label="ปิด">✕</button></div>
+    <div class="phead"><span class="sel-title">เสียงที่เก็บไว้</span><button class="btn small ghost" id="vSavedClose" aria-label="ปิด"><svg class="ic" aria-hidden="true"><use href="#i-x"/></svg></button></div>
     <div class="sel-list" id="vSavedList"></div>
   </div>
 </div>
@@ -355,7 +355,7 @@
 <!-- ตั้งค่าเสียง (เปิดจากแท็บเสียง) -->
 <div class="modal" id="vSheet" hidden>
   <div class="sheet">
-    <div class="phead"><span class="sel-title">ตั้งค่าเสียง</span><button class="btn small ghost" id="vsClose" aria-label="ปิด">✕</button></div>
+    <div class="phead"><span class="sel-title">ตั้งค่าเสียง</span><button class="btn small ghost" id="vsClose" aria-label="ปิด"><svg class="ic" aria-hidden="true"><use href="#i-x"/></svg></button></div>
     <div class="vsbody">
       <label style="margin-top:0">เสียง</label>
       <div class="sel-list" id="vsVoices"></div>
@@ -375,7 +375,7 @@
 <!-- ตัวเล่นคลิป -->
 <div class="modal" id="player" hidden>
   <div class="sheet">
-    <div class="phead"><b id="pTitle"></b><button class="btn small ghost" id="pClose" aria-label="ปิด">✕</button></div>
+    <div class="phead"><b id="pTitle"></b><button class="btn small ghost" id="pClose" aria-label="ปิด"><svg class="ic" aria-hidden="true"><use href="#i-x"/></svg></button></div>
     <div class="pframe" id="pFrame"></div>
     <div class="pact">
       <button class="btn" id="pPick">เลือกคลิปนี้</button>
@@ -392,10 +392,10 @@
     <img id="pickImg" alt="">
     <div class="t"><b id="pickTitle"></b><span id="pickSub"></span></div>
     <button class="btn small" id="pickGo">ทำบท</button>
-    <button class="btn small ghost" id="pickClear" aria-label="ยกเลิกการเลือก">✕</button>
+    <button class="btn small ghost" id="pickClear" aria-label="ยกเลิกการเลือก"><svg class="ic" aria-hidden="true"><use href="#i-x"/></svg></button>
   </div>
 </div>
 
-<script src="store.js?v=20261015e" data-boot="icons.js?v=20261016r dialog.js?v=20261016r budget.js?v=20261016a sync.js?v=20261015e app.js?v=20261016r llm.js?v=20261015e ai.js?v=20261016r r2.js?v=20261016d voicestore.js?v=20261016e tts.js?v=20261016r gdrive.js?v=20261016k"></script>
+<script src="store.js?v=20261015e" data-boot="icons.js?v=20261016s dialog.js?v=20261016r budget.js?v=20261016a sync.js?v=20261015e app.js?v=20261016s llm.js?v=20261016s ai.js?v=20261016s r2.js?v=20261016d voicestore.js?v=20261016e tts.js?v=20261016s gdrive.js?v=20261016s"></script>
 </body>
 </html>

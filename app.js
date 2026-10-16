@@ -102,8 +102,8 @@
     }), ui.only ? null : ui.range, "range"); /* เปิดดู ★/ทำแล้ว อยู่ = ไม่ไฮไลต์ช่วงเวลา */
     var savedN = byChan.filter(function(c){ return data.saved[c.id]; }).length;
     var madeN = byChan.filter(function(c){ return data.made[c.id]; }).length;
-    $("savedBtn").innerHTML = "★ " + savedN; $("savedBtn").classList.toggle("on", ui.only === "saved");
-    $("madeBtn").innerHTML = "✓ " + madeN; $("madeBtn").classList.toggle("on", ui.only === "made");
+    $("savedBtn").innerHTML = MWIcon("star") + savedN; $("savedBtn").classList.toggle("on", ui.only === "saved");
+    $("madeBtn").innerHTML = MWIcon("check") + madeN; $("madeBtn").classList.toggle("on", ui.only === "made");
     function inView(c){ return ui.only === "saved" ? data.saved[c.id] : ui.only === "made" ? data.made[c.id] : inRange(c, ui.range); }
     var byRange = base.filter(inView);
     $("chanChips").innerHTML = act.length < 2 ? "" : chipsHtml([{ id:"", t:"ทุกช่อง", n:byRange.length }].concat(act.map(function(ch){
@@ -131,7 +131,7 @@
         : !clips.length ? "ยังไม่ได้ดึงคลิป กดปุ่ม ดึงคลิป ด้านบน"
         : q ? "ไม่เจอคลิปที่ชื่อมีคำว่า \""+ui.q.trim()+"\""
         : matched ? "ไม่มีคลิปที่ยังไม่ได้ทำในช่วงนี้"
-        : ui.only === "saved" ? "ยังไม่ได้เก็บคลิปไว้ กดดาว ☆ มุมล่างขวาของรูปคลิป"
+        : ui.only === "saved" ? "ยังไม่ได้เก็บคลิปไว้ กดดาวมุมล่างขวาของรูปคลิป"
         : ui.only === "made" ? "ยังไม่มีคลิปที่ทำแล้ว"
         : "ไม่มีคลิปในช่วงเวลานี้ ลองกดช่วงที่ยาวขึ้น";
       $("list").innerHTML = '<div class="empty"><div class="empty-ico">'+MWIcon("film")+'</div>'+esc(why)+'</div>';
@@ -140,18 +140,18 @@
     $("list").innerHTML = shown.map(function(c){
       var made = !!data.made[c.id], sv = !!data.saved[c.id];
       return '<article class="card'+(made?' made':'')+'">'
-        + '<div class="tbox"><button class="tplay" data-play="'+c.id+'" aria-label="ดูตัวอย่างคลิป"><img class="thumb" loading="lazy" decoding="async" src="'+thumbUrl(c.id)+'" alt=""><span class="pbtn">▶</span></button>'
+        + '<div class="tbox"><button class="tplay" data-play="'+c.id+'" aria-label="ดูตัวอย่างคลิป"><img class="thumb" loading="lazy" decoding="async" src="'+thumbUrl(c.id)+'" alt=""><span class="pbtn">'+MWIcon("play")+'</span></button>'
         + metricChip(c, s)
-        + (made ? '<span class="chip done">✓ ทำแล้ว</span>' : '')
+        + (made ? '<span class="chip done">'+MWIcon("check")+'ทำแล้ว</span>' : '')
         + '<span class="chip views">'+fmtNumTh(c.views)+' วิว</span>'
-        + '<button class="bm'+(sv?' on':'')+'" data-save="'+c.id+'" aria-label="'+(sv?'เลิกเก็บไว้':'เก็บไว้ทำทีหลัง')+'">'+(sv?'★':'☆')+'</button></div>'
+        + '<button class="bm'+(sv?' on':'')+'" data-save="'+c.id+'" aria-label="'+(sv?'เลิกเก็บไว้':'เก็บไว้ทำทีหลัง')+'">'+MWIcon("star")+'</button></div>'
         + '<div class="cbody">'
         + '<div class="ctitle">'+esc(c.title)+'</div>'
         + '<div class="meta"><span>'+esc(c.channel)+'</span><span>'+ago(c.published)+'</span></div>'
         + '<div class="actions">'
         + '<button class="btn small" data-pick="'+c.id+'">เลือก</button>'
-        + '<button class="btn small ghost ico" data-play="'+c.id+'" aria-label="ดูตัวอย่างคลิป" title="ดูตัวอย่าง">▶</button>'
-        + '<button class="btn small ghost ico'+(made?' on':'')+'" data-made="'+c.id+'" aria-label="'+(made?'ยกเลิกทำแล้ว':'ทำเครื่องหมายว่าทำแล้ว')+'" title="'+(made?'ยกเลิกทำแล้ว':'ทำแล้ว')+'">✓</button>'
+        + '<button class="btn small ghost ico" data-play="'+c.id+'" aria-label="ดูตัวอย่างคลิป" title="ดูตัวอย่าง">'+MWIcon("play")+'</button>'
+        + '<button class="btn small ghost ico'+(made?' on':'')+'" data-made="'+c.id+'" aria-label="'+(made?'ยกเลิกทำแล้ว':'ทำเครื่องหมายว่าทำแล้ว')+'" title="'+(made?'ยกเลิกทำแล้ว':'ทำแล้ว')+'">'+MWIcon("check")+'</button>'
         + '</div></div></article>';
     }).join("") + (list.length > shown.length ? '<button class="btn ghost more" id="moreBtn">โหลดเพิ่ม (อีก '+(list.length - shown.length)+' คลิป)</button>' : "");
   }
@@ -387,7 +387,7 @@
   });
 
   /* ---------- settings ---------- */
-  function keyState(){ $("ytState").textContent = getKey() ? "✓ ตั้งแล้ว" : "ยังไม่ได้ตั้ง"; $("ytState").classList.toggle("ok", !!getKey()); }
+  function keyState(){ $("ytState").innerHTML = getKey() ? MWIcon("check") + "ตั้งแล้ว" : "ยังไม่ได้ตั้ง"; $("ytState").classList.toggle("ok", !!getKey()); }
   $("ytKey").value = getKey(); keyState();
   function saveYt(){
     MWStore.set(KEY_STORE, $("ytKey").value.trim()); msg("setMsg","บันทึก key แล้ว"); keyState();

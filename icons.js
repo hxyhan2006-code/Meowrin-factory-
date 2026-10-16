@@ -22,6 +22,11 @@
     cloud:   '<path d="M18 10h-1.3A7 7 0 1 0 4 15.5 4.5 4.5 0 0 0 8.5 20H18a5 5 0 0 0 0-10z"/>',
     down:    '<path d="M12 5v14"/><path d="M19 12l-7 7-7-7"/>',
     stop:    '<rect x="5" y="5" width="14" height="14" rx="2"/>',
+    star:    '<path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.9L12 17.8 5.8 21.1 7 14.2 2 9.3l6.9-1z"/>',
+    check:   '<path d="M20 6L9 17l-5-5"/>',
+    x:       '<path d="M18 6L6 18M6 6l12 12"/>',
+    play:    '<path fill="currentColor" stroke="none" d="M8 5v14l11-7z"/>',
+    pause:   '<path fill="currentColor" stroke="none" d="M7 5h4v14H7zM13 5h4v14h-4z"/>',
     sliders: '<path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/>'
   };
   function svg(name){ return '<svg class="ic" aria-hidden="true"><use href="#i-' + name + '"/></svg>'; }
