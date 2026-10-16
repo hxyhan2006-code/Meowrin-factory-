@@ -247,6 +247,23 @@
     if(pId !== id){ stopSaved(); pId = id; pAudio.src = savedUrls[id]; }
     pAudio.play().catch(function(err){ MW.toast("เล่นไม่ได้: " + err.message, true); });
   }
+  function durOf(url){ /* ความยาวเสียงจากเมตาดาต้าอย่างเดียว (ไม่ต้องโหลดทั้งไฟล์) · อ่านไม่ได้ใน 4 วิ = 0 */
+    return new Promise(function(ok){
+      var a = new Audio(), t = setTimeout(function(){ done(0); }, 4000);
+      function done(d){ clearTimeout(t); a.onloadedmetadata = a.ontimeupdate = a.onerror = null; a.removeAttribute("src"); ok(isFinite(d) && d > 0 ? d : 0); }
+      a.preload = "metadata"; a.onerror = function(){ done(0); };
+      a.onloadedmetadata = function(){ if(isFinite(a.duration)) done(a.duration); else { a.ontimeupdate = function(){ done(a.duration); }; a.currentTime = 1e9; } }; /* mp3 บางไฟล์ไม่บอกความยาวจนกรอสุด */
+      a.src = url;
+    });
+  }
+  function fillDurations(list, tok){ /* ทีละเทค หลังวาดรายการเสร็จ (ไม่ขวางการเปิดชีต) */
+    list.reduce(function(p, r){
+      return p.then(function(){
+        if(tok !== rsTok) return;
+        return durOf(savedUrls[r.id]).then(function(d){ var c = tok === rsTok && d && card(r.id); if(c && !(pAudio && pId === r.id)) c.querySelector(".vtime").textContent = "0:00 / " + mmss(d); });
+      });
+    }, Promise.resolve());
+  }
   function localCard(r, on){
     var st = r.cloud ? "☁ อยู่ในคลัง" : on ? "ยังไม่อยู่ในคลัง" : "เฉพาะเครื่องนี้";
     return '<div class="vcard" data-id="' + r.id + '"><div class="vtop"><button class="vplay" data-vplay="' + r.id + '" aria-label="เล่น/หยุด">' + PLAY + '</button>'
@@ -271,6 +288,7 @@
     var empty = '<p class="empty">ยังไม่มีเสียงที่เก็บไว้ · สร้างเสียงแล้วจะเก็บให้อัตโนมัติ (50 เทคล่าสุด' + (on ? " + สำรองบนคลัง" : "") + ')</p>';
     box.innerHTML = '<div id="vSavedLocal">' + (list.map(function(r){ return localCard(r, on); }).join("") || (on ? '<p class="empty">กำลังโหลด...</p>' : empty)) + '</div><div id="vSavedCloud"></div>';
     setSavedN(list.length);
+    fillDurations(list, tok);
     if(!on) return;
     try{
       var cloud = await MWVoice.cloudList();

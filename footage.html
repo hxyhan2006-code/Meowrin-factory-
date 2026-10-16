@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600&family=Mitr:wght@500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="footage.css?v=20261017m">
+<link rel="stylesheet" href="footage.css?v=20261017n">
 </head>
 <body>
 <header>
@@ -123,6 +123,12 @@
 
   <!-- ตั้งค่า -->
   <section class="page" id="p-set">
+    <div class="qbk">
+      <div><b>สำรองดัชนีขึ้น Google Drive</b><small id="gdFootQuickInfo">ตรวจสอบ...</small></div>
+      <button class="btn small" id="gdFootQuick" type="button">สำรองตอนนี้</button>
+    </div>
+    <div id="gdFootQuickMsg"></div>
+    <div class="sech">เชื่อมต่อ</div>
     <details class="panel fold"><summary><span>คลังวิดีโอ (Cloudflare R2)</span><em class="state idle" id="tagR2">ยังไม่ตั้ง</em></summary><div class="fbody">
       <p class="hint" style="margin-top:0">เก็บฟุตเทจไว้บนคลาวด์ เล่น/ต่อฉาก/ทำดัชนีจากคลังได้เลย · โฟลเดอร์ในคลัง = อัลบั้ม · คีย์เก็บในเครื่องนี้เท่านั้น ไม่ขึ้น Drive</p>
       <label for="r2Account">Account ID</label>
@@ -142,18 +148,6 @@
       <button class="btn" id="r2Save" style="width:100%;margin-top:12px">บันทึกและทดสอบ</button>
       <div id="r2Msg"></div>
     </div></details>
-    <details class="panel fold"><summary><span>งบและค่าใช้จ่าย</span><em class="state idle" id="bgTag"></em></summary><div class="fbody">
-      <div id="bgInfo"></div>
-      <p class="hint">เพดานในแอพ (ใส่ 0 = ไม่จำกัด) ถึงแล้วแอพหยุดเรียก AI / หยุดอัปเอง ใช้กับทั้งแอพหลักและหน้าฟุตเทจ · กันบั๊กและใช้เพลินได้ แต่ไม่กันคีย์หลุด ลิมิตแข็งจริงคือเครดิตที่เติมไว้ใน OpenRouter และ Budget Alert ใน Cloudflare</p>
-      <label for="bgDay">เพดานค่า AI ต่อวัน (USD)</label>
-      <input id="bgDay" type="number" min="0" step="0.5" inputmode="decimal">
-      <label for="bgMonth">เพดานค่า AI ต่อเดือน (USD)</label>
-      <input id="bgMonth" type="number" min="0" step="1" inputmode="decimal">
-      <label for="bgR2">เพดานขนาดคลัง R2 (GB)</label>
-      <input id="bgR2" type="number" min="0" step="10" inputmode="numeric">
-      <p class="hint">ค่าเงินบาทคิดที่ ~35 บาท/ดอลลาร์ (ประมาณ) · R2 10 GB แรกฟรี เกินนั้น $0.015/GB/เดือน</p>
-    </div></details>
-
     <details class="panel fold"><summary><span>สำรอง / กู้คืนดัชนี</span><em class="state idle" id="gdTag">...</em></summary><div class="fbody">
       <p class="hint" id="dbInfo"></p>
       <div class="row" style="margin-top:10px">
@@ -174,6 +168,7 @@
       <button class="btn ghost small" id="wipeBtn" style="margin-top:10px;width:100%">ลบดัชนีทั้งหมด</button>
       <div id="setMsg"></div>
     </div></details>
+    <div class="sech">ทำดัชนี</div>
     <details class="panel fold"><summary><span>AI ดูรูป</span><em class="state idle" id="tagAi"></em></summary><div class="fbody">
       <p class="hint" id="keyInfo"></p>
       <label for="model">โมเดล (OpenRouter model id ที่ดูรูปได้)</label>
@@ -187,12 +182,6 @@
       <label for="par">ส่งพร้อมกันกี่คำขอ</label>
       <input id="par" type="number" min="1" max="4" step="1">
     </div></details>
-    <details class="panel fold"><summary><span>🔁 ตรวจฟุตซ้ำ</span></summary><div class="fbody">
-      <p class="hint" style="margin-top:0">หาคลิปที่เป็นฟุตเดียวกันที่อัดหน้าจอซ้ำหลายรอบ (คนละไฟล์ แต่ฉากเหมือนกัน) โดยเทียบหน้าตาของรูปฉากที่เก็บไว้ · ไม่เรียก AI ไม่เสียเงิน · "ซ่อน" = ไม่โผล่ในค้นหา/ผู้กำกับ ย้อนกลับได้ ไม่ลบไฟล์</p>
-      <p class="hint" id="dupInfo"></p>
-      <button class="btn" id="dupBtn" style="width:100%">🔁 ตรวจฟุตซ้ำ</button>
-      <div id="dupOut"></div>
-    </div></details>
     <details class="panel fold"><summary><span>ตัดฉาก</span><em class="state idle" id="tagCut"></em></summary><div class="fbody">
       <label for="thr">ความไวจุดตัดฉาก: <b id="thrVal"></b> (น้อย = ตัดถี่)</label>
       <input id="thr" type="range" min="0.04" max="0.5" step="0.01">
@@ -201,7 +190,26 @@
       <label class="chk"><input type="checkbox" id="fine"> ตัดละเอียด (สุ่มทุก 0.5 วิ ช้าลง ~2 เท่า · สำหรับคลิปตัดไว)</label>
       <p class="hint">สุ่มเฟรมทุก 1 วินาที · ฉากที่ต่างกันน้อยที่สุดจะถูกรวมจนเหลือไม่เกินเพดาน</p>
     </div></details>
+    <details class="panel fold"><summary><span>งบและค่าใช้จ่าย</span><em class="state idle" id="bgTag"></em></summary><div class="fbody">
+      <div id="bgInfo"></div>
+      <p class="hint">เพดานในแอพ (ใส่ 0 = ไม่จำกัด) ถึงแล้วแอพหยุดเรียก AI / หยุดอัปเอง ใช้กับทั้งแอพหลักและหน้าฟุตเทจ · กันบั๊กและใช้เพลินได้ แต่ไม่กันคีย์หลุด ลิมิตแข็งจริงคือเครดิตที่เติมไว้ใน OpenRouter และ Budget Alert ใน Cloudflare</p>
+      <label for="bgDay">เพดานค่า AI ต่อวัน (USD)</label>
+      <input id="bgDay" type="number" min="0" step="0.5" inputmode="decimal">
+      <label for="bgMonth">เพดานค่า AI ต่อเดือน (USD)</label>
+      <input id="bgMonth" type="number" min="0" step="1" inputmode="decimal">
+      <label for="bgR2">เพดานขนาดคลัง R2 (GB)</label>
+      <input id="bgR2" type="number" min="0" step="10" inputmode="numeric">
+      <p class="hint">ค่าเงินบาทคิดที่ ~35 บาท/ดอลลาร์ (ประมาณ) · R2 10 GB แรกฟรี เกินนั้น $0.015/GB/เดือน</p>
+    </div></details>
+    <div class="sech">ตรวจสอบ</div>
+    <details class="panel fold"><summary><span>🔁 ตรวจฟุตซ้ำ</span></summary><div class="fbody">
+      <p class="hint" style="margin-top:0">หาคลิปที่เป็นฟุตเดียวกันที่อัดหน้าจอซ้ำหลายรอบ (คนละไฟล์ แต่ฉากเหมือนกัน) โดยเทียบหน้าตาของรูปฉากที่เก็บไว้ · ไม่เรียก AI ไม่เสียเงิน · "ซ่อน" = ไม่โผล่ในค้นหา/ผู้กำกับ ย้อนกลับได้ ไม่ลบไฟล์</p>
+      <p class="hint" id="dupInfo"></p>
+      <button class="btn" id="dupBtn" style="width:100%">🔁 ตรวจฟุตซ้ำ</button>
+      <div id="dupOut"></div>
+    </div></details>
     <details class="panel fold" id="auditFold"><summary><span>🎯 ตรวจความแม่นของ AI</span><em class="state idle" id="auditTag">...</em></summary><div class="fbody"><div id="auditBox"></div></div></details>
+
   </section>
 </main>
 
@@ -222,6 +230,6 @@
 <input id="pickDocs" type="file" multiple hidden><!-- ไม่ใส่ accept → Android เปิดแอพไฟล์ (เข้าโฟลเดอร์ + เลือกทั้งหมดได้) แทนตัวเลือกรูป -->
 <video id="vid" muted playsinline preload="auto" style="position:fixed;left:-9999px;width:2px;height:2px"></video>
 
-<script src="store.js?v=20261017j" data-boot="dialog.js?v=20261017m budget.js?v=20261017j footage-core.js?v=20261017j r2.js?v=20261017j footage.js?v=20261017l footage-find.js?v=20261017l footage-dup.js?v=20261017j footage-audit.js?v=20261017l footage-cloud.js?v=20261017j mp4fix.js?v=20261017j footage-stitch.js?v=20261017j voicestore.js?v=20261017j footage-plan.js?v=20261017l gdrive.js?v=20261017m"></script>
+<script src="store.js?v=20261017j" data-boot="dialog.js?v=20261017n budget.js?v=20261017j footage-core.js?v=20261017j r2.js?v=20261017j footage.js?v=20261017l footage-find.js?v=20261017l footage-dup.js?v=20261017j footage-audit.js?v=20261017l footage-cloud.js?v=20261017j mp4fix.js?v=20261017j footage-stitch.js?v=20261017j voicestore.js?v=20261017j footage-plan.js?v=20261017l gdrive.js?v=20261017n"></script>
 </body>
 </html>

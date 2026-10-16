@@ -137,3 +137,10 @@ pre{white-space:pre-wrap;word-break:break-word;font-size:11px;margin:6px 0 0;col
 .dupr{display:flex;gap:8px;overflow-x:auto}.dupc{flex:none;width:110px;font-size:11px;color:var(--muted);position:relative}.dupc.off{opacity:.45}
 .dupc img{width:110px;height:110px;object-fit:cover;border-radius:8px;background:#000;display:block}.dupc b{position:absolute;top:4px;left:4px;padding:1px 7px;border-radius:999px;font-size:11px;background:rgba(0,0,0,.7)}
 .dupc b.ok{color:#4ade80}.dupc b.bad{color:#f87171}.dupc span{display:block;margin-top:4px;line-height:1.35}
+
+/* ---------- หน้าตั้งค่า: กลุ่มหัวข้อ + แถบสำรองด่วน (แบบเดียวกับแอพหลัก) ---------- */
+.sech{margin:22px 4px 8px;font-size:12px;letter-spacing:.04em;color:var(--muted)}
+details.fold>summary .state:not(.warn):not(.err){display:none} /* ป้ายสถานะโชว์เฉพาะตอนมีอะไรต้องดูแล */
+.qbk{display:flex;align-items:center;gap:12px;margin-top:14px;padding:12px 14px;border-radius:14px;border:1px solid var(--line);background:var(--surface)}
+.qbk > div{flex:1;min-width:0}.qbk b{display:block;font-size:14px}.qbk small{display:block;color:var(--muted);font-size:12.5px;line-height:1.35}
+.qbk .btn{flex:none}

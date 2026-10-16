@@ -132,7 +132,7 @@
 
   /* ---------- หน้าจอ (ปุ่มที่มีในหน้านั้นๆ) ---------- */
   function ago(t){ if(!t) return "ยังไม่เคย"; var m = Math.round((Date.now() - t) / 60000); return m < 1 ? "เมื่อกี้" : m < 60 ? m + " นาทีที่แล้ว" : m < 1440 ? Math.round(m / 60) + " ชม.ที่แล้ว" : Math.round(m / 1440) + " วันที่แล้ว"; }
-  function show(text, kind){ var html = text ? '<div class="msg ' + (kind || "") + '">' + text.replace(/</g, "&lt;") + "</div>" : ""; ["gdMsg", "gdQuickMsg"].forEach(function(id){ var el = $(id); if(el) el.innerHTML = html; }); }
+  function show(text, kind){ var html = text ? '<div class="msg ' + (kind || "") + '">' + text.replace(/</g, "&lt;") + "</div>" : ""; ["gdMsg", "gdQuickMsg", "gdFootQuickMsg"].forEach(function(id){ var el = $(id); if(el) el.innerHTML = html; }); }
   /* ---------- สถานะ (ป้ายสี: เขียว = ปกติ · เหลือง = ควรดู/ต้องกดอะไรสักอย่าง · แดง = มีปัญหา · เทา = ยังไม่ได้ตั้ง) ---------- */
   function pill(kind, text){ return '<span class="pill ' + kind + '">' + text + "</span>"; }
   function row(label, kind, text, extra){ return '<div class="strow"><span>' + label + "</span>" + pill(kind, text) + (extra ? '<small>' + extra + "</small>" : "") + "</div>"; }
@@ -148,7 +148,7 @@
   function ageKind(t){ return !t ? "idle" : Date.now() - t > 3 * 864e5 ? "warn" : "ok"; }
   function ageText(t){ return !t ? "ยังไม่เคยสำรอง" : ageKind(t) === "warn" ? ago(t) + " (นานแล้ว)" : ago(t); }
   function render(){
-    ["gdNow", "gdQuick", "gdRestore", "gdFootNow", "gdFootRestore"].forEach(function(id){ if($(id)) $(id).disabled = busy; });
+    ["gdNow", "gdQuick", "gdRestore", "gdFootNow", "gdFootQuick", "gdFootRestore"].forEach(function(id){ if($(id)) $(id).disabled = busy; });
     if($("gdConnect")) $("gdConnect").textContent = ready() ? "✓ เชื่อมแล้ว" : "เชื่อม Google Drive";
     var d = driveStatus(), kd = ageKind(cfg.last), kf = ageKind(cfg.lastFoot);
     tag("gdTag", d.kind === "ok" && kd === "warn" ? "warn" : d.kind, d.kind === "ok" && kd === "warn" ? "สำรองนานแล้ว" : d.text);
@@ -157,6 +157,8 @@
       + row("ดัชนีฟุตเทจ", kf, ageText(cfg.lastFoot), kf === "idle" ? "สำรองที่หน้าฟุตเทจ" : "");
     var qi = $("gdQuickInfo"); /* แถบสำรองด่วนในหน้าตั้งค่า */
     if(qi) qi.textContent = !cfg.client ? "ยังไม่ได้ตั้ง Client ID (ตั้งที่ ระบบ > สำรองข้อมูล)" : "ล่าสุด " + ageText(cfg.last) + (ready() ? "" : " · แตะแล้วจะเชื่อมให้ก่อน");
+    var fi = $("gdFootQuickInfo"); /* แถบสำรองด่วนของหน้าฟุตเทจ (สำรองดัชนีคลิป) */
+    if(fi) fi.textContent = !cfg.client ? "ยังไม่ได้ตั้ง Client ID (ตั้งที่ตั้งค่า > สำรอง / กู้คืนดัชนี)" : "ดัชนีฟุตเทจ ล่าสุด " + ageText(cfg.lastFoot) + (ready() ? "" : " · แตะแล้วจะเชื่อมให้ก่อน");
     renderStorage(d, kd);
   }
   function renderStorage(d, kd){
@@ -189,11 +191,12 @@
     var r = await restoreData(); setTimeout(function(){ location.reload(); }, 1200);
     return "กู้คืนแล้ว " + r.keys + " รายการ (สำรองเมื่อ " + new Date(r.at).toLocaleString("th-TH") + ") กำลังโหลดใหม่...";
   });
-  bind("gdFootNow", async function(){
+  var footNow = async function(){
     if(!window.FT || !FT.ui) throw new Error("ดัชนียังโหลดไม่เสร็จ");
     var r = await backupFootage(FT.ui.lib(), function(d, n){ show("กำลังอัปดัชนี " + d + "/" + n + " คลิป..."); });
     return r.up ? "อัปขึ้น Drive แล้ว " + r.up + " คลิป (บน Drive มีทั้งหมด " + r.total + ")" : "บน Drive ครบแล้ว ไม่มีคลิปใหม่";
-  });
+  };
+  bind("gdFootNow", footNow); bind("gdFootQuick", footNow);
   bind("gdFootRestore", async function(){
     if(!window.FT || !FT.ui) throw new Error("ดัชนียังโหลดไม่เสร็จ");
     var r = await restoreFootage(await FT.store.all(), FT.store.putMany, /* อ่านจากฐานจริง ไม่ใช่รายการที่แคชในหน้า */ function(d, n){ show("กำลังดึงดัชนีจาก Drive " + d + "/" + n + " คลิป..."); });
