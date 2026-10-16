@@ -370,7 +370,7 @@
   document.querySelectorAll("[data-models]").forEach(function(b){ b.addEventListener("click", function(){ /* โมเดลแนะนำ (ชีตของแอพ) · พิมพ์ชื่ออื่นเองในช่องได้ */
     var inp = $(b.dataset.models), list = ["google/gemini-3.8-flash", "google/gemini-4-argon"];
     FT.pick.open({ title:"โมเดลแนะนำ", icon:"spark", search:false, items:function(){ return list.map(function(m){ return { k:m, name:m, on:inp.value.trim() === m }; }); },
-      onPick:function(m){ inp.value = m; inp.dispatchEvent(new Event("change")); } });
+      onPick:function(m){ inp.value = inp.value.trim() === m && inp.id === "godModel" ? "" : m; inp.dispatchEvent(new Event("change")); } }); /* ตรวจขั้นเทพ: แตะซ้ำ = ว่าง (ใช้โมเดลหลัก) */
   }); });
   $("thr").addEventListener("input", function(){ cfg.thr = Number(this.value); $("thrVal").textContent = cfg.thr.toFixed(2); FT.saveCfg(); });
   $("thrVal").textContent = Number(cfg.thr).toFixed(2);
@@ -442,7 +442,8 @@
     var n = albumCounts();
     FT.pick.open({ title:"เลือกอัลบั้ม", placeholder:"พิมพ์ชื่ออัลบั้มเพื่อหา", icon:"folder",
       items:function(q){ return Object.keys(n).sort().filter(function(a){ return !q || a.toLowerCase().indexOf(q) >= 0; }).map(function(a){ return { k:a, name:a, sub:n[a] + " คลิป", on:a === renFrom }; }); },
-      onPick:function(a){ renFrom = a; $("albumNew").value = a; renderAlbums(); $("albumNew").focus(); $("albumNew").select(); } });
+      onPick:function(a){ if(a === renFrom){ renFrom = ""; $("albumNew").value = ""; renderAlbums(); return; } /* แตะซ้ำ = ยกเลิก */
+        renFrom = a; $("albumNew").value = a; renderAlbums(); $("albumNew").focus(); $("albumNew").select(); } });
   });
   $("albumNew").addEventListener("input", renderAlbums);
   $("albumRenBtn").addEventListener("click", async function(){ /* แก้ป้ายอัลบั้มของทุกคลิป (ไฟล์ในคลังคลาวด์ไม่ย้าย) · ชื่อซ้ำกับที่มี = รวมกัน */

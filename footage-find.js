@@ -139,7 +139,7 @@
   function pickAlbum(){
     FT.pick.open({ title:"เลือกอัลบั้ม", placeholder:"พิมพ์ชื่ออัลบั้มเพื่อหา", icon:"folder", count:matchCount,
       items:function(q){ var r = [{ k:"", name:"ทุกอัลบั้ม", sub:"", on:!albumSel }].concat(Object.keys(dat.al).sort().map(function(a){ return { k:a, name:a, sub:dat.al[a] + " คลิป", on:albumSel === a }; })); return r.filter(function(x){ return !q || x.name.toLowerCase().indexOf(q) >= 0; }); },
-      onPick:function(k){ albumSel = k; chipMax = 40; search(); } });
+      onPick:function(k){ albumSel = k === albumSel ? "" : k; chipMax = 40; search(); } }); /* แตะตัวที่เลือกอยู่ซ้ำ = ยกเลิก (กลับเป็นทั้งหมด) */
   }
   function pickChars(){ /* เลือกหลายคนได้ = ฉากต้องมีทุกคนที่เลือก · "ไม่ระบุตัวละคร" เลือกร่วมกับตัวอื่นไม่ได้ */
     FT.pick.open({ title:"เลือกตัวละคร", placeholder:"พิมพ์ชื่อเพื่อหา เช่น Zoro หรือ โซโร", icon:"user", multi:true, count:matchCount,
@@ -156,7 +156,7 @@
   function pickSize(){
     FT.pick.open({ title:"จำนวนคนในฉาก", placeholder:"พิมพ์เพื่อหา เช่น คู่", icon:"user", count:matchCount,
       items:function(q){ return SIZES.filter(function(x){ return !q || x[1].toLowerCase().indexOf(q) >= 0; }).map(function(x){ return { k:x[0], name:x[1], sub:x[0] ? dat.sz[x[0]] + " ฉาก" : "", on:sizeSel === x[0] }; }); },
-      onPick:function(k){ sizeSel = k; chipMax = 40; search(); } });
+      onPick:function(k){ sizeSel = k === sizeSel ? "" : k; chipMax = 40; search(); } });
   }
   $("chips").addEventListener("click", function(e){
     if(e.target.closest("[data-clr]")){ albumSel = sizeSel = ""; sel = []; chipMax = 40; search(); return; }
