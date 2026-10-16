@@ -199,7 +199,7 @@ select[data-sheet]{display:none}
   font:600 11.5px/20px "IBM Plex Sans Thai",sans-serif;font-style:normal;text-align:center;
 }
 #histClear{font-size:12.5px}
-.hrow{display:flex;gap:6px;align-items:stretch}
+.hrow{display:flex;flex-wrap:wrap;gap:6px;align-items:stretch}
 .hopen{
   flex:1;min-width:0;
   display:flex;align-items:center;gap:12px;
@@ -221,7 +221,10 @@ select[data-sheet]{display:none}
   overflow:hidden;font-weight:500;font-size:14px;line-height:1.35;overflow-wrap:anywhere;
 }
 .ht small{display:block;color:var(--muted);font-size:12px;margin-top:2px}
-.hdel{flex:none;align-self:center;min-width:44px;padding:0 8px}
+.hmore{flex:none;align-self:center;width:44px;min-width:44px;padding:0}.hmore .ic{margin:0}
+.hdel{display:none;flex:1 0 100%}.hrow.open .hdel{display:block}
+.vmore{flex:none;margin-left:auto;width:40px;height:40px;border-radius:50%;border:0;background:none;color:var(--muted);display:grid;place-items:center;cursor:pointer}.vmore .ic{margin:0}.vcard.open .vmore{color:var(--accent)}
+.vcard .vact{display:none}.vcard.open .vact{display:flex}
 .hdel.armed,#histClear.armed{background:var(--err);border-color:var(--err);color:#fff}
 
 /* ---------- 10h. สร้างเสียง (ElevenLabs) ---------- */
@@ -274,7 +277,7 @@ textarea.vtext,#tab-voice textarea.vtext:focus{display:block;width:100%;min-heig
 .vtop{display:flex;align-items:center;gap:12px}
 .vplay{flex:none;width:44px;height:44px;border-radius:50%;border:0;display:grid;place-items:center;background:var(--accent);color:var(--accent-ink);cursor:pointer}
 .vplay svg{width:20px;height:20px;fill:currentColor}.vplay .ipa{display:none}.vplay.on .ip{display:none}.vplay.on .ipa{display:inline}
-.vmeta{min-width:0}.vmeta b{display:block;font-size:14.5px}.vmeta small{display:block;color:var(--muted);font-size:12.5px;line-height:1.35}
+.vmeta{min-width:0;flex:1;cursor:pointer}.vmeta b{display:block;font-size:14.5px}.vmeta small{display:block;color:var(--muted);font-size:12.5px;line-height:1.35}
 .vstxt{margin:10px 0 0;font-size:13px;line-height:1.45;color:var(--muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .vprog{display:flex;align-items:center;gap:10px;margin-top:10px}
 .vbar{flex:1;height:18px;display:flex;align-items:center;cursor:pointer}

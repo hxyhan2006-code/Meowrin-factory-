@@ -20,6 +20,7 @@
     hide:    '<path d="M17.9 17.9A10.9 10.9 0 0 1 12 20c-7 0-11-8-11-8a18.5 18.5 0 0 1 5.1-5.9M9.9 4.2A9.1 9.1 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.2 3.2"/><path d="M14.1 14.1a3 3 0 1 1-4.2-4.2"/><path d="M1 1l22 22"/>',
     warn:    '<path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/>',
     cloud:   '<path d="M18 10h-1.3A7 7 0 1 0 4 15.5 4.5 4.5 0 0 0 8.5 20H18a5 5 0 0 0 0-10z"/>',
+    more:    '<g fill="currentColor" stroke="none"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></g>',
     chev:    '<path d="M6 9l6 6 6-6"/>',
     down:    '<path d="M12 5v14"/><path d="M19 12l-7 7-7-7"/>',
     stop:    '<rect x="5" y="5" width="14" height="14" rx="2"/>',

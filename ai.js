@@ -451,7 +451,8 @@
       return '<div class="hrow"><div class="hopen"><button class="hthumb" data-play="'+esc(h.id)+'" aria-label="ดูวิดีโอ"><img loading="lazy" alt="" src="'+MW.thumbUrl(h.id)+'"><i><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg></i></button>' /* แตะรูป = ดูวิดีโอในแอพ · แตะข้อความ = เปิดบท */
         + '<button class="hmain" data-open="'+esc(h.id)+'"><span class="ht"><b>'+esc(h.clip.title)+'</b><small>'+esc(histMeta(h))+'</small></span>'
         + '<span class="htags"><span class="sel-tag">'+(done ? "บทเสร็จ" + (done > 1 ? " ×" + done : "") : "State 1")+'</span><span class="sel-tag vo" data-vo="'+esc(h.id)+'" hidden></span></span></button></div>'
-        + '<button class="btn small ghost hdel" data-del="'+esc(h.id)+'" aria-label="ลบรายการนี้">ลบ</button></div>';
+        + '<button class="btn small ghost hmore" data-more="'+esc(h.id)+'" aria-label="เมนูรายการนี้">'+MWIcon("more")+'</button>'
+        + '<button class="btn small ghost hdel" data-del="'+esc(h.id)+'">ลบรายการนี้</button></div>';
     }).join("") : '<div class="empty"><div class="empty-ico">'+MWIcon("clock")+'</div>ยังไม่มีประวัติ ทำบทแล้วจะมาอยู่ตรงนี้</div>';
     $("histClear").hidden = !hist.length;
     markVoiced();
@@ -471,6 +472,7 @@
   document.addEventListener("keydown", function(e){ if(e.key === "Escape" && !$("histSheet").hidden) MW.closeModal("histSheet"); });
   $("histList").addEventListener("click", function(e){
     var b = e.target.closest("button"); if(!b) return;
+    if(b.dataset.more){ b.closest(".hrow").classList.toggle("open"); return; } /* ปุ่มลบซ่อนไว้ แตะสามจุดถึงโผล่ */
     if(b.dataset.play){ var ph = findHist(b.dataset.play); if(ph) MW.openPlayer(ph.clip); return; }
     if(b.dataset.open){
       var h = findHist(b.dataset.open); if(!h) return;
@@ -478,7 +480,7 @@
       if(cur && cur.clip.id === h.id && !running(cur)) cur = null; /* โหลดจากประวัติใหม่ */
       MW.setPick(h.clip); MW.showTab("script");
     }
-    if(b.dataset.del) MW.confirmTap(b, "ลบ", function(){ hist = hist.filter(function(x){ return x.id !== b.dataset.del; }); save(HIST, hist); renderHist(); renderHistCount(); });
+    if(b.dataset.del) MW.confirmTap(b, "ลบรายการนี้", function(){ hist = hist.filter(function(x){ return x.id !== b.dataset.del; }); save(HIST, hist); renderHist(); renderHistCount(); });
   });
   $("histClear").addEventListener("click", function(){
     var b = this; MW.confirmTap(b, "ล้างทั้งหมด", function(){ hist = []; save(HIST, hist); renderHist(); renderHistCount(); MW.toast("ล้างประวัติแล้ว"); });

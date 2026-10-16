@@ -276,10 +276,11 @@
       });
     }, Promise.resolve());
   }
+  var openCards = {}; /* การ์ดที่กางปุ่มอยู่ (ทำซับ/ตัดต่อ/ดาวน์โหลด/ลบ ซ่อนไว้จนกว่าจะแตะ) */
   function localCard(r, on){
     var st = r.cloud ? MWIcon("cloud") + "อยู่ในคลัง" : on ? "ยังไม่อยู่ในคลัง" : "เฉพาะเครื่องนี้";
-    return '<div class="vcard" data-id="' + r.id + '"><div class="vtop"><button class="vplay" data-vplay="' + r.id + '" aria-label="เล่น/หยุด">' + PLAY + '</button>'
-      + '<div class="vmeta"><b>' + MW.esc(dateOf(r.id)) + '</b><small>' + (r.blob.size / 1048576).toFixed(1) + ' MB · ' + (r.text || "").length.toLocaleString() + ' ตัวอักษร · ' + st + '</small></div></div>'
+    return '<div class="vcard' + (openCards[r.id] ? " open" : "") + '" data-id="' + r.id + '"><div class="vtop"><button class="vplay" data-vplay="' + r.id + '" aria-label="เล่น/หยุด">' + PLAY + '</button>'
+      + '<div class="vmeta"><b>' + MW.esc(dateOf(r.id)) + '</b><small>' + (r.blob.size / 1048576).toFixed(1) + ' MB · ' + (r.text || "").length.toLocaleString() + ' ตัวอักษร · ' + st + '</small></div><button class="vmore" data-vmore="' + r.id + '" aria-label="เมนูเทคนี้">' + MWIcon("more") + '</button></div>'
       + '<p class="vstxt">' + MW.esc((r.text || "").replace(/\s+/g, " ").slice(0, 140)) + '</p>'
       + '<div class="vprog"><div class="vbar" data-vbar="' + r.id + '"><i></i></div><span class="vtime">0:00</span></div>'
       + '<div class="vact"><a class="btn small" href="sub/?voice=' + r.id + '">ทำซับ</a><a class="btn small ghost" href="footage.html?voice=' + r.id + '">' + MWIcon("film") + 'ตัดต่อภาพ</a>'
@@ -321,6 +322,8 @@
   $("vSavedList").addEventListener("click", async function(e){
     var bar = e.target.closest(".vbar");
     if(bar){ if(pAudio && pId === +bar.dataset.vbar && pAudio.duration){ var r0 = bar.getBoundingClientRect(); pAudio.currentTime = Math.min(1, Math.max(0, (e.clientX - r0.left) / r0.width)) * pAudio.duration; } return; } /* แตะแถบเวลา = กรอ */
+    var mt = e.target.closest(".vmeta, [data-vmore]"), mc = mt && mt.closest(".vcard[data-id]");
+    if(mc){ var open = mc.classList.toggle("open"); if(open) openCards[mc.dataset.id] = 1; else delete openCards[mc.dataset.id]; return; }
     var b = e.target.closest("button"); if(!b) return; var d = b.dataset;
     if(d.vplay){ playSaved(+d.vplay); return; }
     if(d.vdel || d.vdelc){ /* ลบ: แตะครั้งแรกปุ่มเปลี่ยนเป็น "แน่ใจนะ?" แตะซ้ำภายใน 3 วิถึงลบ (ไม่ใช้กล่องของเบราว์เซอร์) */
