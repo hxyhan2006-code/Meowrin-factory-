@@ -209,7 +209,11 @@ select[data-sheet]{display:none}
   background:var(--field);
   color:var(--text);text-align:left;
 }
-.hopen img{flex:none;width:44px;aspect-ratio:9/16;object-fit:cover;border-radius:8px;background:var(--bg)}
+.hopen img{display:block;width:44px;aspect-ratio:9/16;object-fit:cover;border-radius:8px;background:var(--bg)}
+.hthumb{position:relative;flex:none;padding:0;border:0;border-radius:8px;background:none;cursor:pointer}
+.hthumb i{position:absolute;inset:0;display:grid;place-items:center;border-radius:8px;background:rgba(0,0,0,.28)}
+.hthumb i svg{width:22px;height:22px;fill:#fff;filter:drop-shadow(0 1px 3px rgba(0,0,0,.6))}
+.hmain{flex:1;min-width:0;display:flex;align-items:center;gap:12px;padding:0;border:0;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer}
 .ht{flex:1;min-width:0}
 .ht b{
   display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;

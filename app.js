@@ -441,7 +441,7 @@
   });
 
   window.MW = { syncSelects: function(){ sheetSels.forEach(syncSel); }, toast: toast, data: data, persist: persist, esc: esc, showTab: showTab, videoId: videoId, onMadeChange: render,
-                setPick: setPick, ago: ago, thumbUrl: thumbUrl, openModal: openModal, closeModal: closeModal, confirmTap: confirmTap };
+                setPick: setPick, ago: ago, thumbUrl: thumbUrl, openModal: openModal, closeModal: closeModal, confirmTap: confirmTap, openPlayer: openPlayer };
   /* ป้ายสถานะบนหัวข้อที่พับอยู่ในตั้งค่า (อ่านจาก MWStore เปลี่ยนเมื่อไหร่อัปเดตเอง ไม่ต้องให้แต่ละไฟล์ตั้งเอง) */
   function stTag(id, kind, text){ var el = $(id); if(el){ el.className = "state " + kind; el.textContent = text; } }
   function settingsTags(){
