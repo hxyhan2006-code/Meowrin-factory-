@@ -191,6 +191,7 @@
     $("ttsRaw").hidden = !k.rawUrl; if(k.rawUrl){ $("ttsRaw").href = k.rawUrl; $("ttsRaw").download = k.name.replace(/\.mp3$/, "_full.mp3"); }
     $("ttsInfo").textContent = k.cut !== null ? "ตัดช่วงวอร์ม " + k.cut.toFixed(1) + " วิแรกออกให้แล้ว ถ้าตัดผิด ใช้ไฟล์เต็มด้านล่างแทน"
       : k.warm ? "ไฟล์นี้ยังมีช่วงวอร์มอยู่ข้างหน้า ตัดเองใน CapCut ตามเดิม" + (cfg.tsOff ? " (โมเดลนี้ไม่ส่งเวลาตัวอักษรมา เลยตัดให้ไม่ได้)" : "") : "";
+    $("ttsSub").hidden = !k.vid; if(k.vid) $("ttsSub").href = "sub/?voice=" + k.vid;
     $("ttsShare").hidden = !canShareFile(new File([k.blob], k.name, { type:"audio/mpeg" }));
   }
   document.addEventListener("mw:script", sync);
@@ -210,7 +211,7 @@
       take.rawUrl = take.blob !== take.raw ? URL.createObjectURL(take.raw) : "";
       a.takes.push(take); a.sel = a.takes.length - 1;
       if(window.MWVoice){ /* เก็บในเครื่อง 10 เทค + สำรองขึ้นคลัง R2 (ถ้าตั้งค่าไว้) ให้หน้าฟุตเทจใช้ต่อ */
-        var vrec = { id:Date.now(), text:text, name:take.name, blob:take.blob, align:take.align };
+        var vrec = { id:Date.now(), text:text, name:take.name, blob:take.blob, align:take.align }; take.vid = vrec.id; /* vid = รหัสในที่เก็บเสียง ใช้เปิดหน้าซับด้วยเทคนี้ */
         MWVoice.put(vrec).then(function(){ return MWVoice.cloudPut(vrec).catch(function(err){ MW.toast("สำรองเสียงขึ้นคลังไม่ได้: " + err.message); }); })
           .then(function(){ if(!$("vSavedSheet").hidden) renderSaved(); else countSaved(); }).catch(function(){});
       }
@@ -253,13 +254,20 @@
   countSaved();
   $("vSavedList").addEventListener("click", async function(e){
     var b = e.target.closest("button"); if(!b) return; var d = b.dataset;
+    if(d.vdel || d.vdelc){ /* ลบ: แตะครั้งแรกปุ่มเปลี่ยนเป็น "แน่ใจนะ?" แตะซ้ำภายใน 3 วิถึงลบ (ไม่ใช้กล่องของเบราว์เซอร์) */
+      MW.confirmTap(b, b.textContent, async function(){
+        try{
+          if(d.vdel){ var rec = await MWVoice.get(+d.vdel), withCloud = rec && rec.cloud; await MWVoice.del(+d.vdel); if(withCloud) await MWVoice.cloudDel(+d.vdel); }
+          else await MWVoice.cloudDel(+d.vdelc);
+          MW.toast("ลบแล้ว");
+        }catch(err){ MW.toast("ทำไม่ได้: " + err.message); }
+        renderSaved();
+      });
+      return;
+    }
     try{
       if(d.vup){ b.disabled = true; b.textContent = "กำลังอัป..."; var r = await MWVoice.get(+d.vup); await MWVoice.cloudPut(r); }
       else if(d.vpull){ b.disabled = true; b.textContent = "กำลังดึง..."; await MWVoice.pull(+d.vpull); }
-      else if(d.vdel){ var rec = await MWVoice.get(+d.vdel), withCloud = rec && rec.cloud;
-        if(!window.confirm(withCloud ? "ลบเสียงนี้ทั้งในเครื่องและในคลัง?" : "ลบเสียงนี้?")) return;
-        await MWVoice.del(+d.vdel); if(withCloud) await MWVoice.cloudDel(+d.vdel); }
-      else if(d.vdelc){ if(!window.confirm("ลบเสียงนี้จากคลัง?")) return; await MWVoice.cloudDel(+d.vdelc); }
       else return;
     }catch(err){ MW.toast("ทำไม่ได้: " + err.message); }
     renderSaved();

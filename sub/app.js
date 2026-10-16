@@ -1,8 +1,8 @@
-import { alignLinesToWords, refineSegmentBoundariesWithEnergy } from './aligner.js?v=1.14';
-import { buildSrt } from './srt.js?v=1.14';
-import { callGroqWhisper, buildTranscriptForGemini, callGeminiSplit, removeThaiSpaces, GEMINI_MODELS, DEFAULT_GEMINI_MODEL } from './ai.js?v=1.14';
-import { loadMediabunny, decodeAudioFile, isVideoFile, extractAudioFromVideo, computePeaks, buildTrimmedAudioBuffer, audioBufferToWavBlob } from './media.js?v=1.14';
-import { CANVAS_W, FONT_FAMILY, BOTTOM_MARGIN_RATIO, renderVideo } from './render.js?v=1.14';
+import { alignLinesToWords, refineSegmentBoundariesWithEnergy } from './aligner.js?v=1.15';
+import { buildSrt } from './srt.js?v=1.15';
+import { callGroqWhisper, buildTranscriptForGemini, callGeminiSplit, removeThaiSpaces, GEMINI_MODELS, DEFAULT_GEMINI_MODEL } from './ai.js?v=1.15';
+import { loadMediabunny, decodeAudioFile, isVideoFile, extractAudioFromVideo, computePeaks, buildTrimmedAudioBuffer, audioBufferToWavBlob } from './media.js?v=1.15';
+import { CANVAS_W, FONT_FAMILY, BOTTOM_MARGIN_RATIO, renderVideo } from './render.js?v=1.15';
 
 // ===== ที่เก็บข้อมูลร่วมกับแอพหลัก (MWStore จาก ../store.js) — service worker ของแอพหลักคุมหน้านี้อยู่แล้ว =====
   const S = window.MWStore;
@@ -591,23 +591,35 @@ import { CANVAS_W, FONT_FAMILY, BOTTOM_MARGIN_RATIO, renderVideo } from './rende
   voiceList.addEventListener('click', async (e) => {
     const item = e.target.closest('.voice-item');
     if (!item) return;
-    const id = Number(item.dataset.id);
+    const note = item.querySelector('small');
     try {
-      item.querySelector('small').textContent = 'กำลังเปิดเสียง...';
-      const rec = (await window.MWVoice.get(id)) || (await window.MWVoice.pull(id));
-      if (!rec || !rec.blob) throw new Error('ไม่เจอไฟล์เสียงนี้');
+      note.textContent = 'กำลังเปิดเสียง...';
+      await useVoice(Number(item.dataset.id));
       closeVoiceModal();
-      const name = (rec.name || String(id)).replace(/\.[^.]+$/, '');
-      await loadAudioFile(new File([rec.blob], `${name}.mp3`, { type: 'audio/mpeg' }), { fromApp: true });
-      // บทของเทคนี้ = บทที่ใช้เจนเสียงนี้ ใส่ช่อง "สคริปต์ดิบ" ให้เลย (ทับของเดิม เพราะเสียงกับบทต้องเป็นชุดเดียวกัน)
-      if (rec.text && rec.text.trim()) {
-        rawScriptInput.value = rec.text.trim();
-        fileInfo.insertAdjacentHTML('beforeend', ' <span class="badge">ใส่บทของเสียงนี้ให้แล้ว</span>');
-      }
     } catch (err) {
-      item.querySelector('small').textContent = `เปิดไม่ได้: ${err.message || err}`;
+      note.textContent = `เปิดไม่ได้: ${err.message || err}`;
     }
   });
+  // ใช้เทคเสียงที่เจนไว้ (ทั้งจากรายการด้านบน และจากปุ่ม "ทำซับจอเขียว" ในแท็บเสียงของแอพหลัก ผ่าน ?voice=รหัส)
+  async function useVoice(id){
+    const rec = (await window.MWVoice.get(id)) || (await window.MWVoice.pull(id));
+    if (!rec || !rec.blob) throw new Error('ไม่เจอไฟล์เสียงนี้');
+    const name = (rec.name || String(id)).replace(/\.[^.]+$/, '');
+    await loadAudioFile(new File([rec.blob], `${name}.mp3`, { type: 'audio/mpeg' }), { fromApp: true });
+    // บทของเทคนี้ = บทที่ใช้เจนเสียงนี้ ใส่ช่อง "สคริปต์ดิบ" ให้เลย (ทับของเดิม เพราะเสียงกับบทต้องเป็นชุดเดียวกัน)
+    if (rec.text && rec.text.trim()) {
+      rawScriptInput.value = rec.text.trim();
+      fileInfo.insertAdjacentHTML('beforeend', ' <span class="badge">ใส่บทของเสียงนี้ให้แล้ว</span>');
+    }
+  }
+  const voiceFromUrl = new URLSearchParams(location.search).get('voice');
+  if (voiceFromUrl) {
+    history.replaceState(null, '', location.pathname); // กันรีเฟรชแล้วโหลดซ้ำ
+    useVoice(Number(voiceFromUrl)).catch((err) => {
+      fileInfo.innerHTML = `เปิดเสียงที่เลือกไม่ได้: ${escapeHtml(err.message || String(err))}`;
+      fileInfo.classList.add('show');
+    });
+  }
 
 
   function fmtTime(t){
