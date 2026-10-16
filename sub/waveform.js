@@ -1,7 +1,7 @@
 // waveform.js — กล่องตัดท่อนเสียง: วาดคลื่นเสียง ซูม/บีบนิ้ว แบ่ง/ลบท่อน (ลบแล้วเสียงที่เหลือต่อกันแบบ CapCut) เลิกทำ/ทำซ้ำ
 // แยกออกจาก app.js (v1.16) · state ทั้งหมดของคลื่นเสียงอยู่ในนี้ที่เดียว app.js คุยผ่านค่าที่ createTrimEditor คืนให้
 // audioEl = <audio> ตัวเดียวกับที่ app.js ใช้ (เล่น/กรอ) · trimCard = <details> กล่องตัดท่อนเสียง
-import { computePeaks, buildTrimmedAudioBuffer, audioBufferToWavBlob } from './media.js?v=4.1';
+import { computePeaks, buildTrimmedAudioBuffer, audioBufferToWavBlob } from './media.js?v=4.2';
 
 export function createTrimEditor({ audioEl, trimCard }){
   const waveformScroll = document.getElementById('waveformScroll');

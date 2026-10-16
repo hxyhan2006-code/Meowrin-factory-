@@ -59,7 +59,7 @@
   async function list(parent, extra){ /* ทุกไฟล์ในโฟลเดอร์ (ไล่หน้า) */
     var out = [], page = "";
     do{
-      var j = await (await api(API + "/files?q=" + q("'" + parent + "' in parents and trashed=false" + (extra || "")) + "&pageSize=1000&fields=nextPageToken,files(id,name,appProperties,modifiedTime,size)" + (page ? "&pageToken=" + page : ""))).json();
+      var j = await (await api(API + "/files?q=" + q("'" + parent + "' in parents and trashed=false" + (extra || "")) + "&pageSize=1000&fields=nextPageToken,files(id,name,appProperties,description,modifiedTime,size)" + (page ? "&pageToken=" + page : ""))).json();
       out = out.concat(j.files || []); page = j.nextPageToken || "";
     }while(page);
     return out;
@@ -101,102 +101,44 @@
   /* ---------- ดัชนีฟุตเทจ (IndexedDB mw_footage_v1 ผ่าน window.FT) ---------- */
   function h32(s, seed){ var h = seed >>> 0; for(var i = 0; i < s.length; i++){ h ^= s.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; } return ("0000000" + h.toString(16)).slice(-8); }
   function cid(c){ return h32(c.id, 2166136261) + h32(c.id, 3421674724); }
-  function sig(c){ return h32([c.album, c.imgV || 1, c.scenes.length, c.at || 0, c.status].join("|"), 2166136261); }
+  var SIGF = ["อัลบั้ม", "รุ่นรูป", "จำนวนฉาก", "at", "สถานะ"];
+  function comp(c){ return [c.album, c.imgV || 1, c.scenes.length, c.at || 0, c.status].join("|"); } /* ส่วนประกอบของลายเซ็น (เก็บใน description ของไฟล์บน Drive ไว้บอกสาเหตุว่าเปลี่ยนตรงไหน) */
+  function sig(c){ return h32(comp(c), 2166136261); }
+  function plan(lib, files, fmap){ /* คลิปไหนต้องอัป: ไม่มีบน Drive = ใหม่ · ลายเซ็นไม่ตรง = เปลี่ยน (นับสาเหตุ) · ไฟล์ซ้ำของคลิปเดียวกัน เลือกอันที่ลายเซ็นตรงก่อน */
+    var byId = {}, have = {}, dups = 0, cur = {};
+    lib.forEach(function(c){ cur[cid(c)] = sig(c); });
+    files.forEach(function(f){ byId[f.id] = f; var a = f.appProperties || {}; if(!a.cid) return;
+      var h = { id:f.id, sig:a.sig, desc:f.description || "" }, old = have[a.cid];
+      if(old){ dups++; if(old.sig === cur[a.cid] || h.sig !== cur[a.cid]) return; } /* ซ้ำ: คงอันที่ตรงไว้ */
+      have[a.cid] = h; });
+    var fresh = 0, changed = 0, why = {}, todo = [];
+    lib.forEach(function(c){ if(c.status !== "done") return; var k = cid(c), h = have[k], sg = sig(c);
+      if(!h && fmap[k] && byId[fmap[k].id]) h = have[k] = { id:fmap[k].id, sig:fmap[k].sig, desc:"" }; /* Drive ไม่ส่ง appProperties กลับมา → เชื่อบันทึกในเครื่องว่าไฟล์นี้อัปด้วยลายเซ็นนี้แล้ว */
+      if(h && h.sig === sg) return;
+      if(!h) fresh++; else { changed++; var o = h.desc.split("|"), n = comp(c).split("|"), hit = false;
+        SIGF.forEach(function(nm, i){ if(o.length === n.length && o[i] !== n[i]){ why[nm] = (why[nm] || 0) + 1; hit = true; } }); if(!hit) why["ไม่ทราบ"] = (why["ไม่ทราบ"] || 0) + 1; }
+      todo.push(c); });
+    return { todo:todo, have:have, fresh:fresh, changed:changed, why:why, dups:dups };
+  }
   async function pool(items, n, fn){ var i = 0; await Promise.all(Array.from({ length:Math.min(n, items.length) }, async function(){ while(i < items.length){ var x = items[i++]; await fn(x); } })); }
   async function backupFootage(lib, onProg){
-    var dir = await folder("footage", await folder(FOLDER)), have = {};
-    (await list(dir)).forEach(function(f){ var a = f.appProperties || {}; if(a.cid) have[a.cid] = { id:f.id, sig:a.sig }; });
-    var todo = lib.filter(function(c){ return c.status === "done"; }).filter(function(c){ var h = have[cid(c)]; return !h || h.sig !== sig(c); }), done = 0;
-    onProg(0, todo.length);
+    var dir = await folder("footage", await folder(FOLDER)), fmap = cfg.fmap || (cfg.fmap = {});
+    var p = plan(lib, await list(dir), fmap), have = p.have, todo = p.todo, done = 0;
+    onProg(0, todo.length, p);
     await pool(todo, 3, async function(c){
-      var h = have[cid(c)], meta = { appProperties:{ cid:cid(c), sig:sig(c) } };
-      if(!h){ meta.name = "clip_" + c.name.replace(/[^\w.\-]+/g, "_").slice(0, 60) + "_" + cid(c).slice(0, 6) + ".json"; meta.parents = [dir]; }
-      await upload(meta, JSON.stringify(c), h && h.id); done++; onProg(done, todo.length);
+      var k = cid(c), h = have[k], meta = { appProperties:{ cid:k, sig:sig(c) }, description:comp(c) };
+      if(!h){ meta.name = "clip_" + c.name.replace(/[^\w.\-]+/g, "_").slice(0, 60) + "_" + k.slice(0, 6) + ".json"; meta.parents = [dir]; }
+      fmap[k] = { id:await upload(meta, JSON.stringify(c), h && h.id), sig:sig(c) }; done++; onProg(done, todo.length, p);
+      if(done % 25 === 0) saveCfg(); /* ค้างกลางทางก็ไม่ต้องเริ่มใหม่ทั้งหมด */
     });
     cfg.lastFoot = Date.now(); saveCfg(); render();
-    return { up:todo.length, total:Object.keys(have).length + todo.filter(function(c){ return !have[cid(c)]; }).length };
+    return { up:todo.length, fresh:p.fresh, changed:p.changed, why:p.why, dups:p.dups, total:Object.keys(have).length + p.fresh };
   }
-  async function restoreFootage(lib, putMany, onProg){
-    var dir = await folder("footage", await folder(FOLDER)), mine = {};
-    lib.forEach(function(c){ mine[cid(c)] = sig(c); });
-    var files = (await list(dir)).filter(function(f){ var a = f.appProperties || {}; return !a.cid || mine[a.cid] !== a.sig; }), got = [], done = 0;
-    onProg(0, files.length);
-    await pool(files, 4, async function(f){
-      try{ var c = JSON.parse(await download(f.id)); if(c && c.id && Array.isArray(c.scenes)) got.push(c); }catch(e){}
-      done++; onProg(done, files.length);
-      if(got.length >= 20){ var b = got.splice(0); await putMany(b); }
-    });
-    if(got.length) await putMany(got);
-    return { n:done };
-  }
-
-  /* ---------- หน้าจอ (ปุ่มที่มีในหน้านั้นๆ) ---------- */
-  function ago(t){ if(!t) return "ยังไม่เคย"; var m = Math.round((Date.now() - t) / 60000); return m < 1 ? "เมื่อกี้" : m < 60 ? m + " นาทีที่แล้ว" : m < 1440 ? Math.round(m / 60) + " ชม.ที่แล้ว" : Math.round(m / 1440) + " วันที่แล้ว"; }
-  function show(text, kind){ var html = text ? '<div class="msg ' + (kind || "") + '">' + text.replace(/</g, "&lt;") + "</div>" : ""; ["gdMsg", "gdQuickMsg", "gdFootQuickMsg"].forEach(function(id){ var el = $(id); if(el) el.innerHTML = html; }); }
-  /* ---------- สถานะ (ป้ายสี: เขียว = ปกติ · เหลือง = ควรดู/ต้องกดอะไรสักอย่าง · แดง = มีปัญหา · เทา = ยังไม่ได้ตั้ง) ---------- */
-  function pill(kind, text){ return '<span class="pill ' + kind + '">' + text + "</span>"; }
-  function row(label, kind, text, extra){ return '<div class="strow"><span>' + label + "</span>" + pill(kind, text) + (extra ? '<small>' + extra + "</small>" : "") + "</div>"; }
-  function tag(id, kind, text){ var el = $(id); if(el){ el.className = "state " + kind; el.textContent = text; } }
-  var RANK = { idle:1, ok:0, warn:2, err:3 };
-  function worst(list){ return list.reduce(function(a, b){ return RANK[b] > RANK[a] ? b : a; }, "ok"); }
-  function driveStatus(){
-    if(lastErr) return { kind:"err", text:"มีปัญหา", why:lastErr };
-    if(!cfg.client) return { kind:"idle", text:"ยังไม่ได้ตั้ง", why:"ใส่ Client ID แล้วกด เชื่อม" };
-    if(!ready()) return { kind:"warn", text:"ต้องเชื่อมรอบนี้", why:"กด เชื่อม Google Drive (ทุกครั้งที่เปิดแอพรอบใหม่)" };
-    return { kind:"ok", text:"เชื่อมอยู่", why:"สำรองเองเมื่อข้อมูลเปลี่ยน" };
-  }
-  function ageKind(t){ return !t ? "idle" : Date.now() - t > 3 * 864e5 ? "warn" : "ok"; }
-  function ageText(t){ return !t ? "ยังไม่เคยสำรอง" : ageKind(t) === "warn" ? ago(t) + " (นานแล้ว)" : ago(t); }
-  function render(){
-    ["gdNow", "gdQuick", "gdRestore", "gdFootNow", "gdFootQuick", "gdFootRestore"].forEach(function(id){ if($(id)) $(id).disabled = busy; });
-    if($("gdConnect")) $("gdConnect").innerHTML = ready() ? MWIcon("check") + "เชื่อมแล้ว" : "เชื่อม Google Drive";
-    var d = driveStatus(), kd = ageKind(cfg.last), kf = ageKind(cfg.lastFoot);
-    tag("gdTag", d.kind === "ok" && kd === "warn" ? "warn" : d.kind, d.kind === "ok" && kd === "warn" ? "สำรองนานแล้ว" : d.text);
-    var st = $("gdState");
-    if(st) st.innerHTML = row("การเชื่อมต่อ", d.kind, d.text, d.why) + row("ข้อมูลแอพ", kd, ageText(cfg.last))
-      + row("ดัชนีฟุตเทจ", kf, ageText(cfg.lastFoot), kf === "idle" ? "สำรองที่หน้าฟุตเทจ" : "");
-    var qi = $("gdQuickInfo"); /* แถบสำรองด่วนในหน้าตั้งค่า */
-    if(qi) qi.textContent = !cfg.client ? "ยังไม่ได้ตั้ง Client ID (ตั้งที่ ระบบ > สำรองข้อมูล)" : "ล่าสุด " + ageText(cfg.last) + (ready() ? "" : " · แตะแล้วจะเชื่อมให้ก่อน");
-    var fi = $("gdFootQuickInfo"); /* แถบสำรองด่วนของหน้าฟุตเทจ (สำรองดัชนีคลิป) */
-    if(fi) fi.textContent = !cfg.client ? "ยังไม่ได้ตั้ง Client ID (ตั้งที่ตั้งค่า > สำรอง / กู้คืนดัชนี)" : "ดัชนีฟุตเทจ ล่าสุด " + ageText(cfg.lastFoot) + (ready() ? "" : " · แตะแล้วจะเชื่อมให้ก่อน");
-    renderStorage(d, kd);
-  }
-  function renderStorage(d, kd){
-    MWStore.info().then(function(i){
-      var idb = i.mode === "idb", full = i.quota && i.used / i.quota > 0.8, kinds = [];
-      var html = row("เก็บในเครื่อง", idb ? "ok" : "err", idb ? "IndexedDB" : "ใช้ได้แค่ localStorage", idb ? "" : "เบราว์เซอร์นี้ใช้ IndexedDB ไม่ได้ (โหมดส่วนตัว?) พื้นที่จำกัด")
-        + row("กันเบราว์เซอร์ลบเอง", i.persisted ? "ok" : "warn", i.persisted ? "ได้แล้ว" : "ยังไม่ได้", i.persisted ? "" : "เพิ่มแอพลงหน้าจอหลักช่วยได้")
-        + row("พื้นที่", full ? "warn" : "ok", (i.used / 1048576).toFixed(1) + " MB" + (i.quota ? " / " + (i.quota / 1073741824).toFixed(1) + " GB" : ""), full ? "ใกล้เต็ม" : "");
-      kinds = [idb ? "ok" : "err", i.persisted ? "ok" : "warn", full ? "warn" : "ok"];
-      var el = $("stInfo"); if(el) el.innerHTML = html;
-      /* Drive: ยังไม่ได้เชื่อมในรอบนี้เป็นเรื่องปกติ (ต้องกดเชื่อมทุกครั้งที่เปิดแอพ) เตือนเฉพาะตอนสำรองล่าสุดนานเกิน 3 วันหรือไม่เคยสำรอง */
-      var dk = d.kind === "idle" ? "warn" : d.kind === "ok" ? (kd === "warn" ? "warn" : "ok") : d.kind === "warn" ? (kd === "ok" ? "ok" : "warn") : d.kind;
-      var all = worst(kinds.concat([dk]));
-      tag("stTag", all, all === "ok" ? "ปกติ" : all === "err" ? "มีปัญหา" : "ควรดูแล");
-    });
-  }
-  async function act(btn, fn){
-    if(busy) return; busy = true; render(); var t = btn.textContent;
-    try{ if(!ready()) await connect(); show(await fn(), "ok"); lastErr = ""; }catch(err){ lastErr = err.message; show(err.message, "err"); }
-    busy = false; render(); btn.textContent = t;
-  }
-  function bind(id, fn){ var el = $(id); if(el) el.addEventListener("click", function(){ act(el, fn); }); }
-  if($("gdClient")){
-    $("gdClient").value = cfg.client || "";
-    $("gdClient").addEventListener("change", function(){ cfg.client = this.value.trim(); cfg.ok = false; tok = null; saveCfg(); render(); if(cfg.client) gis().catch(function(){}); });
-  }
-  if($("gdConnect")) $("gdConnect").addEventListener("click", function(){ connect().then(function(){ show("เชื่อมแล้ว", "ok"); }, function(err){ show(err.message, "err"); }); });
-  var backupNow = async function(){ var r = await backupData(); return "สำรองขึ้น Drive แล้ว (" + r.keys + " รายการ · " + r.kb.toFixed(0) + " KB)"; };
-  bind("gdNow", backupNow); bind("gdQuick", backupNow);
-  bind("gdRestore", async function(){
-    if(!await MWDialog.confirm("กู้คืนจาก Drive? ข้อมูลในเครื่อง (ประวัติ/prompt/ช่อง/ตั้งค่า) จะถูกแทนด้วยของบน Drive · API key ไม่ถูกแตะ", { ok:"กู้คืน" })) return "ยกเลิก";
-    var r = await restoreData(); setTimeout(function(){ location.reload(); }, 1200);
-    return "กู้คืนแล้ว " + r.keys + " รายการ (สำรองเมื่อ " + new Date(r.at).toLocaleString("th-TH") + ") กำลังโหลดใหม่...";
-  });
+  function whyText(r){ var w = Object.keys(r.why).map(function(k){ return k + " " + r.why[k]; }).join(", "); return "ใหม่ " + r.fresh + " · เปลี่ยน " + r.changed + (w ? " (" + w + ")" : "") + (r.dups ? " · ไฟล์ซ้ำบน Drive " + r.dups : ""); }
   var footNow = async function(){
     if(!window.FT || !FT.ui) throw new Error("ดัชนียังโหลดไม่เสร็จ");
-    var r = await backupFootage(FT.ui.lib(), function(d, n){ show("กำลังอัปดัชนี " + d + "/" + n + " คลิป..."); });
-    return r.up ? "อัปขึ้น Drive แล้ว " + r.up + " คลิป (บน Drive มีทั้งหมด " + r.total + ")" : "บน Drive ครบแล้ว ไม่มีคลิปใหม่";
+    var r = await backupFootage(FT.ui.lib(), function(d, n, p){ show("กำลังอัปดัชนี " + d + "/" + n + " คลิป · " + whyText(p)); });
+    return r.up ? "อัปขึ้น Drive แล้ว " + r.up + " คลิป (" + whyText(r) + ") · บน Drive มีทั้งหมด " + r.total : "บน Drive ครบแล้ว ไม่มีคลิปใหม่";
   };
   bind("gdFootNow", footNow); bind("gdFootQuick", footNow);
   bind("gdFootRestore", async function(){
