@@ -293,3 +293,5 @@ textarea.vtext,#tab-voice textarea.vtext:focus{display:block;width:100%;min-heig
 .qbk{display:flex;align-items:center;gap:12px;margin-top:10px;padding:12px 14px;border-radius:14px;border:1px solid var(--line);background:var(--surface)}
 .qbk > div{flex:1;min-width:0}.qbk b{display:block;font-size:14px}.qbk small{display:block;color:var(--muted);font-size:12.5px;line-height:1.35}
 .qbk .btn{flex:none}
+
+.ver{margin:28px 0 8px;text-align:center;font-size:12px;color:var(--muted)}
