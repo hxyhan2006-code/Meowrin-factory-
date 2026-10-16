@@ -1,13 +1,15 @@
-import { alignLinesToWords, refineSegmentBoundariesWithEnergy } from './aligner.js?v=1.9';
-import { buildSrt } from './srt.js?v=1.9';
-import { callGroqWhisper, buildTranscriptForGemini, callGeminiSplit, GEMINI_MODELS, DEFAULT_GEMINI_MODEL } from './ai.js?v=1.9';
-import { loadMediabunny, decodeAudioFile, isVideoFile, extractAudioFromVideo, computePeaks, buildTrimmedAudioBuffer, audioBufferToWavBlob } from './media.js?v=1.9';
-import { CANVAS_W, FONT_FAMILY, BOTTOM_MARGIN_RATIO, renderVideo } from './render.js?v=1.9';
+import { alignLinesToWords, refineSegmentBoundariesWithEnergy } from './aligner.js?v=1.10';
+import { buildSrt } from './srt.js?v=1.10';
+import { callGroqWhisper, buildTranscriptForGemini, callGeminiSplit, GEMINI_MODELS, DEFAULT_GEMINI_MODEL } from './ai.js?v=1.10';
+import { loadMediabunny, decodeAudioFile, isVideoFile, extractAudioFromVideo, computePeaks, buildTrimmedAudioBuffer, audioBufferToWavBlob } from './media.js?v=1.10';
+import { CANVAS_W, FONT_FAMILY, BOTTOM_MARGIN_RATIO, renderVideo } from './render.js?v=1.10';
 
 // ===== ที่เก็บข้อมูลร่วมกับแอพหลัก (MWStore จาก ../store.js) — service worker ของแอพหลักคุมหน้านี้อยู่แล้ว =====
   const S = window.MWStore;
   await S.ready;
-  const GROQ_KEY = 'mw_groq_key_v1', GEMINI_KEY = 'mw_gemini_key_v1', SUB_CFG = 'mw_sub_cfg_v1'; // key ตั้งที่แอพหลัก > ตั้งค่า
+  // เพดานค่า AI ของแอพหลัก (budget.js) ใช้ตอนถอยไป OpenRouter — โหลดหลังข้อมูลพร้อม ถ้าโหลดไม่ได้ก็ใช้ต่อได้ (แค่ไม่มีเพดาน)
+  await new Promise((ok) => { const el = document.createElement('script'); el.src = '../budget.js?v=20261016a'; el.onload = el.onerror = ok; document.body.appendChild(el); });
+  const GROQ_KEY = 'mw_groq_key_v1', GEMINI_KEY = 'mw_gemini_key_v1', OR_KEY = 'mw_openrouter_key_v1', SUB_CFG = 'mw_sub_cfg_v1'; // key ตั้งที่แอพหลัก > ตั้งค่า
   // ย้าย key จากแอปซับตัวเก่าครั้งเดียว (ถ้าเคยเปิดบนโดเมนเดียวกัน) — ครั้งต่อไปอ่านจาก MWStore อย่างเดียว
   [[GROQ_KEY, 'groq_api_key'], [GEMINI_KEY, 'gemini_api_key']].forEach(([k, old]) => {
     if (S.get(k, '')) return;
@@ -1172,7 +1174,8 @@ import { CANVAS_W, FONT_FAMILY, BOTTOM_MARGIN_RATIO, renderVideo } from './rende
     const raw = rawScriptInput.value.trim();
 
     if (!groqKey){ showAutoSplitError('ใส่ Groq API key ก่อน ที่แอพหลัก > ตั้งค่า > API key'); return; }
-    if (!geminiKey){ showAutoSplitError('ใส่ Gemini API key ก่อน ที่แอพหลัก > ตั้งค่า > API key'); return; }
+    const orKey = readKey(OR_KEY);
+    if (!geminiKey && !orKey){ showAutoSplitError('ใส่ Gemini API key (หรือ OpenRouter key) ก่อน ที่แอพหลัก > ตั้งค่า > API key'); return; }
     if (!selectedFile){ showAutoSplitError('เลือกไฟล์เสียงหรือวิดีโอก่อน (แท็บ "เสียง & ตัดต่อ")'); return; }
     if (!SCRIPT_FILL_MODE && !raw){ showAutoSplitError('วางสคริปต์ดิบในกล่อง 1 ก่อน (หรือเปิด "ตั้งค่า AI เพิ่มเติม" แล้วสลับเป็นโหมด "เติมจากเสียงด้วย" ถ้าไม่มีสคริปต์)'); return; }
 
@@ -1191,7 +1194,12 @@ import { CANVAS_W, FONT_FAMILY, BOTTOM_MARGIN_RATIO, renderVideo } from './rende
       autoSplitProgressTo(85); // Gemini phase
       showAutoSplitStatus('กำลังแยกบรรทัดด้วย Gemini ตามจังหวะเสียงจริง...');
       const transcriptText = buildTranscriptForGemini(whisperWords);
-      const splitLines = await callGeminiSplit(geminiKey, raw, transcriptText, SCRIPT_FILL_MODE, WORD_RANGE_MIN, WORD_RANGE_MAX, GEMINI_MODEL_ID);
+      const splitLines = await callGeminiSplit(geminiKey, raw, transcriptText, SCRIPT_FILL_MODE, WORD_RANGE_MIN, WORD_RANGE_MAX, GEMINI_MODEL_ID, orKey ? {
+        orKey,
+        check: () => window.MWBudget && window.MWBudget.check(), // เพดานค่า AI ต่อวัน/เดือนของแอพหลัก
+        add: (usd) => window.MWBudget && window.MWBudget.add(usd),
+        onFallback: (why) => showAutoSplitStatus(`${why.replace(/ \(\d+\):.*$/s, '')} → ใช้ OpenRouter แทน (คิดเงิน)`)
+      } : null);
 
       editedScript.value = splitLines;
       updateLineCount();

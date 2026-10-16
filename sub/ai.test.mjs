@@ -36,4 +36,56 @@ await test('ไม่ระบุหรือชื่อที่ไม่ร�
   assert.equal(await urlUsed('../evil'), expected);
 });
 
+// ---------- สำรอง OpenRouter ----------
+function mockFetch(handler) { const calls = []; globalThis.fetch = async (u, o) => { calls.push(u); return handler(u, o); }; return calls; }
+const gemOk = () => ({ ok: true, json: async () => ({ candidates: [{ content: { parts: [{ text: 'จาก Gemini' }] } }] }) });
+const gemErr = (st) => ({ ok: false, status: st, text: async () => 'quota', json: async () => ({}) });
+const orOk = (cost) => ({ ok: true, status: 200, json: async () => ({ choices: [{ message: { content: 'จาก OR' } }], usage: { cost } }) });
+const mkFb = (extra = {}) => { const log = { added: 0, notes: [], checks: 0 }; return { log, fb: { orKey: 'OR', check: () => log.checks++, add: (x) => (log.added += x), onFallback: (m) => log.notes.push(m), ...extra } }; };
+const run = (key, fb) => callGeminiSplit(key, 'ส', 'a', false, 2, 3, 'gemini-3.8-flash', fb);
+
+await test('Gemini ใช้ได้ -> ไม่แตะ OpenRouter ไม่เสียเงิน', async () => {
+  const calls = mockFetch((u) => (u.includes('openrouter') ? orOk(1) : gemOk())); const { fb, log } = mkFb();
+  assert.equal(await run('K', fb), 'จาก Gemini');
+  assert.equal(calls.length, 1); assert.equal(log.checks, 0);
+});
+
+await test('Gemini โควต้าเต็ม (429) / ล่ม (503) / ต่อไม่ได้ -> ถอยไป OpenRouter โมเดลเดียวกัน บันทึกค่าใช้จ่าย', async () => {
+  for (const mode of [429, 503, 'net']) {
+    let body = null;
+    const calls = mockFetch((u, o) => {
+      if (u.includes('openrouter')) { body = JSON.parse(o.body); return orOk(0.002); }
+      if (mode === 'net') throw new TypeError('fetch failed');
+      return gemErr(mode);
+    });
+    const { fb, log } = mkFb();
+    assert.equal(await run('K', fb), 'จาก OR');
+    assert.equal(body.model, 'google/gemini-3.8-flash'); assert.equal(calls.length, 2);
+    assert.equal(log.added, 0.002); assert.equal(log.checks, 1); assert.equal(log.notes.length, 1);
+  }
+});
+
+await test('ไม่มี OpenRouter key -> error ของ Gemini เดิม ไม่เรียก OpenRouter', async () => {
+  const calls = mockFetch(() => gemErr(429));
+  await assert.rejects(run('K', null), /Gemini API error \(429\)/);
+  assert.equal(calls.length, 1);
+});
+
+await test('ไม่มี Gemini key แต่มี OpenRouter -> ใช้ OpenRouter เลย', async () => {
+  const calls = mockFetch(() => orOk(0)); const { fb } = mkFb();
+  assert.equal(await run('', fb), 'จาก OR'); assert.equal(calls.length, 1); assert.ok(calls[0].includes('openrouter'));
+});
+
+await test('เกินเพดานค่าใช้จ่าย -> หยุด ไม่ยิง OpenRouter', async () => {
+  const calls = mockFetch((u) => (u.includes('openrouter') ? orOk(1) : gemErr(429)));
+  const { fb } = mkFb({ check: () => { throw new Error('ถึงเพดาน'); } });
+  await assert.rejects(run('K', fb), /ถึงเพดาน/); assert.equal(calls.length, 1);
+});
+
+await test('OpenRouter เครดิตหมด (402) -> ข้อความชัด', async () => {
+  mockFetch((u) => (u.includes('openrouter') ? { ok: false, status: 402, json: async () => ({ error: { message: 'x' } }) } : gemErr(429)));
+  const { fb } = mkFb();
+  await assert.rejects(run('K', fb), /เครดิต OpenRouter ไม่พอ/);
+});
+
 console.log(`\nผ่านทั้งหมด ${passed} ข้อ`);

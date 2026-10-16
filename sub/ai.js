@@ -134,27 +134,74 @@ export function buildGeminiSplitPrompt(rawScript, transcriptText, fillMode, word
   ].join('\n');
 }
 
-export async function callGeminiSplit(apiKey, rawScript, transcriptText, fillMode, wordMin, wordMax, model){
-  const prompt = buildGeminiSplitPrompt(rawScript, transcriptText, fillMode, wordMin, wordMax);
-  const modelId = GEMINI_MODELS.some(m => m.id === model) ? model : DEFAULT_GEMINI_MODEL;
-  const res = await fetch(`${GEMINI_API_BASE}${modelId}:generateContent?key=${encodeURIComponent(apiKey)}`, {
+const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
+
+function cleanSplitText(text){
+  const cleaned = (text || '').replace(/^```[a-zA-Z]*\n?/, '').replace(/```\s*$/, '').trim();
+  if (!cleaned) throw new Error('AI ไม่ส่งข้อความบรรทัดที่แยกแล้วกลับมา ลองใหม่อีกครั้ง');
+  return cleaned;
+}
+
+// สำรอง: Gemini ฟรีเต็มโควต้า/ล่ม/key ใช้ไม่ได้ → ใช้โมเดลตัวเดียวกันผ่าน OpenRouter (คิดเงินจริง)
+// fallback = { orKey, check(), add(usd), onFallback(msg) } — ไม่ใส่ = ไม่มีตัวสำรอง
+async function callOpenRouterSplit(fallback, prompt, modelId){
+  if (fallback.check) fallback.check(); // เกินเพดานค่าใช้จ่ายในแอพ → โยน error ก่อนเรียก
+  const res = await fetch(OPENROUTER_URL, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${fallback.orKey}` },
     body: JSON.stringify({
-      contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: { temperature: 0.2 }
+      model: `google/${modelId}`,
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.2,
+      usage: { include: true }
     })
   });
-
-  if (!res.ok){
-    const errText = await res.text().catch(() => '');
-    throw new Error(`Gemini API error (${res.status}): ${errText.slice(0, 300)}`);
+  const data = await res.json().catch(() => ({}));
+  const er = data.error || (data.choices && data.choices[0] && data.choices[0].error);
+  if (!res.ok || er){
+    const st = (er && typeof er.code === 'number') ? er.code : res.status;
+    const msg = ((er && er.message) || '').slice(0, 200);
+    if (st === 401) throw new Error(`OpenRouter key ใช้ไม่ได้ เช็ก key ในแอพหลัก > ตั้งค่า (${msg})`);
+    if (st === 402) throw new Error(`เครดิต OpenRouter ไม่พอ เติมเครดิตแล้วลองใหม่ (${msg})`);
+    throw new Error(`OpenRouter error (${st}): ${msg}`);
   }
+  const cost = data.usage && typeof data.usage.cost === 'number' ? data.usage.cost : 0;
+  if (cost > 0 && fallback.add) fallback.add(cost);
+  const text = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+  return cleanSplitText(typeof text === 'string' ? text : '');
+}
 
-  const data = await res.json();
-  const parts = data && data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts;
-  const text = Array.isArray(parts) ? parts.map(p => p.text || '').join('') : '';
-  const cleaned = text.replace(/^```[a-zA-Z]*\n?/, '').replace(/```\s*$/, '').trim();
-  if (!cleaned) throw new Error('Gemini ไม่ส่งข้อความบรรทัดที่แยกแล้วกลับมา ลองใหม่อีกครั้ง');
-  return cleaned;
+export async function callGeminiSplit(apiKey, rawScript, transcriptText, fillMode, wordMin, wordMax, model, fallback){
+  const prompt = buildGeminiSplitPrompt(rawScript, transcriptText, fillMode, wordMin, wordMax);
+  const modelId = GEMINI_MODELS.some(m => m.id === model) ? model : DEFAULT_GEMINI_MODEL;
+  const orKey = fallback && fallback.orKey;
+  if (!apiKey){
+    if (!orKey) throw new Error('ยังไม่ได้ใส่ Gemini key และ OpenRouter key');
+    return callOpenRouterSplit(fallback, prompt, modelId);
+  }
+  let failMsg;
+  try {
+    const res = await fetch(`${GEMINI_API_BASE}${modelId}:generateContent?key=${encodeURIComponent(apiKey)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.2 }
+      })
+    });
+    if (!res.ok){
+      const errText = await res.text().catch(() => '');
+      failMsg = `Gemini API error (${res.status}): ${errText.slice(0, 300)}`;
+    } else {
+      const data = await res.json();
+      const parts = data && data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts;
+      return cleanSplitText(Array.isArray(parts) ? parts.map(p => p.text || '').join('') : '');
+    }
+  } catch (err) {
+    if (!(err instanceof TypeError)) throw err; // เฉพาะต่อเน็ต/Gemini ไม่ได้ (fetch ล้ม) ถึงถอยไป OpenRouter · ตอบว่างเปล่าไม่ถอย
+    failMsg = 'ต่อ Gemini ไม่ได้';
+  }
+  if (!orKey) throw new Error(failMsg);
+  if (fallback.onFallback) fallback.onFallback(failMsg);
+  return callOpenRouterSplit(fallback, prompt, modelId);
 }
