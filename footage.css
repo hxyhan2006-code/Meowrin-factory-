@@ -158,3 +158,11 @@ header button.tipbtn{flex:none;width:40px;height:40px;display:flex;align-items:c
 header button.tipbtn .ic{margin:0;width:20px;height:20px}
 header button.tipbtn.on{color:var(--accent);border-color:rgba(57,217,138,.55);background:var(--accent-soft)}
 html:not(.tips) .hint.tip{display:none}
+/* ชีตเลือกอัลบั้ม (แท็บตั้งค่า) + ปุ่มเลือกอัลบั้ม */
+.albpick{width:100%;justify-content:flex-start;text-align:left}.albpick i{font-style:normal;color:var(--muted);font-size:13px;margin-left:auto}
+.asheet{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:50;display:flex;align-items:flex-end}.asheet[hidden]{display:none}
+.abox{width:100%;max-width:560px;margin:0 auto;background:var(--surface);border:1px solid var(--line-strong);border-radius:18px 18px 0 0;padding:16px 14px calc(14px + env(safe-area-inset-bottom));max-height:75vh;overflow-y:auto}
+.abox h3{margin:0 0 10px;font:500 17px Mitr,sans-serif}
+.alrow{display:flex;align-items:center;gap:10px;width:100%;min-height:52px;margin-bottom:6px;padding:0 14px;border-radius:var(--rc);border:1px solid var(--line-strong);background:var(--field);color:var(--text);font:inherit;text-align:left}
+.alrow b{flex:1;font-weight:500;overflow-wrap:anywhere}.alrow i{font-style:normal;color:var(--muted);font-size:13px}.alrow .ic{margin:0;flex:none}
+.alrow.on{background:var(--accent-soft);border-color:rgba(57,217,138,.55);color:var(--accent)}

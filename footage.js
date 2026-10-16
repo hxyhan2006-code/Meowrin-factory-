@@ -425,21 +425,29 @@
   FT.ui = { lib:function(){ return lib; }, esc:esc, msg:msg, money:money, tm:tm, capDur:capDur, refresh:refreshLib,
             addQueue:function(items){ queue = queue.filter(function(q){ return q.status !== "skip"; }).concat(items.filter(function(a){ return !queue.some(function(q){ return q.id === a.id; }); })); renderQueue(); },
             addCost:function(x){ runCost += x; renderStats(); }, wake:wake };
-  function renderAlbums(){ /* ชิปอัลบั้มที่มี: แตะ = ใส่ชื่อในช่อง (และเปิดช่องเปลี่ยนชื่อ) */
-    var n = {}; lib.forEach(function(c){ if(c.album) n[c.album] = (n[c.album] || 0) + 1; });
-    var cur = $("albumName").value.trim();
-    $("albumPick").innerHTML = Object.keys(n).sort().map(function(a){ return '<button type="button" class="chip' + (a === cur ? " on" : "") + '" data-a="' + esc(a) + '">' + MWIcon("folder") + esc(a) + " <i>" + n[a] + "</i></button>"; }).join("");
-    $("albumRenLbl").textContent = "เปลี่ยนชื่ออัลบั้ม “" + cur + "” (" + (n[cur] || 0) + " คลิป) เป็น:";
-    $("albumRen").hidden = $("albumRenLbl").hidden = !n[cur]; if(n[cur] && !$("albumNew").value) $("albumNew").value = cur;
+  /* ---------- เปลี่ยนชื่ออัลบั้ม (แท็บตั้งค่า) · ชีตเลือกอัลบั้มของแอพเอง ไม่ใช้ select ของเบราว์เซอร์ ---------- */
+  var renFrom = "";
+  function albumCounts(){ var n = {}; lib.forEach(function(c){ if(c.album) n[c.album] = (n[c.album] || 0) + 1; }); return n; }
+  function renderAlbums(){
+    var n = albumCounts(); if(!n[renFrom]) renFrom = "";
+    $("albPickBtn").innerHTML = MWIcon("folder") + (renFrom ? esc(renFrom) + " <i>" + n[renFrom] + " คลิป</i>" : "แตะเพื่อเลือกอัลบั้ม");
+    $("albumRenBtn").disabled = !renFrom || !$("albumNew").value.trim() || $("albumNew").value.trim() === renFrom;
   }
-  $("albumPick").addEventListener("click", function(e){ var b = e.target.closest("[data-a]"); if(!b) return; $("albumName").value = b.dataset.a === $("albumName").value.trim() ? "" : b.dataset.a; $("albumNew").value = ""; renderAlbums(); });
-  $("albumName").addEventListener("input", function(){ $("albumNew").value = ""; renderAlbums(); });
-  $("albumRenBtn").addEventListener("click", async function(){ /* เปลี่ยนชื่อ = แก้ป้ายอัลบั้มของทุกคลิป (ไฟล์ในคลังคลาวด์ไม่ย้าย) · ชื่อซ้ำกับที่มี = รวมกัน */
-    var old = $("albumName").value.trim(), nw = $("albumNew").value.trim(); if(!old || !nw || nw === old) return;
+  $("albPickBtn").addEventListener("click", function(){
+    var n = albumCounts();
+    $("albList").innerHTML = Object.keys(n).sort().map(function(a){ return '<button type="button" class="alrow' + (a === renFrom ? " on" : "") + '" data-a="' + esc(a) + '">' + MWIcon("folder") + "<b>" + esc(a) + "</b><i>" + n[a] + " คลิป</i></button>"; }).join("") || '<p class="hint">ยังไม่มีอัลบั้ม</p>';
+    $("albSheet").hidden = false;
+  });
+  $("albList").addEventListener("click", function(e){ var b = e.target.closest("[data-a]"); if(!b) return; renFrom = b.dataset.a; $("albumNew").value = renFrom; $("albSheet").hidden = true; renderAlbums(); $("albumNew").focus(); $("albumNew").select(); });
+  $("albClose").addEventListener("click", function(){ $("albSheet").hidden = true; });
+  $("albSheet").addEventListener("click", function(e){ if(e.target === this) this.hidden = true; });
+  $("albumNew").addEventListener("input", renderAlbums);
+  $("albumRenBtn").addEventListener("click", async function(){ /* แก้ป้ายอัลบั้มของทุกคลิป (ไฟล์ในคลังคลาวด์ไม่ย้าย) · ชื่อซ้ำกับที่มี = รวมกัน */
+    var old = renFrom, nw = $("albumNew").value.trim(); if(!old || !nw || nw === old) return;
     var hit = lib.filter(function(c){ return c.album === old; });
     await Promise.all(hit.map(function(c){ c.album = nw; return FT.store.put(c); }));
-    $("albumName").value = nw; $("albumNew").value = "";
-    $("albumMsg").hidden = false; $("albumMsg").textContent = "เปลี่ยน “" + old + "” เป็น “" + nw + "” แล้ว " + hit.length + " คลิป";
+    renFrom = nw; $("albumNew").value = "";
+    msg("albumMsg", "เปลี่ยน “" + old + "” เป็น “" + nw + "” แล้ว " + hit.length + " คลิป", "ok");
     renderAll();
   });
   /* ---------- โชว์/ซ่อนคำอธิบาย (.hint.tip) ---------- */

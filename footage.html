@@ -5,12 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="theme-color" content="#0b0e0d" />
 <title>ฟุตเทจ · Meowrin factory</title>
-<link rel="icon" type="image/png" href="icon-192.png?v=3.6">
-<link rel="apple-touch-icon" href="icon-192.png?v=3.6">
+<link rel="icon" type="image/png" href="icon-192.png?v=3.7">
+<link rel="apple-touch-icon" href="icon-192.png?v=3.7">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600&family=Mitr:wght@500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="footage.css?v=3.6">
+<link rel="stylesheet" href="footage.css?v=3.7">
 </head>
 <body>
 <header>
@@ -25,11 +25,7 @@
       <h2>เพิ่มฟุตเทจเข้าคลัง</h2>
       <button class="btn" id="filesDocsBtn" type="button" style="width:100%"><svg class="ic" aria-hidden="true"><use href="#i-folder"/></svg>เลือกจากแอพไฟล์ (เลือกทั้งโฟลเดอร์ได้)</button>
       <label for="albumName">อัลบั้มของคลิปที่เลือก</label>
-      <input id="albumName" type="text" placeholder="พิมพ์ชื่อใหม่ หรือแตะอัลบั้มด้านล่าง" autocomplete="off" maxlength="40">
-      <div class="chips wrap" id="albumPick"></div>
-      <label id="albumRenLbl" for="albumNew" hidden></label>
-      <div id="albumRen" class="row" hidden style="margin-top:0"><input id="albumNew" type="text" placeholder="พิมพ์ชื่อใหม่" autocomplete="off" maxlength="40"><button class="btn ghost" id="albumRenBtn" type="button">เปลี่ยนชื่อ</button></div>
-      <p class="hint" id="albumMsg" hidden></p>
+      <input id="albumName" type="text" placeholder="พิมพ์ชื่ออัลบั้มที่จะอัปโหลด (ว่าง = ไม่ระบุ)" autocomplete="off" maxlength="40">
       <input id="filesDocs" type="file" multiple hidden><!-- ไม่ใส่ accept → Android เปิดแอพไฟล์ เข้า Pictures/Gallery/owner/<อัลบั้ม> แล้วเลือกทั้งหมดได้ -->
       <p class="hint tip" style="margin-top:6px">เลือกทั้งโฟลเดอร์มั่วๆ ได้เลย (Pictures → Gallery → owner → ชื่ออัลบั้ม · กดค้างไฟล์แรก → เลือกทั้งหมด) · คลิปที่ทำแล้วข้ามเอง · ถ้าตั้งค่าคลังไว้ จะอัปไฟล์ขึ้นคลังให้อัตโนมัติ · AI ดูและจัดหมวดตัวละครให้เอง</p>
       <div class="row" style="margin-top:12px">
@@ -136,6 +132,15 @@
       <button class="btn small" id="gdFootQuick" type="button">สำรองตอนนี้</button>
     </div>
     <div id="gdFootQuickMsg"></div>
+    <div class="sech">อัลบั้ม</div>
+    <details class="panel fold"><summary><span>เปลี่ยนชื่ออัลบั้ม</span><em class="state idle">...</em></summary><div class="fbody">
+      <label>อัลบั้มเดิม</label>
+      <button class="btn ghost albpick" id="albPickBtn" type="button"></button>
+      <label for="albumNew">ชื่อใหม่</label>
+      <input id="albumNew" type="text" placeholder="พิมพ์ชื่อใหม่" autocomplete="off" maxlength="40">
+      <button class="btn" id="albumRenBtn" type="button" style="width:100%;margin-top:12px" disabled>เปลี่ยนชื่อ</button>
+      <div id="albumMsg"></div>
+    </div></details>
     <div class="sech">เชื่อมต่อ</div>
     <details class="panel fold"><summary><span>คลังวิดีโอ (Cloudflare R2)</span><em class="state idle" id="tagR2">ยังไม่ตั้ง</em></summary><div class="fbody">
       <p class="hint tip" style="margin-top:0">เก็บฟุตเทจไว้บนคลาวด์ เล่น/ต่อฉาก/ทำดัชนีจากคลังได้เลย · โฟลเดอร์ในคลัง = อัลบั้ม · คีย์เก็บในเครื่องนี้เท่านั้น ไม่ขึ้น Drive</p>
@@ -238,6 +243,7 @@
 <input id="pickDocs" type="file" multiple hidden><!-- ไม่ใส่ accept → Android เปิดแอพไฟล์ (เข้าโฟลเดอร์ + เลือกทั้งหมดได้) แทนตัวเลือกรูป -->
 <video id="vid" muted playsinline preload="auto" style="position:fixed;left:-9999px;width:2px;height:2px"></video>
 
-<script src="store.js?v=3.6" data-boot="icons.js?v=3.6 dialog.js?v=3.6 budget.js?v=3.6 footage-core.js?v=3.6 r2.js?v=3.6 footage.js?v=3.6 footage-find.js?v=3.6 footage-dup.js?v=3.6 footage-audit.js?v=3.6 footage-cloud.js?v=3.6 mp4fix.js?v=3.6 footage-stitch.js?v=3.6 voicestore.js?v=3.6 footage-plan.js?v=3.6 gdrive.js?v=3.6"></script>
+<div class="asheet" id="albSheet" hidden><div class="abox" role="dialog" aria-label="เลือกอัลบั้ม"><h3>เลือกอัลบั้ม</h3><div id="albList"></div><button class="btn ghost" id="albClose" type="button" style="width:100%;margin-top:8px">ปิด</button></div></div>
+<script src="store.js?v=3.7" data-boot="icons.js?v=3.7 dialog.js?v=3.7 budget.js?v=3.7 footage-core.js?v=3.7 r2.js?v=3.7 footage.js?v=3.7 footage-find.js?v=3.7 footage-dup.js?v=3.7 footage-audit.js?v=3.7 footage-cloud.js?v=3.7 mp4fix.js?v=3.7 footage-stitch.js?v=3.7 voicestore.js?v=3.7 footage-plan.js?v=3.7 gdrive.js?v=3.7"></script>
 </body>
 </html>
