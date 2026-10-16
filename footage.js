@@ -45,10 +45,12 @@
   /* ---------- เลือกไฟล์ → คิว ---------- */
   var VIDEO = /\.(mp4|m4v|mov|webm|mkv|3gp)$/i;
   function addFiles(list){
-    var album = "ไม่ระบุ", picked = Date.now(), up = FT.cloud && FT.cloud.ready(); /* ตั้งค่าคลังไว้ = อัปขึ้นคลังอัตโนมัติ */
+    var album = $("albumName").value.trim() || "ไม่ระบุ", picked = Date.now(), up = FT.cloud && FT.cloud.ready(); /* ตั้งค่าคลังไว้ = อัปขึ้นคลังอัตโนมัติ */
     var files = Array.prototype.filter.call(list, function(f){ return /^video\//.test(f.type) || VIDEO.test(f.name); }), other = list.length - files.length; /* แอพไฟล์เลือกทั้งโฟลเดอร์ได้ → ตัดรูป/ไฟล์อื่นทิ้ง */
+    var moved = 0;
     var add = files.map(function(f){
       var done = findClip(f), id = done ? done.id : FT.clipId(f), fin = done && done.status === "done";
+      if(fin && album !== "ไม่ระบุ" && done.album !== album){ done.album = album; FT.store.put(done); moved++; } /* พิมพ์อัลบั้มแล้วเลือกคลิปที่ทำไว้ = ย้ายเข้าอัลบั้มนั้น (ไม่เรียก AI) */
       var old = fin && (done.imgV || 1) < FT.IMG_V; /* รูปรุ่นเก่า (เล็ก/เบลอ) → วาดใหม่ฟรี */
       var cloud = up && fin && !done.r2; /* ทำดัชนีแล้วแต่ยังไม่อยู่ในคลัง → อัปอย่างเดียว */
       var mode = old ? "up" : cloud ? "cloud" : "";
@@ -59,7 +61,7 @@
     /* สรุปให้รู้ก่อนกดเริ่ม: อะไรเสียค่า AI อะไรอัปอย่างเดียว อะไรข้าม (เลือกทั้งอัลบั้มซ้ำได้ ไม่ทำซ้ำ) */
     var n = function(fn){ return add.filter(fn).length; };
     var nNew = n(function(q){ return q.status === "wait" && !q.mode; }), nUp = n(function(q){ return q.mode === "cloud"; }), nFix = n(function(q){ return q.mode === "up"; }), nSkip = n(function(q){ return q.status === "skip"; });
-    msg("runMsg", "เลือกมา " + add.length + " คลิป" + (other ? " (ตัดไฟล์ที่ไม่ใช่วิดีโอ " + other + ")" : "") + " · ใหม่ทำดัชนี " + nNew + (nNew ? " (เสียค่า AI ≈ " + money(nNew * avgCost()) + ")" : "") + " · อัปขึ้นคลังอย่างเดียว " + nUp + " · วาดรูปใหม่ " + nFix + " · มีครบแล้ว ข้าม " + nSkip, nNew ? "" : "ok");
+    msg("runMsg", "เลือกมา " + add.length + " คลิป" + (other ? " (ตัดไฟล์ที่ไม่ใช่วิดีโอ " + other + ")" : "") + " · ใหม่ทำดัชนี " + nNew + (nNew ? " (เสียค่า AI ≈ " + money(nNew * avgCost()) + ")" : "") + " · อัปขึ้นคลังอย่างเดียว " + nUp + " · วาดรูปใหม่ " + nFix + " · มีครบแล้ว ข้าม " + nSkip + (moved ? " · ย้ายเข้าอัลบั้ม “" + album + "” " + moved : ""), nNew ? "" : "ok");
     renderQueue();
   }
   function avgCost(){ var d = lib.filter(function(c){ return c.status === "done" && c.cost; }); return d.length ? d.reduce(function(t, c){ return t + c.cost; }, 0) / d.length : 0.014; }
@@ -423,7 +425,15 @@
   FT.ui = { lib:function(){ return lib; }, esc:esc, msg:msg, money:money, tm:tm, capDur:capDur, refresh:refreshLib,
             addQueue:function(items){ queue = queue.filter(function(q){ return q.status !== "skip"; }).concat(items.filter(function(a){ return !queue.some(function(q){ return q.id === a.id; }); })); renderQueue(); },
             addCost:function(x){ runCost += x; renderStats(); }, wake:wake };
-  function renderAll(){ renderQueue(); renderStats(); renderDb(); if($("p-find").classList.contains("on") && FT.ui.search) FT.ui.search(); }
+  function renderAlbums(){ /* รายชื่ออัลบั้มที่มีให้แตะเลือกในช่องอัลบั้ม */
+    var n = {}; lib.forEach(function(c){ if(c.album && c.album !== "ไม่ระบุ") n[c.album] = 1; });
+    $("albumList").innerHTML = Object.keys(n).sort().map(function(a){ return '<option value="' + esc(a) + '">'; }).join("");
+  }
+  /* ---------- โชว์/ซ่อนคำอธิบาย (.hint.tip) ---------- */
+  function applyTips(){ document.documentElement.classList.toggle("tips", !!cfg.tips); $("tipBtn").classList.toggle("on", !!cfg.tips); }
+  $("tipBtn").addEventListener("click", function(){ cfg.tips = !cfg.tips; FT.saveCfg(); applyTips(); });
+  applyTips();
+  function renderAll(){ renderAlbums(); renderQueue(); renderStats(); renderDb(); if($("p-find").classList.contains("on") && FT.ui.search) FT.ui.search(); }
 
   refreshLib().then(function(){ /* เปิดหน้าครั้งไหน ถ้ามีรายการซ้ำเก่าค้าง รวมให้เองเลย (ลบแค่รายการดัชนีที่ซ้ำ ไม่แตะไฟล์วิดีโอ) */
     var d = findDupes(); if(!d.del.length) return;

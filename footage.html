@@ -5,16 +5,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="theme-color" content="#0b0e0d" />
 <title>ฟุตเทจ · Meowrin factory</title>
-<link rel="icon" type="image/png" href="icon-192.png?v=3.3">
-<link rel="apple-touch-icon" href="icon-192.png?v=3.3">
+<link rel="icon" type="image/png" href="icon-192.png?v=3.4">
+<link rel="apple-touch-icon" href="icon-192.png?v=3.4">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600&family=Mitr:wght@500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="footage.css?v=3.3">
+<link rel="stylesheet" href="footage.css?v=3.4">
 </head>
 <body>
 <header>
-  <div class="wrap"><a class="back" href="./" aria-label="กลับแอพ"><svg class="ic" aria-hidden="true"><use href="#i-back"/></svg></a><h1>ดัชนีฟุตเทจ</h1></div>
+  <div class="wrap"><a class="back" href="./" aria-label="กลับแอพ"><svg class="ic" aria-hidden="true"><use href="#i-back"/></svg></a><h1>ดัชนีฟุตเทจ</h1><button class="tipbtn" id="tipBtn" type="button" aria-label="โชว์/ซ่อนคำอธิบาย"><svg class="ic" aria-hidden="true"><use href="#i-info"/></svg></button></div>
   <nav class="tabs"><button data-p="find" class="on">คลัง</button><button data-p="idx">อัปโหลด</button><button data-p="plan">ผู้กำกับ</button><button data-p="set">ตั้งค่า</button></nav>
 </header>
 
@@ -24,8 +24,11 @@
     <div class="panel">
       <h2>เพิ่มฟุตเทจเข้าคลัง</h2>
       <button class="btn" id="filesDocsBtn" type="button" style="width:100%"><svg class="ic" aria-hidden="true"><use href="#i-folder"/></svg>เลือกจากแอพไฟล์ (เลือกทั้งโฟลเดอร์ได้)</button>
+      <label for="albumName">อัลบั้มของคลิปที่เลือก</label>
+      <input id="albumName" type="text" list="albumList" placeholder="พิมพ์ชื่ออัลบั้มใหม่ หรือแตะเลือกที่มี (ว่าง = ไม่ระบุ)" autocomplete="off" maxlength="40">
+      <datalist id="albumList"></datalist>
       <input id="filesDocs" type="file" multiple hidden><!-- ไม่ใส่ accept → Android เปิดแอพไฟล์ เข้า Pictures/Gallery/owner/<อัลบั้ม> แล้วเลือกทั้งหมดได้ -->
-      <p class="hint" style="margin-top:6px">เลือกทั้งโฟลเดอร์มั่วๆ ได้เลย (Pictures → Gallery → owner → ชื่ออัลบั้ม · กดค้างไฟล์แรก → เลือกทั้งหมด) · คลิปที่ทำแล้วข้ามเอง · ถ้าตั้งค่าคลังไว้ จะอัปไฟล์ขึ้นคลังให้อัตโนมัติ · AI ดูและจัดหมวดตัวละครให้เอง</p>
+      <p class="hint tip" style="margin-top:6px">เลือกทั้งโฟลเดอร์มั่วๆ ได้เลย (Pictures → Gallery → owner → ชื่ออัลบั้ม · กดค้างไฟล์แรก → เลือกทั้งหมด) · คลิปที่ทำแล้วข้ามเอง · ถ้าตั้งค่าคลังไว้ จะอัปไฟล์ขึ้นคลังให้อัตโนมัติ · AI ดูและจัดหมวดตัวละครให้เอง</p>
       <div class="row" style="margin-top:12px">
         <button class="btn" id="startBtn" disabled>เริ่มทำดัชนี</button>
         <button class="btn ghost" id="pauseBtn" hidden>พัก</button>
@@ -35,17 +38,17 @@
       <div class="prog"><i id="progBar"></i></div>
       <p class="hint" id="progTxt"></p>
       <p class="hint" id="wakeInfo" hidden></p>
-      <p class="hint"><svg class="ic" aria-hidden="true"><use href="#i-warn"/></svg>เปิดหน้านี้ค้างไว้ระหว่างทำ ถ้าสลับแอพ เบราว์เซอร์จะหยุดอ่านวิดีโอ (กลับมาแล้วกด เริ่ม/ทำต่อ ได้)</p>
+      <p class="hint tip"><svg class="ic" aria-hidden="true"><use href="#i-warn"/></svg>เปิดหน้านี้ค้างไว้ระหว่างทำ ถ้าสลับแอพ เบราว์เซอร์จะหยุดอ่านวิดีโอ (กลับมาแล้วกด เริ่ม/ทำต่อ ได้)</p>
     </div>
     <div class="panel">
       <h2><svg class="ic" aria-hidden="true"><use href="#i-search"/></svg>ดัชนีละเอียด</h2>
-      <p class="hint" style="margin-top:0">AI ดูเฟรมต้น/กลาง/ท้ายของทุกฉาก + ติดป้ายระยะภาพ (ใกล้/กลาง/ไกล) ความแรงของฉาก อารมณ์ เหตุการณ์ในเรื่อง และภาพมีลายน้ำ/ซับ/เบลอไหม → ค้นหาและผู้กำกับเลือกฉากแม่นขึ้น · คลิปใหม่ทำแบบนี้ให้เองแล้ว · คลิปเก่าอัปเกรดได้จากคลังโดยไม่ต้องเลือกไฟล์ (อ่านเฉพาะช่วงที่ใช้ ไม่โหลดทั้งไฟล์)</p>
+      <p class="hint tip" style="margin-top:0">AI ดูเฟรมต้น/กลาง/ท้ายของทุกฉาก + ติดป้ายระยะภาพ (ใกล้/กลาง/ไกล) ความแรงของฉาก อารมณ์ เหตุการณ์ในเรื่อง และภาพมีลายน้ำ/ซับ/เบลอไหม → ค้นหาและผู้กำกับเลือกฉากแม่นขึ้น · คลิปใหม่ทำแบบนี้ให้เองแล้ว · คลิปเก่าอัปเกรดได้จากคลังโดยไม่ต้องเลือกไฟล์ (อ่านเฉพาะช่วงที่ใช้ ไม่โหลดทั้งไฟล์)</p>
       <p class="hint" id="deepInfo"></p>
       <button class="btn" id="deepBtn" style="width:100%;margin-top:8px" disabled><svg class="ic" aria-hidden="true"><use href="#i-search"/></svg>อัปเกรดคลิปเก่า</button>
       <p class="hint" id="godInfo" style="margin-top:12px"></p>
       <button class="btn" id="godBtn" style="width:100%;margin-top:8px" disabled><svg class="ic" aria-hidden="true"><use href="#i-spark"/></svg>ตรวจขั้นเทพ</button>
       <h3 style="margin:18px 0 4px;font-size:15px"><svg class="ic" aria-hidden="true"><use href="#i-user"/></svg>ตรวจตัวละครซ้ำ</h3>
-      <p class="hint" style="margin-top:0">ถ้าฉากที่มีตัวละคร (เช่น แชงคูส อุซป) ค้นไม่เจอ ให้ AI ดูรูปที่เก็บไว้อีกรอบ แบบถามเจาะจงว่ามีใครในรายชื่อ 38 ตัวละครบ้าง (บอกลักษณะเด่นของแต่ละตัวให้ด้วย) แล้วเติมเฉพาะที่ขาด · ถูกกว่าและเร็วกว่าอัปเกรดดัชนีละเอียด ไม่ต้องเปิดไฟล์วิดีโอ</p>
+      <p class="hint tip" style="margin-top:0">ถ้าฉากที่มีตัวละคร (เช่น แชงคูส อุซป) ค้นไม่เจอ ให้ AI ดูรูปที่เก็บไว้อีกรอบ แบบถามเจาะจงว่ามีใครในรายชื่อ 38 ตัวละครบ้าง (บอกลักษณะเด่นของแต่ละตัวให้ด้วย) แล้วเติมเฉพาะที่ขาด · ถูกกว่าและเร็วกว่าอัปเกรดดัชนีละเอียด ไม่ต้องเปิดไฟล์วิดีโอ</p>
       <p class="hint" id="rcInfo"></p>
       <button class="btn" id="rcBtn" style="width:100%;margin-top:8px" disabled><svg class="ic" aria-hidden="true"><use href="#i-user"/></svg>ตรวจตัวละครซ้ำ</button>
     </div>
@@ -88,7 +91,7 @@
   <section class="page" id="p-plan">
     <div class="panel">
       <h2>ผู้กำกับ AI</h2>
-      <p class="hint" style="margin-top:0">ใส่บท → AI แบ่งช็อต แล้วดูภาพในคลังจริงเพื่อเลือกฉากที่เข้ากับแต่ละประโยค → ได้วิดีโอไฟล์เดียวไปทำต่อใน CapCut · แบบ 1 ได้คลิปยาวเผื่อเลือก คั่นจอเขียว · แบบ 2 สับไวพร้อมใช้ · ราว $0.05–0.15 ต่อบท</p>
+      <p class="hint tip" style="margin-top:0">ใส่บท → AI แบ่งช็อต แล้วดูภาพในคลังจริงเพื่อเลือกฉากที่เข้ากับแต่ละประโยค → ได้วิดีโอไฟล์เดียวไปทำต่อใน CapCut · แบบ 1 ได้คลิปยาวเผื่อเลือก คั่นจอเขียว · แบบ 2 สับไวพร้อมใช้ · ราว $0.05–0.15 ต่อบท</p>
       <label for="plSrc">บทจากประวัติ</label>
       <select id="plSrc"></select>
       <label for="plMode">แบบ</label>
@@ -132,7 +135,7 @@
     <div id="gdFootQuickMsg"></div>
     <div class="sech">เชื่อมต่อ</div>
     <details class="panel fold"><summary><span>คลังวิดีโอ (Cloudflare R2)</span><em class="state idle" id="tagR2">ยังไม่ตั้ง</em></summary><div class="fbody">
-      <p class="hint" style="margin-top:0">เก็บฟุตเทจไว้บนคลาวด์ เล่น/ต่อฉาก/ทำดัชนีจากคลังได้เลย · โฟลเดอร์ในคลัง = อัลบั้ม · คีย์เก็บในเครื่องนี้เท่านั้น ไม่ขึ้น Drive</p>
+      <p class="hint tip" style="margin-top:0">เก็บฟุตเทจไว้บนคลาวด์ เล่น/ต่อฉาก/ทำดัชนีจากคลังได้เลย · โฟลเดอร์ในคลัง = อัลบั้ม · คีย์เก็บในเครื่องนี้เท่านั้น ไม่ขึ้น Drive</p>
       <label for="r2Account">Account ID</label>
       <input id="r2Account" type="text" autocomplete="off" placeholder="ตัวเลข+ตัวอักษร 32 ตัว">
       <label for="r2Bucket">ชื่อ bucket</label>
@@ -165,7 +168,7 @@
         <button class="btn ghost" id="gdFootNow">สำรองดัชนีขึ้น Drive</button>
         <button class="btn ghost" id="gdFootRestore">ดึงดัชนีจาก Drive</button>
       </div>
-      <p class="hint">อัปเฉพาะคลิปใหม่/ที่เปลี่ยน · ทำดัชนีเสร็จแต่ละรอบ ถ้าเชื่อมอยู่จะอัปให้เอง · ใส่ Client ID ที่ ตั้งค่า ของแอพหลัก</p>
+      <p class="hint tip">อัปเฉพาะคลิปใหม่/ที่เปลี่ยน · ทำดัชนีเสร็จแต่ละรอบ ถ้าเชื่อมอยู่จะอัปให้เอง · ใส่ Client ID ที่ ตั้งค่า ของแอพหลัก</p>
       <div id="gdMsg"></div>
       <button class="btn ghost small" id="wipeBtn" style="margin-top:10px;width:100%">ลบดัชนีทั้งหมด</button>
       <div id="setMsg"></div>
@@ -190,22 +193,22 @@
       <label for="maxScenes">ฉากสูงสุดต่อคลิป</label>
       <input id="maxScenes" type="number" min="1" max="60" step="1">
       <label class="chk"><input type="checkbox" id="fine"> ตัดละเอียด (สุ่มทุก 0.5 วิ ช้าลง ~2 เท่า · สำหรับคลิปตัดไว)</label>
-      <p class="hint">สุ่มเฟรมทุก 1 วินาที · ฉากที่ต่างกันน้อยที่สุดจะถูกรวมจนเหลือไม่เกินเพดาน</p>
+      <p class="hint tip">สุ่มเฟรมทุก 1 วินาที · ฉากที่ต่างกันน้อยที่สุดจะถูกรวมจนเหลือไม่เกินเพดาน</p>
     </div></details>
     <details class="panel fold"><summary><span>งบและค่าใช้จ่าย</span><em class="state idle" id="bgTag"></em></summary><div class="fbody">
       <div id="bgInfo"></div>
-      <p class="hint">เพดานในแอพ (ใส่ 0 = ไม่จำกัด) ถึงแล้วแอพหยุดเรียก AI / หยุดอัปเอง ใช้กับทั้งแอพหลักและหน้าฟุตเทจ · กันบั๊กและใช้เพลินได้ แต่ไม่กันคีย์หลุด ลิมิตแข็งจริงคือเครดิตที่เติมไว้ใน OpenRouter และ Budget Alert ใน Cloudflare</p>
+      <p class="hint tip">เพดานในแอพ (ใส่ 0 = ไม่จำกัด) ถึงแล้วแอพหยุดเรียก AI / หยุดอัปเอง ใช้กับทั้งแอพหลักและหน้าฟุตเทจ · กันบั๊กและใช้เพลินได้ แต่ไม่กันคีย์หลุด ลิมิตแข็งจริงคือเครดิตที่เติมไว้ใน OpenRouter และ Budget Alert ใน Cloudflare</p>
       <label for="bgDay">เพดานค่า AI ต่อวัน (USD)</label>
       <input id="bgDay" type="number" min="0" step="0.5" inputmode="decimal">
       <label for="bgMonth">เพดานค่า AI ต่อเดือน (USD)</label>
       <input id="bgMonth" type="number" min="0" step="1" inputmode="decimal">
       <label for="bgR2">เพดานขนาดคลัง R2 (GB)</label>
       <input id="bgR2" type="number" min="0" step="10" inputmode="numeric">
-      <p class="hint">ค่าเงินบาทคิดที่ ~35 บาท/ดอลลาร์ (ประมาณ) · R2 10 GB แรกฟรี เกินนั้น $0.015/GB/เดือน</p>
+      <p class="hint tip">ค่าเงินบาทคิดที่ ~35 บาท/ดอลลาร์ (ประมาณ) · R2 10 GB แรกฟรี เกินนั้น $0.015/GB/เดือน</p>
     </div></details>
     <div class="sech">ตรวจสอบ</div>
     <details class="panel fold"><summary><span><svg class="ic" aria-hidden="true"><use href="#i-repeat"/></svg>ตรวจฟุตซ้ำ</span></summary><div class="fbody">
-      <p class="hint" style="margin-top:0">หาคลิปที่เป็นฟุตเดียวกันที่อัดหน้าจอซ้ำหลายรอบ (คนละไฟล์ แต่ฉากเหมือนกัน) โดยเทียบหน้าตาของรูปฉากที่เก็บไว้ · ไม่เรียก AI ไม่เสียเงิน · "ซ่อน" = ไม่โผล่ในค้นหา/ผู้กำกับ ย้อนกลับได้ ไม่ลบไฟล์</p>
+      <p class="hint tip" style="margin-top:0">หาคลิปที่เป็นฟุตเดียวกันที่อัดหน้าจอซ้ำหลายรอบ (คนละไฟล์ แต่ฉากเหมือนกัน) โดยเทียบหน้าตาของรูปฉากที่เก็บไว้ · ไม่เรียก AI ไม่เสียเงิน · "ซ่อน" = ไม่โผล่ในค้นหา/ผู้กำกับ ย้อนกลับได้ ไม่ลบไฟล์</p>
       <p class="hint" id="dupInfo"></p>
       <button class="btn" id="dupBtn" style="width:100%"><svg class="ic" aria-hidden="true"><use href="#i-repeat"/></svg>ตรวจฟุตซ้ำ</button>
       <div id="dupOut"></div>
@@ -232,6 +235,6 @@
 <input id="pickDocs" type="file" multiple hidden><!-- ไม่ใส่ accept → Android เปิดแอพไฟล์ (เข้าโฟลเดอร์ + เลือกทั้งหมดได้) แทนตัวเลือกรูป -->
 <video id="vid" muted playsinline preload="auto" style="position:fixed;left:-9999px;width:2px;height:2px"></video>
 
-<script src="store.js?v=3.3" data-boot="icons.js?v=3.3 dialog.js?v=3.3 budget.js?v=3.3 footage-core.js?v=3.3 r2.js?v=3.3 footage.js?v=3.3 footage-find.js?v=3.3 footage-dup.js?v=3.3 footage-audit.js?v=3.3 footage-cloud.js?v=3.3 mp4fix.js?v=3.3 footage-stitch.js?v=3.3 voicestore.js?v=3.3 footage-plan.js?v=3.3 gdrive.js?v=3.3"></script>
+<script src="store.js?v=3.4" data-boot="icons.js?v=3.4 dialog.js?v=3.4 budget.js?v=3.4 footage-core.js?v=3.4 r2.js?v=3.4 footage.js?v=3.4 footage-find.js?v=3.4 footage-dup.js?v=3.4 footage-audit.js?v=3.4 footage-cloud.js?v=3.4 mp4fix.js?v=3.4 footage-stitch.js?v=3.4 voicestore.js?v=3.4 footage-plan.js?v=3.4 gdrive.js?v=3.4"></script>
 </body>
 </html>

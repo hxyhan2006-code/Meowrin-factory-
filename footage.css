@@ -153,3 +153,8 @@ details.fold>summary .state:not(.warn):not(.err){display:none} /* ป้าย�
 .bm .ic{width:20px;height:20px}.bm.on .ic,.svbtn.on .ic{fill:currentColor}
 .pbtn .ic{width:20px;height:20px;margin:0}
 .chip.done .ic{width:1em;height:1em;margin-right:.25em}
+/* ปุ่มโชว์/ซ่อนคำอธิบาย: ปิดไว้เป็นค่าเริ่ม (ซ่อนเฉพาะ .hint.tip = คำอธิบายถาวร ไม่ซ่อนตัวเลข/สถานะ) */
+header button.tipbtn{flex:none;width:40px;height:40px;display:flex;align-items:center;justify-content:center;border-radius:10px;background:var(--surface);border:1px solid var(--line);color:var(--muted);padding:0}
+header button.tipbtn .ic{margin:0;width:20px;height:20px}
+header button.tipbtn.on{color:var(--accent);border-color:rgba(57,217,138,.55);background:var(--accent-soft)}
+html:not(.tips) .hint.tip{display:none}
