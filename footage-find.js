@@ -130,7 +130,7 @@
     $("onlyRow").hidden = !sel.length || sel.indexOf("?") >= 0; $("onlySel").checked = only;
     var al = {}; U.lib().forEach(function(c){ if(c.status === "done" && !c.hide) al[c.album] = (al[c.album] || 0) + 1; }); /* ชิปอัลบั้มที่จัดเอง: นับเป็นคลิป */
     var an = Object.keys(al).sort(function(x, y){ return al[y] - al[x]; });
-    $("albums").innerHTML = an.length > 1 ? '<button class="chip' + (albumSel ? "" : " on") + '" data-a="">ทุกอัลบั้ม</button>' + an.map(function(a){ return '<button class="chip' + (albumSel === a ? " on" : "") + '" data-a="' + esc(a) + '">📁 ' + esc(a) + " <i>" + al[a] + "</i></button>"; }).join("") : "";
+    $("albums").innerHTML = an.length > 1 ? '<button class="chip' + (albumSel ? "" : " on") + '" data-a="">ทุกอัลบั้ม</button>' + an.map(function(a){ return '<button class="chip' + (albumSel === a ? " on" : "") + '" data-a="' + esc(a) + '">' + MWIcon("folder") + esc(a) + " <i>" + al[a] + "</i></button>"; }).join("") : "";
   }
   $("albums").addEventListener("click", function(e){ var b = e.target.closest("[data-a]"); if(!b) return; albumSel = b.dataset.a === albumSel ? "" : b.dataset.a; chipMax = 40; search(); });
   $("chips").addEventListener("click", function(e){
@@ -210,8 +210,8 @@
       + (sc ? '<img class="scene" src="' + sc.thumb + '" alt="ฉาก" data-k="' + k + '">' : "") + '</div><div class="t">'
       + "<b>" + esc(c.album) + "</b>" + (sc ? ' · <span class="when">ฉาก ' + tm(sc.s) + "–" + tm(sc.e) + "</span>" : " · " + c.scenes.length + " ฉาก")
       + "<p>" + (exact ? '<span class="tag ok">★ ตรงเป๊ะ</span> ' : "") + (why ? '<span class="tag run">AI: ' + esc(why) + "</span> " : "") + esc(sc ? (a.summary_th || "(AI ไม่ได้อธิบายฉากนี้)") : (c.summary_th || "")) + "</p>"
-      + (who ? "<p>👤 " + esc(who) + "</p>" : "")
-      + (sc && (a.shot || a.intensity || a.event || a.multi) ? '<p class="meta">🎞 ' + esc([SHOT[a.shot], a.intensity ? "แรง " + a.intensity + "/5" : "", a.event || a.arc, (a.issues || []).length ? "⚠ " + a.issues.join(", ") : "", a.multi ? "✂ หลายช็อตปน" : "", a.usable && a.usable <= 2 ? "คุณภาพต่ำ" : ""].filter(Boolean).join(" · ")) + "</p>" : "") /* ป้ายดัชนีรุ่นละเอียด */
+      + (who ? "<p>" + MWIcon("user") + esc(who) + "</p>" : "")
+      + (sc && (a.shot || a.intensity || a.event || a.multi) ? '<p class="meta">' + MWIcon("film") + esc([SHOT[a.shot], a.intensity ? "แรง " + a.intensity + "/5" : "", a.event || a.arc, (a.issues || []).length ? "ปัญหาภาพ: " + a.issues.join(", ") : "", a.multi ? "หลายช็อตปน" : "", a.usable && a.usable <= 2 ? "คุณภาพต่ำ" : ""].filter(Boolean).join(" · ")) + "</p>" : "") /* ป้ายดัชนีรุ่นละเอียด */
       + (sc ? "" : strip(c)) /* โหมดดูทั้งคลิป: แถบรูปทุกฉาก แตะดูรูปใหญ่ + คำอธิบายฉากนั้น */
       + '<p>' + day(c.lastModified) + '</p><div class="fname">' + esc(c.name) + "</div></div></div>";
   }

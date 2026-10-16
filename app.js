@@ -83,8 +83,8 @@
   $("viewBtn").addEventListener("click", function(){ data.cols = data.cols === 3 ? 2 : 3; persist(); render(); });
 
   function metricChip(c, sort){
-    if(sort === "vpd") return '<span class="chip hot">🔥 '+fmtNumTh(Math.round(vpd(c)))+'/วัน</span>';
-    if(sort === "score" && c.score) return '<span class="chip hot">🔥 '+c.score.toFixed(1)+'×</span>';
+    if(sort === "vpd") return '<span class="chip hot">'+MWIcon("flame")+fmtNumTh(Math.round(vpd(c)))+'/วัน</span>';
+    if(sort === "score" && c.score) return '<span class="chip hot">'+MWIcon("flame")+c.score.toFixed(1)+'×</span>';
     return "";
   }
 
@@ -134,7 +134,7 @@
         : ui.only === "saved" ? "ยังไม่ได้เก็บคลิปไว้ กดดาว ☆ มุมล่างขวาของรูปคลิป"
         : ui.only === "made" ? "ยังไม่มีคลิปที่ทำแล้ว"
         : "ไม่มีคลิปในช่วงเวลานี้ ลองกดช่วงที่ยาวขึ้น";
-      $("list").innerHTML = '<div class="empty"><div class="empty-ico">🎬</div>'+esc(why)+'</div>';
+      $("list").innerHTML = '<div class="empty"><div class="empty-ico">'+MWIcon("film")+'</div>'+esc(why)+'</div>';
       return;
     }
     $("list").innerHTML = shown.map(function(c){

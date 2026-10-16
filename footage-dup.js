@@ -1,4 +1,4 @@
-/* footage-dup.js — พับ "🔁 ตรวจฟุตซ้ำ" ในแท็บตั้งค่า: หาคลิปที่เป็นฟุตเดียวกันที่อัดหน้าจอซ้ำหลายรอบ (คนละไฟล์ แต่ฉากเหมือนกัน)
+/* footage-dup.js — พับ "ตรวจฟุตซ้ำ" ในแท็บตั้งค่า: หาคลิปที่เป็นฟุตเดียวกันที่อัดหน้าจอซ้ำหลายรอบ (คนละไฟล์ แต่ฉากเหมือนกัน)
    วิธี: ทำลายนิ้วมือภาพ (dHash 64 บิต) ของรูปฉากที่เก็บไว้ (ไม่เรียก AI ไม่เสียเงิน) → จับคู่ฉากที่ต่างกัน ≤ T บิต ข้ามคลิป → คลิปที่ฉากซ้ำกันมากพอ = ซ้ำ
    → จัดกลุ่ม (union-find) แนะนำเก็บตัวที่ใหญ่/ยาวสุด · "ซ่อน" = c.hide (ค้นหา/ชิป/ผู้กำกับไม่เห็น ย้อนกลับได้ ไม่ลบไฟล์ในคลัง)
    แฮชเก็บที่ sc.h (hex 16 ตัว, "" = ภาพเรียบ/ดำ ข้าม) · โหลดหลัง footage-find.js */
@@ -63,12 +63,12 @@
     var hidden = U.lib().filter(function(c){ return c.hide; });
     var dupClips = 0, bytes = 0; groups.forEach(function(g){ g.items.forEach(function(it){ if(it.c !== g.keep){ dupClips++; bytes += it.c.size || 0; } }); });
     box.innerHTML = (groups.length ? '<p class="hint"><b>พบ ' + groups.length + " กลุ่ม</b> · คลิปที่ซ้ำ " + dupClips + " คลิป (ราว " + gb(bytes) + ") · ตัวที่ติดป้าย \"เก็บ\" คือตัวที่ยาว/ครอบคลุมที่สุด</p>"
-      + '<button class="btn" id="dupHideAll" style="width:100%">🙈 ซ่อนตัวที่ซ้ำทั้งหมด (' + dupClips + " คลิป)</button>"
+      + '<button class="btn" id="dupHideAll" style="width:100%">' + MWIcon("hide") + 'ซ่อนตัวที่ซ้ำทั้งหมด (' + dupClips + " คลิป)</button>"
       : '<p class="hint">ไม่พบฟุตซ้ำ (ที่ฉากเหมือนกัน ≥ 40%)</p>')
       + groups.map(function(g, gi){
         return '<div class="dupg"><div class="dupr">' + g.items.map(function(it){ var c = it.c, keep = c === g.keep;
           return '<div class="dupc' + (c.hide ? " off" : "") + '"><img src="' + (c.cover || "") + '" alt=""><b class="' + (keep ? "ok" : "bad") + '">' + (keep ? "เก็บ ✓" : c.hide ? "ซ่อนแล้ว" : "ซ้ำ") + "</b><span>" + esc(c.name.length > 22 ? c.name.slice(0, 20) + "…" : c.name) + "<br>" + U.capDur(c.duration) + " · " + gb(c.size || 0) + "<br>" + esc(c.album) + "</span></div>"; }).join("") + "</div>"
-          + '<button class="btn ghost small" data-dg="' + gi + '" style="width:100%;margin-top:6px">' + (g.items.every(function(it){ return it.c === g.keep || it.c.hide; }) ? "↩ คืนตัวที่ซ่อนในกลุ่มนี้" : "🙈 ซ่อนตัวที่ซ้ำในกลุ่มนี้") + "</button></div>"; }).join("")
+          + '<button class="btn ghost small" data-dg="' + gi + '" style="width:100%;margin-top:6px">' + (g.items.every(function(it){ return it.c === g.keep || it.c.hide; }) ? "↩ คืนตัวที่ซ่อนในกลุ่มนี้" : MWIcon("hide") + "ซ่อนตัวที่ซ้ำในกลุ่มนี้") + "</button></div>"; }).join("")
       + (hidden.length ? '<p class="hint" style="margin-top:12px">ซ่อนอยู่ทั้งหมด ' + hidden.length + ' คลิป (ไม่โผล่ในค้นหา/ผู้กำกับ · ไฟล์ในคลังยังอยู่)</p><button class="btn ghost small" id="dupShowAll" style="width:100%">↩ คืนทุกคลิปที่ซ่อน</button>' : "");
   }
   async function setHide(clips, on){
@@ -82,7 +82,7 @@
       b.textContent = "กำลังเทียบฉาก..."; await new Promise(function(r){ setTimeout(r, 20); });
       groups = analyze(clips); $("dupInfo").textContent = "ตรวจ " + clips.length + " คลิป · " + clips.reduce(function(t, c){ return t + c.scenes.length; }, 0) + " ฉาก";
     }catch(err){ $("dupInfo").textContent = "ตรวจไม่สำเร็จ: " + err.message; }
-    b.disabled = false; b.textContent = "🔁 ตรวจฟุตซ้ำอีกรอบ"; busy = false; render();
+    b.disabled = false; b.innerHTML = MWIcon("repeat") + "ตรวจฟุตซ้ำอีกรอบ"; busy = false; render();
   });
   $("dupOut").addEventListener("click", function(e){
     var b = e.target.closest("button"); if(!b || !groups) return;

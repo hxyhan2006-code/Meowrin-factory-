@@ -155,7 +155,7 @@
     $("goBtn").textContent = busy ? "กำลังทำบท..." : cur.vers.length ? (n > 1 ? "ทำใหม่ " + n + " เวอร์ชัน" : "ทำบทใหม่") : (n > 1 ? "ทำบท " + n + " เวอร์ชัน" : "ทำบทเลย");
     $("vWrap").hidden = !cur.vers.length;
     $("vTabs").innerHTML = cur.vers.length < 2 ? "" : cur.vers.map(function(v, i){
-      var ic = v.busy ? "⏳ " : v.err ? "⚠ " : v.s2 ? "✓ " : "";
+      var ic = v.busy ? MWIcon("clock") : v.err ? MWIcon("warn") : v.s2 ? "✓ " : "";
       return '<button class="fchip'+(i === cur.active ? ' on' : '')+'" data-v="'+i+'">'+ic+esc(v.pname)+'</button>';
     }).join("");
     var v = activeV();
@@ -463,7 +463,7 @@
         + '<button class="hmain" data-open="'+esc(h.id)+'"><span class="ht"><b>'+esc(h.clip.title)+'</b><small>'+esc(histMeta(h))+'</small></span>'
         + '<span class="sel-tag">'+(done ? "บทเสร็จ" + (done > 1 ? " ×" + done : "") : "State 1")+'</span></button></div>'
         + '<button class="btn small ghost hdel" data-del="'+esc(h.id)+'" aria-label="ลบรายการนี้">ลบ</button></div>';
-    }).join("") : '<div class="empty"><div class="empty-ico">🕘</div>ยังไม่มีประวัติ ทำบทแล้วจะมาอยู่ตรงนี้</div>';
+    }).join("") : '<div class="empty"><div class="empty-ico">'+MWIcon("clock")+'</div>ยังไม่มีประวัติ ทำบทแล้วจะมาอยู่ตรงนี้</div>';
     $("histClear").hidden = !hist.length;
   }
   $("histBtn").addEventListener("click", function(){ renderHist(); MW.openModal("histSheet"); });

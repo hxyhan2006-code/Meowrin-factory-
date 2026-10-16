@@ -33,7 +33,7 @@
   async function call(withTs, text){
     var key = load(KEY, "");
     if(!key) throw new Error("ยังไม่ได้ใส่ ElevenLabs API key (แท็บตั้งค่า)");
-    if(!cfg.voice) throw new Error("ยังไม่ได้เลือกเสียง (ตั้งค่า → เสียงพากย์ → เพิ่มเสียง แล้วเลือกที่ปุ่ม ⚙ ในแท็บ เสียง)");
+    if(!cfg.voice) throw new Error("ยังไม่ได้เลือกเสียง (ตั้งค่า → เสียงพากย์ → เพิ่มเสียง แล้วเลือกที่ปุ่มตั้งค่าเสียงในแท็บ เสียง)");
     var res;
     try{
       res = await fetch(API + encodeURIComponent(cfg.voice) + (withTs ? "/with-timestamps" : "") + "?output_format=" + cfg.fmt, {
@@ -178,7 +178,7 @@
   function sync(){ /* เรียกทุกครั้งที่บทในจอเปลี่ยน */
     var text = scriptText(), n = text.length, a = found(text), label = n ? " · " + n.toLocaleString() + " ตัวอักษร" : "";
     $("ttsBtn").hidden = !!a; $("ttsBtn").disabled = busy || !n; $("ttsMore").hidden = !a; /* ปุ่มล่างจอ: ยังไม่มีเสียง = สร้างเสียง · มีแล้ว = อีกเทค */
-    $("ttsBtn").textContent = busy ? "กำลังสร้างเสียง..." : "🔊 สร้างเสียง" + label;
+    $("ttsBtn").innerHTML = busy ? "กำลังสร้างเสียง..." : MWIcon("speaker") + "สร้างเสียง" + label;
     $("ttsMore").disabled = busy; $("ttsMore").textContent = busy ? "กำลังสร้างเสียง..." : "+ สร้างอีกเทค" + label;
     $("ttsOut").hidden = !a;
     if(!a) return;
@@ -265,19 +265,19 @@
     }, Promise.resolve());
   }
   function localCard(r, on){
-    var st = r.cloud ? "☁ อยู่ในคลัง" : on ? "ยังไม่อยู่ในคลัง" : "เฉพาะเครื่องนี้";
+    var st = r.cloud ? MWIcon("cloud") + "อยู่ในคลัง" : on ? "ยังไม่อยู่ในคลัง" : "เฉพาะเครื่องนี้";
     return '<div class="vcard" data-id="' + r.id + '"><div class="vtop"><button class="vplay" data-vplay="' + r.id + '" aria-label="เล่น/หยุด">' + PLAY + '</button>'
       + '<div class="vmeta"><b>' + MW.esc(dateOf(r.id)) + '</b><small>' + (r.blob.size / 1048576).toFixed(1) + ' MB · ' + (r.text || "").length.toLocaleString() + ' ตัวอักษร · ' + st + '</small></div></div>'
       + '<p class="vstxt">' + MW.esc((r.text || "").replace(/\s+/g, " ").slice(0, 140)) + '</p>'
       + '<div class="vprog"><div class="vbar" data-vbar="' + r.id + '"><i></i></div><span class="vtime">0:00</span></div>'
       + '<div class="vact"><a class="btn small" href="sub/?voice=' + r.id + '">ทำซับ</a>'
       + '<a class="btn ghost small" href="' + savedUrls[r.id] + '" download="' + MW.esc(r.name || "meowrin.mp3") + '">ดาวน์โหลด</a>'
-      + (on && !r.cloud ? '<button class="btn ghost small" data-vup="' + r.id + '">☁ อัปขึ้นคลัง</button>' : "")
+      + (on && !r.cloud ? '<button class="btn ghost small" data-vup="' + r.id + '">' + MWIcon("cloud") + 'อัปขึ้นคลัง</button>' : "")
       + '<button class="btn ghost small" data-vdel="' + r.id + '">ลบ</button></div></div>';
   }
   function cloudCard(c){
-    return '<div class="vcard"><div class="vtop"><div class="vmeta"><b>' + MW.esc(dateOf(c.id)) + '</b><small>' + (c.size / 1048576).toFixed(1) + ' MB · ☁ อยู่ในคลัง</small></div></div>'
-      + '<div class="vact"><button class="btn small" data-vpull="' + c.id + '">⬇ ดึงมาเครื่องนี้</button><button class="btn ghost small" data-vdelc="' + c.id + '">ลบจากคลัง</button></div></div>';
+    return '<div class="vcard"><div class="vtop"><div class="vmeta"><b>' + MW.esc(dateOf(c.id)) + '</b><small>' + (c.size / 1048576).toFixed(1) + ' MB · ' + MWIcon("cloud") + 'อยู่ในคลัง</small></div></div>'
+      + '<div class="vact"><button class="btn small" data-vpull="' + c.id + '">' + MWIcon("down") + 'ดึงมาเครื่องนี้</button><button class="btn ghost small" data-vdelc="' + c.id + '">ลบจากคลัง</button></div></div>';
   }
   async function renderSaved(){ /* วาดเสียงในเครื่องก่อน (resolve เมื่อเสร็จ) · เสียงที่อยู่แค่ในคลังเติมทีหลังเฉพาะส่วนของมัน ไม่วาดการ์ดในเครื่องซ้ำ (กันกะพริบ/เสียงสะดุด) */
     if(!window.MWVoice) return;
@@ -296,7 +296,7 @@
       var only = cloud.filter(function(c){ return !list.some(function(r){ return r.id === c.id; }); });
       setSavedN(list.length + only.length);
       if(!list.length) $("vSavedLocal").innerHTML = only.length ? "" : empty;
-      $("vSavedCloud").innerHTML = only.length ? '<p class="hint" style="margin:12px 0 4px">☁ อยู่ในคลังแต่ยังไม่ได้ดึงมาเครื่องนี้</p>' + only.map(cloudCard).join("") : "";
+      $("vSavedCloud").innerHTML = only.length ? '<p class="hint" style="margin:12px 0 4px">' + MWIcon("cloud") + 'อยู่ในคลังแต่ยังไม่ได้ดึงมาเครื่องนี้</p>' + only.map(cloudCard).join("") : "";
     }catch(err){ if(tok === rsTok && !list.length) $("vSavedLocal").innerHTML = empty; /* คลังไม่ตอบ = แสดงเฉพาะในเครื่อง */ }
   }
   function closeSaved(){ stopSaved(); MW.closeModal("vSavedSheet"); }

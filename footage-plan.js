@@ -25,7 +25,7 @@
     var t = norm($("plText").value), keep = $("plVoice").value;
     var match = function(v){ var x = norm(v.text); return t && x && (x === t || x.indexOf(t) >= 0 || t.indexOf(x) >= 0); };
     $("plVoice").innerHTML = '<option value="">— ไม่ใส่เสียง (ประมาณเวลาจากตัวอักษร) —</option>' + voices.map(function(v){
-      return '<option value="' + v.id + '">' + (match(v) ? "✓ ตรงกับบทนี้ · " : "") + U.esc(v.name || "เสียง") + " · " + new Date(v.id).toLocaleTimeString("th-TH", { hour:"2-digit", minute:"2-digit" }) + (v.align ? " · มีเวลาคำพูด" : " · ไม่มีเวลาคำพูด (ประมาณตามตัวอักษร)") + "</option>"; }).join("") + cl.map(function(c){ return '<option value="' + c.id + '">☁ ในคลัง · ' + new Date(c.id).toLocaleString("th-TH", { day:"numeric", month:"short", hour:"2-digit", minute:"2-digit" }) + " (ดึงมาให้ตอนกำกับ)</option>"; }).join("");
+      return '<option value="' + v.id + '">' + (match(v) ? "✓ ตรงกับบทนี้ · " : "") + U.esc(v.name || "เสียง") + " · " + new Date(v.id).toLocaleTimeString("th-TH", { hour:"2-digit", minute:"2-digit" }) + (v.align ? " · มีเวลาคำพูด" : " · ไม่มีเวลาคำพูด (ประมาณตามตัวอักษร)") + "</option>"; }).join("") + cl.map(function(c){ return '<option value="' + c.id + '">(ในคลัง) · ' + new Date(c.id).toLocaleString("th-TH", { day:"numeric", month:"short", hour:"2-digit", minute:"2-digit" }) + " (ดึงมาให้ตอนกำกับ)</option>"; }).join("");
     var m = voices.find(match); $("plVoice").value = voices.concat(cl).some(function(v){ return String(v.id) === keep; }) ? keep : (m ? String(m.id) : "");
     $("plVoiceInfo").textContent = voices.length ? "" : "ยังไม่มีเสียง · สร้างเสียงในแอพหลัก (แท็บ เสียง) ก่อน แล้วกลับมาเลือกที่นี่";
   }
@@ -156,7 +156,7 @@
     $("plRows").innerHTML = plan.shots.map(function(x, k){
       var ch = chosen(x), r = ch && cut(x, ch);
       return '<div class="pl' + (x.use ? "" : " off") + '"><div class="ln"><i>' + (k + 1) + "</i>" + U.esc(x.t) + ' <small class="dur">' + (plan.voice ? x.at.toFixed(1) + "–" + (x.at + x.dur).toFixed(1) + " วิ" : x.dur.toFixed(1) + " วิ") + "</small></div>"
-        + '<div class="want">🎬 ' + U.esc(x.want || "-") + "</div>"
+        + '<div class="want">' + MWIcon("film") + U.esc(x.want || "-") + "</div>"
         + (ch ? U.card(ch.c, ch.sc, false, x.why) + '<p class="hint" style="margin:4px 0 0">ตัดช่วง ' + U.tm(r.from) + "–" + U.tm(r.to) + " (" + (r.to - r.from).toFixed(1) + " วิ)" + (!isLong() && r.to - r.from < x.dur - 0.3 ? " · ฉากสั้นกว่าประโยค ยืดใน CapCut" : "") + "</p>"
               : '<div class="none">ไม่มีฉากที่ตรงในคลัง (อัปฟุตเทจเพิ่ม หรือหาเองตามคำอธิบายด้านบน)</div>')
         + (x.cands.length > 1 ? '<div class="alts">' + x.cands.map(function(cd, j){ var c = clip(cd.id), s = c && c.scenes[cd.si];
@@ -190,7 +190,7 @@
     var list = picked(), ok = cuts && cuts.sig === sig(list);
     if(!ok){ $("plBatches").innerHTML = ""; return; }
     $("plBatches").innerHTML = '<video class="plvid" src="' + cuts.url + '" controls playsinline></video>'
-      + '<button class="btn" id="plSave" style="width:100%;margin-top:10px">💾 บันทึกไฟล์ลงเครื่อง (' + (cuts.file.size / 1048576).toFixed(1) + " MB)</button>"
+      + '<button class="btn" id="plSave" style="width:100%;margin-top:10px">' + MWIcon("save") + 'บันทึกไฟล์ลงเครื่อง (' + (cuts.file.size / 1048576).toFixed(1) + " MB)</button>"
       + '<p class="hint">จากนั้นเปิด CapCut → โปรเจกต์ใหม่ → เลือกวิดีโอจากแกลเลอรี (อัลบั้ม Download หรือ ล่าสุด) · ' + (isLong() ? "จอเขียว + เสียงตื๊ด = จุดเปลี่ยนช็อต เลือกช่วงที่ชอบแล้วตัดจอเขียวทิ้ง" : (plan.voice ? "ในไฟล์มีเสียงพากย์แล้ว ภาพตัดตามคำพูด ใส่ซับ/เอฟเฟกต์ต่อได้เลย" : "ปิดเสียงฉากแล้ววางเสียงพากย์ทับ ปรับจังหวะให้ตรงคำ")) + "</p>"
       + '<p class="hint">เวลาเริ่มของแต่ละช็อตในไฟล์:</p><ol class="marks">'
       + cuts.marks.map(function(m){ return "<li><b>" + m.at.toFixed(1) + " วิ</b> · ช็อต " + (m.x.k + 1) + (m.x.c ? "" : " (ค้างภาพก่อนหน้า)") + " · " + U.esc(m.x.t) + " (" + m.len.toFixed(1) + " วิ)</li>"; }).join("") + "</ol>";
@@ -198,13 +198,13 @@
   function renderShare(){
     var list = picked(), miss = list.filter(function(x){ return x.c && !U.hasSrc(x.c); }), done = cuts && cuts.sig === sig(list);
     var sep = isLong() ? SEP : 0, secs = !isLong() && plan.voice ? plan.voice.dur : list.reduce(function(t, x){ return t + (x.to - x.from); }, 0) + Math.max(0, list.length - 1) * sep;
-    $("plShare").textContent = done ? "✂ ทำใหม่อีกรอบ" : (isLong() ? "✂ สร้างวิดีโอยาว " : plan.voice ? "✂ ตัดต่อ + ใส่เสียงพากย์ " : "✂ ให้ AI ตัดต่อ ") + list.length + " ช็อต";
+    $("plShare").innerHTML = MWIcon("scissors") + (done ? "ทำใหม่อีกรอบ" : (isLong() ? "สร้างวิดีโอยาว " : plan.voice ? "ตัดต่อ + ใส่เสียงพากย์ " : "ให้ AI ตัดต่อ ") + list.length + " ช็อต");
     $("plShare").disabled = cutting || !list.length || miss.length > 0 || !FT.stitch.ok();
     $("plNeed").hidden = !miss.length;
     $("plNeedTxt").textContent = "ยังไม่มีไฟล์ " + miss.length + "/" + list.length + " ช็อต (ไม่อยู่ในคลังคลาวด์ และยังไม่ได้เปิดไฟล์ในเครื่อง) · กดปุ่มด้านล่าง → เข้าโฟลเดอร์อัลบั้ม → เลือกทั้งหมด แอพเก็บเฉพาะคลิปที่ใช้เอง";
     if(!cutting) say(!list.length ? "" : miss.length ? lastPick
       : done ? "สร้างไว้แล้ว ดูตัวอย่างด้านล่างก่อนบันทึกได้"
-      : "กด ✂ แล้วแอพจะเล่นเฉพาะช่วงที่ตัดเรียงตามบท" + (sep ? " คั่นด้วยจอเขียว + เสียงตื๊ด " + sep + " วิ" : plan.voice ? " ตามจังหวะเสียงพากย์ (ใส่เสียงให้ในไฟล์)" : " ต่อกันเลย") + " (ใช้เวลา ≈ " + Math.round(secs) + " วิ · เปิดหน้าค้างไว้ ห้ามสลับแอพ)", done ? "ok" : "");
+      : "กดปุ่มตัดต่อแล้วแอพจะเล่นเฉพาะช่วงที่ตัดเรียงตามบท" + (sep ? " คั่นด้วยจอเขียว + เสียงตื๊ด " + sep + " วิ" : plan.voice ? " ตามจังหวะเสียงพากย์ (ใส่เสียงให้ในไฟล์)" : " ต่อกันเลย") + " (ใช้เวลา ≈ " + Math.round(secs) + " วิ · เปิดหน้าค้างไว้ ห้ามสลับแอพ)", done ? "ok" : "");
     renderResult();
   }
   document.addEventListener("ft:files", function(e){ /* footage-find.js ส่งมาหลังเลือกไฟล์ */
@@ -228,7 +228,7 @@
       }, say, { sep:isLong() ? SEP : 0, voice:vb });
       cuts = { sig:sig(list), file:r.file, url:URL.createObjectURL(r.file), marks:r.marks };
       cutting = false; renderShare();
-      say("เสร็จแล้ว " + r.marks.length + " ช็อต · " + (r.file.size / 1048576).toFixed(1) + " MB · ดูตัวอย่างด้านล่าง แล้วกด 💾 บันทึก", "ok");
+      say("เสร็จแล้ว " + r.marks.length + " ช็อต · " + (r.file.size / 1048576).toFixed(1) + " MB · ดูตัวอย่างด้านล่าง แล้วกดปุ่มบันทึก", "ok");
     }catch(err){ cutting = false; renderShare(); say("อัดไม่ได้: " + err.message + (document.hidden ? " (สลับแอพระหว่างอัด?)" : ""), "err"); }
     $("plProg").hidden = true;
   });

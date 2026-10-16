@@ -115,9 +115,9 @@
     var el = $("wakeInfo"); if(!el) return;
     el.hidden = !running && !wakeMode;
     el.className = "hint " + (wakeMode === "none" ? "bad" : "");
-    el.textContent = wakeMode === "lock" ? "🔆 จอไม่ดับระหว่างทำ ✓ (ต่อให้ตั้งเวลาปิดจอของเครื่องไว้สั้นก็ไม่ดับ)"
-      : wakeMode === "video" ? "🔆 จอไม่ดับระหว่างทำ ✓ (ใช้วิธีเล่นวิดีโอเปล่าแทน เพราะเครื่องไม่ให้ใช้ Wake Lock)"
-      : wakeMode === "none" ? "⚠ กันจอดับไม่ได้ ตั้งเวลาปิดจอของมือถือให้นานสุด และอย่าให้จอล็อก ไม่งั้นจะพักเอง" : "";
+    el.innerHTML = wakeMode === "lock" ? MWIcon("sun") + "จอไม่ดับระหว่างทำ ✓ (ต่อให้ตั้งเวลาปิดจอของเครื่องไว้สั้นก็ไม่ดับ)"
+      : wakeMode === "video" ? MWIcon("sun") + "จอไม่ดับระหว่างทำ ✓ (ใช้วิธีเล่นวิดีโอเปล่าแทน เพราะเครื่องไม่ให้ใช้ Wake Lock)"
+      : wakeMode === "none" ? MWIcon("warn") + "กันจอดับไม่ได้ ตั้งเวลาปิดจอของมือถือให้นานสุด และอย่าให้จอล็อก ไม่งั้นจะพักเอง" : "";
   }
   document.addEventListener("visibilitychange", function(){
     if(!running) return;
@@ -275,7 +275,7 @@
   function renderRc(){
     var all = 0, todo = rcTodo().length; lib.forEach(function(c){ all += c.status === "done" ? c.scenes.length : 0; });
     if(!rcRun) $("rcInfo").textContent = (rcMsg ? rcMsg + " · " : "") + "ตรวจแล้ว " + (all - todo) + "/" + all + " ฉาก" + (todo ? " · ค่า AI ประมาณ " + money(todo * 0.0012) + " (รูปที่เก็บไว้ ไม่ต้องเปิดไฟล์)" : "");
-    $("rcBtn").disabled = !rcRun && !todo; $("rcBtn").textContent = rcRun ? "⏹ หยุด" : todo ? "👤 ตรวจตัวละครซ้ำ " + todo + " ฉาก" : "👤 ตรวจครบแล้ว";
+    $("rcBtn").disabled = !rcRun && !todo; $("rcBtn").innerHTML = rcRun ? MWIcon("stop") + "หยุด" : MWIcon("user") + (todo ? "ตรวจตัวละครซ้ำ " + todo + " ฉาก" : "ตรวจครบแล้ว");
   }
   $("rcBtn").addEventListener("click", async function(){
     if(rcRun){ rcStop = true; return; }
@@ -319,8 +319,8 @@
     $("deepBtn").disabled = running || !d.ok.length;
     $("godInfo").textContent = "ขั้นเทพแล้ว " + d.g3 + "/" + d.done + " คลิป";
     $("godBtn").disabled = running || !d.gok.length;
-    $("godBtn").textContent = d.gok.length ? "🧠 ตรวจขั้นเทพ " + d.gok.length + " คลิป (ค่า AI ≈ " + money(d.gcost) + ")" : "🧠 ไม่มีคลิปที่ต้องตรวจ";
-    $("deepBtn").textContent = d.ok.length ? "🔬 อัปเกรด " + d.ok.length + " คลิป (ค่า AI ≈ " + money(d.cost) + ")" : "🔬 ไม่มีคลิปที่ต้องอัปเกรด";
+    $("godBtn").innerHTML = MWIcon("spark") + (d.gok.length ? "ตรวจขั้นเทพ " + d.gok.length + " คลิป (ค่า AI ≈ " + money(d.gcost) + ")" : "ไม่มีคลิปที่ต้องตรวจ");
+    $("deepBtn").innerHTML = MWIcon("search") + (d.ok.length ? "อัปเกรด " + d.ok.length + " คลิป (ค่า AI ≈ " + money(d.cost) + ")" : "ไม่มีคลิปที่ต้องอัปเกรด");
   }
   $("godInfo").textContent = "";
   $("godBtn").addEventListener("click", async function(){
@@ -379,7 +379,7 @@
     setTag("tagCut", "idle", "ไว " + Number(cfg.thr).toFixed(2) + " · ≤" + cfg.maxScenes + " ฉาก");
   }
   ["model", "thr", "maxScenes"].forEach(function(id){ $(id).addEventListener("input", tagsSet); }); tagsSet();
-  $("keyInfo").textContent = FT.orKey() ? "✓ ใช้ OpenRouter key จากแอพหลักในเบราว์เซอร์นี้" : "⚠ ยังไม่เจอ OpenRouter key ในเบราว์เซอร์นี้ ใส่ที่แอพหลัก (ตั้งค่า) ก่อน";
+  $("keyInfo").innerHTML = FT.orKey() ? "✓ ใช้ OpenRouter key จากแอพหลักในเบราว์เซอร์นี้" : MWIcon("warn") + "ยังไม่เจอ OpenRouter key ในเบราว์เซอร์นี้ ใส่ที่แอพหลัก (ตั้งค่า) ก่อน";
 
   /* ---------- ลบคลิปซ้ำ: ชื่อไฟล์+ขนาดเดียวกัน เก็บตัวที่ทำล่าสุด ---------- */
   function findDupes(){ /* คืน { del:[id ที่จะลบ], fix:[รายการที่ต้องแก้อัลบั้ม] } */
