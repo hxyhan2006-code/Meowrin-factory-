@@ -228,6 +228,17 @@
   var PLAY = '<svg viewBox="0 0 24 24" aria-hidden="true"><path class="ip" d="M8 5v14l11-7z"/><path class="ipa" d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg>';
   var pAudio = null, pId = 0; /* ตัวเล่นเดียวใช้ร่วมทุกการ์ด (เล่นได้ทีละเทค) · ปิดชีต = หยุดทันที */
   function mmss(t){ t = Math.max(0, Math.round(t || 0)); return Math.floor(t / 60) + ":" + String(t % 60).padStart(2, "0"); }
+  (function(){ /* ตัวเล่นของเทคที่เพิ่งเจน: หน้าตาเดียวกับการ์ดเสียงที่เก็บไว้ ไม่ใช้ตัวเล่นของเบราว์เซอร์ */
+    var au = $("ttsAudio"), btn = $("ttsPlay"), bar = $("ttsBar"), tm = $("ttsTime"), dur = function(){ return isFinite(au.duration) ? au.duration : 0; };
+    btn.innerHTML = PLAY;
+    function paint(){ btn.classList.toggle("on", !au.paused); bar.firstChild.style.width = dur() ? (au.currentTime / dur() * 100) + "%" : "0"; tm.textContent = mmss(au.currentTime) + " / " + mmss(dur()); }
+    ["timeupdate", "play", "pause", "ended", "loadedmetadata", "durationchange", "emptied"].forEach(function(ev){ au.addEventListener(ev, paint); });
+    btn.addEventListener("click", function(){ if(au.paused) au.play().catch(function(err){ MW.toast("เล่นไม่ได้: " + err.message, true); }); else au.pause(); });
+    function seek(e){ var r = bar.getBoundingClientRect(); if(dur()) au.currentTime = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)) * dur(); }
+    bar.addEventListener("pointerdown", function(e){ bar.setPointerCapture(e.pointerId); seek(e); });
+    bar.addEventListener("pointermove", function(e){ if(bar.hasPointerCapture(e.pointerId)) seek(e); });
+    paint();
+  })();
   function card(id){ return $("vSavedList").querySelector('.vcard[data-id="' + id + '"]'); }
   function paintPlay(){
     $("vSavedList").querySelectorAll(".vplay").forEach(function(x){ x.classList.toggle("on", !!pAudio && !pAudio.paused && +x.dataset.vplay === pId); });

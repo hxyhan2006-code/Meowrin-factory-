@@ -4,19 +4,19 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="theme-color" content="#0b0e0d" />
-<link rel="manifest" href="manifest.json?v=4.7">
+<link rel="manifest" href="manifest.json?v=4.8">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Meowrin">
-<link rel="icon" type="image/png" href="icon-192.png?v=4.7">
-<link rel="apple-touch-icon" href="icon-192.png?v=4.7">
+<link rel="icon" type="image/png" href="icon-192.png?v=4.8">
+<link rel="apple-touch-icon" href="icon-192.png?v=4.8">
 <title>Meowrin factory</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600&family=Mitr:wght@500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=4.7">
-<link rel="stylesheet" href="sheet.css?v=4.7">
+<link rel="stylesheet" href="style.css?v=4.8">
+<link rel="stylesheet" href="sheet.css?v=4.8">
 </head>
 <body>
 <div class="wrap">
@@ -131,7 +131,8 @@
         <div id="ttsMsg"></div>
         <div id="ttsOut" hidden>
           <div class="fchips wrapchips" id="ttsTakes"></div>
-          <audio id="ttsAudio" controls preload="auto"></audio>
+          <div class="tplayer"><button class="vplay" id="ttsPlay" type="button" aria-label="เล่น/หยุด"></button><div class="vbar" id="ttsBar"><i></i></div><span class="vtime" id="ttsTime">0:00 / 0:00</span></div>
+          <audio id="ttsAudio" preload="auto"></audio>
           <p class="hint" id="ttsInfo" style="margin:0"></p>
           <div class="row wrap">
             <button class="btn" id="ttsShare" style="flex:1">แชร์ไป CapCut</button>
@@ -401,6 +402,6 @@
   </div>
 </div>
 
-<script src="store.js?v=4.7" data-boot="version.js?v=4.7 icons.js?v=4.7 dialog.js?v=4.7 budget.js?v=4.7 sync.js?v=4.7 app.js?v=4.7 llm.js?v=4.7 ai.js?v=4.7 r2.js?v=4.7 voicestore.js?v=4.7 tts.js?v=4.7 gdrive.js?v=4.7"></script>
+<script src="store.js?v=4.8" data-boot="version.js?v=4.8 icons.js?v=4.8 dialog.js?v=4.8 budget.js?v=4.8 sync.js?v=4.8 app.js?v=4.8 llm.js?v=4.8 ai.js?v=4.8 r2.js?v=4.8 voicestore.js?v=4.8 tts.js?v=4.8 gdrive.js?v=4.8"></script>
 </body>
 </html>

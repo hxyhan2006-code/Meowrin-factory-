@@ -76,12 +76,13 @@ try {
   await main.page.reload(); await main.page.waitForTimeout(2000);
   await main.page.click('nav [data-tab=voice]'); await main.page.click('#vSavedBtn'); await main.page.waitForTimeout(1500);
   check('เสียงที่เก็บไว้: การ์ดขึ้นพร้อมความยาว', /0:00 \/ 0:\d\d/.test(await main.page.textContent('.vtime')));
-  await main.page.click('.vplay'); await main.page.waitForTimeout(600);
+  await main.page.click('#vSavedList .vplay'); await main.page.waitForTimeout(600);
   const playing = await main.page.evaluate(() => window.__auds.some((a) => !a.paused));
   await main.page.click('#vSavedClose'); await main.page.waitForTimeout(300);
   // แถวปุ่มใต้เสียงที่เจนแล้ว ต้องไม่ล้นจอ (ล้น = มือถือซูมออกทั้งหน้า) แม้ปุ่มโชว์ครบทั้ง 5
   await main.page.evaluate(() => { document.querySelector('#vBody').hidden = false; document.querySelector('#vNo').hidden = true; document.querySelector('#ttsOut').hidden = false; ['ttsSub', 'ttsDirect', 'ttsRaw', 'ttsShare'].forEach((i) => { document.getElementById(i).hidden = false; }); });
   check('แท็บเสียง: แถวปุ่มใต้เสียงที่เจนแล้วไม่ล้นจอ', await main.page.evaluate(() => { const bs = [...document.querySelectorAll('#ttsOut .row .btn')]; return bs.length === 5 && bs.every((b) => b.getBoundingClientRect().width > 0 && b.getBoundingClientRect().right <= innerWidth + 1); }));
+  check('แท็บเสียง: ตัวเล่นของแอพเอง (ไม่มีตัวเล่นของเบราว์เซอร์) ไม่ล้นจอ', await main.page.evaluate(() => { const r = document.querySelector('#ttsOut .tplayer').getBoundingClientRect(); return !document.querySelector('#ttsAudio').controls && r.width > 0 && r.right <= innerWidth + 1 && document.querySelector('#ttsPlay svg') !== null; }));
   check('เสียงที่เก็บไว้: กดเล่นแล้วปิดหน้าต่าง เสียงหยุด', playing && !(await main.page.evaluate(() => window.__auds.some((a) => !a.paused))));
   // บทพากย์: แก้ในหน้าเสียงต้องไม่ทับต้นฉบับในหน้าบท · จัดบรรทัดใหม่ต้องรวมบรรทัดที่ถูกตัด (ไม่ตัดตามความกว้างจอ)
   await main.page.evaluate(() => {
