@@ -1,14 +1,16 @@
-import { alignLinesToWords, refineSegmentBoundariesWithEnergy } from './aligner.js?v=1.10';
-import { buildSrt } from './srt.js?v=1.10';
-import { callGroqWhisper, buildTranscriptForGemini, callGeminiSplit, GEMINI_MODELS, DEFAULT_GEMINI_MODEL } from './ai.js?v=1.10';
-import { loadMediabunny, decodeAudioFile, isVideoFile, extractAudioFromVideo, computePeaks, buildTrimmedAudioBuffer, audioBufferToWavBlob } from './media.js?v=1.10';
-import { CANVAS_W, FONT_FAMILY, BOTTOM_MARGIN_RATIO, renderVideo } from './render.js?v=1.10';
+import { alignLinesToWords, refineSegmentBoundariesWithEnergy } from './aligner.js?v=1.11';
+import { buildSrt } from './srt.js?v=1.11';
+import { callGroqWhisper, buildTranscriptForGemini, callGeminiSplit, GEMINI_MODELS, DEFAULT_GEMINI_MODEL } from './ai.js?v=1.11';
+import { loadMediabunny, decodeAudioFile, isVideoFile, extractAudioFromVideo, computePeaks, buildTrimmedAudioBuffer, audioBufferToWavBlob } from './media.js?v=1.11';
+import { CANVAS_W, FONT_FAMILY, BOTTOM_MARGIN_RATIO, renderVideo } from './render.js?v=1.11';
 
 // ===== ที่เก็บข้อมูลร่วมกับแอพหลัก (MWStore จาก ../store.js) — service worker ของแอพหลักคุมหน้านี้อยู่แล้ว =====
   const S = window.MWStore;
   await S.ready;
-  // เพดานค่า AI ของแอพหลัก (budget.js) ใช้ตอนถอยไป OpenRouter — โหลดหลังข้อมูลพร้อม ถ้าโหลดไม่ได้ก็ใช้ต่อได้ (แค่ไม่มีเพดาน)
-  await new Promise((ok) => { const el = document.createElement('script'); el.src = '../budget.js?v=20261016a'; el.onload = el.onerror = ok; document.body.appendChild(el); });
+  // สคริปต์ของแอพหลักที่หน้านี้ยืมใช้ — โหลดหลังข้อมูลพร้อม ถ้าโหลดไม่ได้ก็ใช้ต่อได้ (budget = เพดานค่า AI ตอนถอยไป OpenRouter · r2 + voicestore = เสียงที่เจนไว้)
+  for (const src of ['../budget.js?v=20261016a', '../r2.js?v=20261016d', '../voicestore.js?v=20261016e']) {
+    await new Promise((ok) => { const el = document.createElement('script'); el.src = src; el.onload = el.onerror = ok; document.body.appendChild(el); });
+  }
   const GROQ_KEY = 'mw_groq_key_v1', GEMINI_KEY = 'mw_gemini_key_v1', OR_KEY = 'mw_openrouter_key_v1', SUB_CFG = 'mw_sub_cfg_v1'; // key ตั้งที่แอพหลัก > ตั้งค่า
   // ย้าย key จากแอปซับตัวเก่าครั้งเดียว (ถ้าเคยเปิดบนโดเมนเดียวกัน) — ครั้งต่อไปอ่านจาก MWStore อย่างเดียว
   [[GROQ_KEY, 'groq_api_key'], [GEMINI_KEY, 'gemini_api_key']].forEach(([k, old]) => {
@@ -484,9 +486,8 @@ import { CANVAS_W, FONT_FAMILY, BOTTOM_MARGIN_RATIO, renderVideo } from './rende
   goTab(0);
   // ---------- file selection ----------
   fileDrop.addEventListener('click', () => audioFileInput.click());
-  audioFileInput.addEventListener('change', async (e) => {
-    const f = e.target.files[0];
-    if (!f) return;
+  audioFileInput.addEventListener('change', (e) => { const f = e.target.files[0]; if (f) loadAudioFile(f); });
+  async function loadAudioFile(f){
 
     // reset trim state for the newly selected file up front
     cutRegions = [];
@@ -551,6 +552,44 @@ import { CANVAS_W, FONT_FAMILY, BOTTOM_MARGIN_RATIO, renderVideo } from './rende
       updatePlayheadAndTime();
     } catch (err){
       console.warn('waveform decode failed, trimming UI unavailable for this file', err);
+    }
+  }
+
+  // ---------- เลือกเสียงที่เจนไว้ในแอพ (MWVoice ในเครื่อง + คลัง R2 ที่ยังไม่ได้ดึงมา) ----------
+  const pickVoiceBtn = document.getElementById('pickVoiceBtn');
+  const voiceModalBackdrop = document.getElementById('voiceModalBackdrop');
+  const voiceList = document.getElementById('voiceList');
+  const closeVoiceModal = () => voiceModalBackdrop.classList.remove('show');
+  document.getElementById('voiceCloseBtn').addEventListener('click', closeVoiceModal);
+  voiceModalBackdrop.addEventListener('click', (e) => { if (e.target === voiceModalBackdrop) closeVoiceModal(); });
+  pickVoiceBtn.addEventListener('click', async () => {
+    voiceModalBackdrop.classList.add('show');
+    voiceList.textContent = 'กำลังโหลด...';
+    const V = window.MWVoice;
+    if (!V) { voiceList.textContent = 'โหลดระบบเสียงของแอพไม่ได้ ลองรีเฟรชหน้า'; return; }
+    let local = [], cloudOnly = [];
+    try { local = await V.list(); } catch (err) { /* ไม่มีเสียงในเครื่อง */ }
+    if (V.cloudOn()) {
+      try { cloudOnly = (await V.cloudList()).filter(c => !local.some(v => v.id === c.id)); } catch (err) { /* คลังเปิดไม่ได้ ใช้เฉพาะในเครื่อง */ }
+    }
+    if (!local.length && !cloudOnly.length) { voiceList.textContent = 'ยังไม่มีเสียงที่เจนไว้ สร้างเสียงที่แอพหลัก (แท็บ เสียง) ก่อน'; return; }
+    const when = (id) => new Date(id).toLocaleString('th-TH', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+    voiceList.innerHTML = local.map(v => `<button type="button" class="voice-item" data-id="${v.id}"><b>${escapeHtml(v.name || 'เสียง')} · ${when(v.id)}</b><small>${escapeHtml((v.text || '').replace(/\s+/g, ' ').slice(0, 60))}</small></button>`).join('')
+      + cloudOnly.map(c => `<button type="button" class="voice-item" data-id="${c.id}" data-cloud="1"><b>จากคลัง · ${when(c.id)}</b><small>ยังไม่ได้ดึงมาเครื่องนี้ (${(c.size / 1048576).toFixed(1)} MB)</small></button>`).join('');
+  });
+  voiceList.addEventListener('click', async (e) => {
+    const item = e.target.closest('.voice-item');
+    if (!item) return;
+    const id = Number(item.dataset.id);
+    try {
+      item.querySelector('small').textContent = 'กำลังเปิดเสียง...';
+      const rec = (await window.MWVoice.get(id)) || (await window.MWVoice.pull(id));
+      if (!rec || !rec.blob) throw new Error('ไม่เจอไฟล์เสียงนี้');
+      closeVoiceModal();
+      const name = (rec.name || String(id)).replace(/\.[^.]+$/, '');
+      await loadAudioFile(new File([rec.blob], `${name}.mp3`, { type: 'audio/mpeg' }));
+    } catch (err) {
+      item.querySelector('small').textContent = `เปิดไม่ได้: ${err.message || err}`;
     }
   });
 
