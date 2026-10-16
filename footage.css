@@ -173,3 +173,5 @@ html:not(.tips) .hint.tip{display:none}
 html:has(.asheet:not([hidden])),html:has(.big:not([hidden])){overflow:hidden}
 .asheet,.abox{overscroll-behavior:contain}
 .big{overscroll-behavior:contain}
+.pkhead{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:10px}.pkhead h3{margin:0}
+#pkInfo{font-size:14px;color:var(--accent)}#pkInfo.zero{color:var(--warn,#f59e0b)}

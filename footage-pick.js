@@ -11,6 +11,7 @@
     var list = $("pkList"), top = list.scrollTop, items = cur.items($("pkQ").value.trim().toLowerCase());
     list.innerHTML = items.map(function(it){ return '<button type="button" class="alrow' + (it.on ? " on" : "") + '" data-k="' + esc(it.k) + '">' + MWIcon(it.on ? "check" : it.icon || cur.icon || "folder") + "<b>" + esc(it.name) + "</b><i>" + esc(it.sub || "") + "</i></button>"; }).join("") || '<p class="hint">ไม่เจอที่ค้นหา</p>';
     list.scrollTop = top;
+    var n = cur.count ? cur.count() : -1; $("pkInfo").textContent = n < 0 ? "" : "เจอ " + n + " ฉาก"; $("pkInfo").classList.toggle("zero", n === 0); /* ผลลัพธ์สดตามที่เลือกอยู่ */
   }
   function close(){ $("pkSheet").hidden = true; cur = null; }
   function open(opt){

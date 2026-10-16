@@ -133,13 +133,16 @@
       + (albumSel || sel.length || sizeSel ? '<button class="chip" data-clr="1">ล้างทั้งหมด</button>' : "");
     $("onlyRow").hidden = !sel.length || sel.indexOf("?") >= 0; $("onlySel").checked = only;
   }
+  function matchCount(){ /* จำนวนฉากที่ผ่านตัวกรองอัลบั้ม/ตัวละคร/จำนวนคนตอนนี้ (ยังไม่นับคำค้นในช่องค้นหา) */
+    var n = 0; U.lib().forEach(function(c){ if(c.status !== "done" || c.hide || albumSel && c.album !== albumSel) return; c.scenes.forEach(function(sc){ if(passSc(sc)) n++; }); }); return n;
+  }
   function pickAlbum(){
-    FT.pick.open({ title:"เลือกอัลบั้ม", placeholder:"พิมพ์ชื่ออัลบั้มเพื่อหา", icon:"folder",
+    FT.pick.open({ title:"เลือกอัลบั้ม", placeholder:"พิมพ์ชื่ออัลบั้มเพื่อหา", icon:"folder", count:matchCount,
       items:function(q){ var r = [{ k:"", name:"ทุกอัลบั้ม", sub:"", on:!albumSel }].concat(Object.keys(dat.al).sort().map(function(a){ return { k:a, name:a, sub:dat.al[a] + " คลิป", on:albumSel === a }; })); return r.filter(function(x){ return !q || x.name.toLowerCase().indexOf(q) >= 0; }); },
       onPick:function(k){ albumSel = k; chipMax = 40; search(); } });
   }
   function pickChars(){ /* เลือกหลายคนได้ = ฉากต้องมีทุกคนที่เลือก · "ไม่ระบุตัวละคร" เลือกร่วมกับตัวอื่นไม่ได้ */
-    FT.pick.open({ title:"เลือกตัวละคร", placeholder:"พิมพ์ชื่อเพื่อหา เช่น Zoro หรือ โซโร", icon:"user", multi:true,
+    FT.pick.open({ title:"เลือกตัวละคร", placeholder:"พิมพ์ชื่อเพื่อหา เช่น Zoro หรือ โซโร", icon:"user", multi:true, count:matchCount,
       items:function(q){
         var rows = dat.ks.filter(function(k){ var nx = NAMEX.find(function(x){ return x.key === k; }); return !q || (enName(k) + " " + k + " " + (labelOf[k] || "") + " " + (nx ? nx.ths.join(" ") : "")).toLowerCase().indexOf(q) >= 0; })
           .map(function(k){ return { k:k, name:enName(k), sub:dat.cnt[k] + " ฉาก", on:sel.indexOf(k) >= 0 }; });
@@ -151,7 +154,7 @@
       onClear:function(){ sel = []; chipMax = 40; search(); } });
   }
   function pickSize(){
-    FT.pick.open({ title:"จำนวนคนในฉาก", placeholder:"พิมพ์เพื่อหา เช่น คู่", icon:"user",
+    FT.pick.open({ title:"จำนวนคนในฉาก", placeholder:"พิมพ์เพื่อหา เช่น คู่", icon:"user", count:matchCount,
       items:function(q){ return SIZES.filter(function(x){ return !q || x[1].toLowerCase().indexOf(q) >= 0; }).map(function(x){ return { k:x[0], name:x[1], sub:x[0] ? dat.sz[x[0]] + " ฉาก" : "", on:sizeSel === x[0] }; }); },
       onPick:function(k){ sizeSel = k; chipMax = 40; search(); } });
   }
