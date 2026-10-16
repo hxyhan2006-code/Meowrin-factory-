@@ -1,0 +1,42 @@
+name: build-apk
+# สร้างไฟล์ APK ทดลอง (กดรันเองเท่านั้น ไม่รันอัตโนมัติ) — ไม่แตะโค้ดแอพเดิม
+on:
+  workflow_dispatch:
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - name: เตรียมโฟลเดอร์ห่อแอพ
+        run: |
+          mkdir -p wrap/www
+          rsync -a --exclude '.git' --exclude '.github' --exclude 'wrap' --exclude 'tests' --exclude 'tools' --exclude '*.md' --exclude '*.mjs' --exclude '*.test.mjs' ./ wrap/www/
+          cd wrap
+          npm init -y >/dev/null
+          npm install --no-audit --no-fund @capacitor/core@7 @capacitor/cli@7 @capacitor/android@7
+          cat > capacitor.config.json <<'JSON'
+          {
+            "appId": "com.han.meowrin",
+            "appName": "Meowrin",
+            "webDir": "www",
+            "backgroundColor": "#0b0e0d"
+          }
+          JSON
+          npx cap add android
+          npx cap sync android
+      - name: สร้าง APK
+        working-directory: wrap/android
+        run: ./gradlew assembleDebug --no-daemon
+      - uses: actions/upload-artifact@v4
+        with:
+          name: meowrin-apk
+          path: wrap/android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 14
