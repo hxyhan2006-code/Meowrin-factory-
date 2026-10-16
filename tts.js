@@ -212,7 +212,7 @@
       if(window.MWVoice){ /* เก็บในเครื่อง 10 เทค + สำรองขึ้นคลัง R2 (ถ้าตั้งค่าไว้) ให้หน้าฟุตเทจใช้ต่อ */
         var vrec = { id:Date.now(), text:text, name:take.name, blob:take.blob, align:take.align };
         MWVoice.put(vrec).then(function(){ return MWVoice.cloudPut(vrec).catch(function(err){ MW.toast("สำรองเสียงขึ้นคลังไม่ได้: " + err.message); }); })
-          .then(function(){ if($("vSaved").open) renderSaved(); else MWVoice.list().then(function(l){ $("vSavedN").textContent = "(" + l.length + ")"; }); }).catch(function(){});
+          .then(function(){ if(!$("vSavedSheet").hidden) renderSaved(); else countSaved(); }).catch(function(){});
       }
       MW.toast(a.takes.length > 1 ? "ได้เทค " + a.takes.length + " แล้ว" : "สร้างเสียงแล้ว");
       setTimeout(function(){ $("ttsOut").scrollIntoView({ behavior:"smooth", block:"center" }); }, 50); /* เลื่อนไปที่ตัวเล่นให้เห็นเลย */
@@ -220,6 +220,8 @@
     busy = false; sync();
   }
   /* ---------- เสียงที่เก็บไว้ (MWVoice: 50 เทคล่าสุดในเครื่อง + สำรองบนคลัง R2 ถ้าตั้งค่าไว้ · หน้าฟุตเทจใช้ต่อได้) ---------- */
+  function setSavedN(n){ $("vSavedN").textContent = n; $("vSavedN").hidden = !n; } /* เลขบนปุ่มสามขีด */
+  function countSaved(){ if(window.MWVoice) MWVoice.list().then(function(l){ setSavedN(l.length); }).catch(function(){}); }
   var savedUrls = [], dateOf = function(id){ return new Date(id).toLocaleString("th-TH", { day:"numeric", month:"short", hour:"2-digit", minute:"2-digit" }); };
   async function renderSaved(){
     if(!window.MWVoice) return;
@@ -228,7 +230,7 @@
     savedUrls.forEach(function(u){ URL.revokeObjectURL(u); }); savedUrls = [];
     var draw = function(){
       var only = cloud ? cloud.filter(function(c){ return !list.some(function(r){ return r.id === c.id; }); }) : [];
-      $("vSavedN").textContent = list.length || only.length ? "(" + list.length + (only.length ? " + ☁ " + only.length : "") + ")" : "";
+      setSavedN(list.length + only.length);
       box.innerHTML = (list.map(function(r){
         var u = URL.createObjectURL(r.blob); savedUrls.push(u);
         return '<div class="vsaved"><div class="vsh"><b>' + MW.esc(dateOf(r.id)) + '</b> · ' + (r.blob.size / 1048576).toFixed(1) + ' MB · ' + (r.text || "").length.toLocaleString() + ' ตัวอักษร · ' + (r.cloud ? "☁ อยู่ในคลัง" : on ? "ยังไม่อยู่ในคลัง" : "เฉพาะเครื่องนี้") + '</div>'
@@ -243,8 +245,12 @@
     draw();
     if(on){ try{ cloud = await MWVoice.cloudList(); draw(); }catch(err){ /* คลังไม่ตอบ = แสดงเฉพาะในเครื่อง */ } }
   }
-  $("vSaved").addEventListener("toggle", function(){ if(this.open) renderSaved(); });
-  if(window.MWVoice) MWVoice.list().then(function(l){ if(l.length) $("vSavedN").textContent = "(" + l.length + ")"; }).catch(function(){});
+  $("vSavedBtn").addEventListener("click", function(){ renderSaved(); MW.openModal("vSavedSheet"); });
+  $("vSavedClose").addEventListener("click", function(){ MW.closeModal("vSavedSheet"); });
+  $("vSavedSheet").addEventListener("click", function(e){ if(e.target === this) MW.closeModal("vSavedSheet"); });
+  document.addEventListener("keydown", function(e){ if(e.key === "Escape" && !$("vSavedSheet").hidden) MW.closeModal("vSavedSheet"); });
+  document.addEventListener("mw:tab", function(e){ $("vSavedBtn").hidden = e.detail !== "voice"; }); /* ปุ่มโชว์เฉพาะแท็บเสียง (แบบเดียวกับปุ่มประวัติในแท็บบท) */
+  countSaved();
   $("vSavedList").addEventListener("click", async function(e){
     var b = e.target.closest("button"); if(!b) return; var d = b.dataset;
     try{
