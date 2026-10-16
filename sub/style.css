@@ -27,9 +27,9 @@ button{font-family:inherit;color:var(--text);touch-action:manipulation;}
 .back-link .ic{margin:0;}
 .modal-box a{color:var(--accent);}
 .voice-list{display:flex;flex-direction:column;gap:8px;max-height:50vh;overflow-y:auto;margin:4px 0 0;}
-.voice-item{display:block;width:100%;text-align:left;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;color:var(--text);font:inherit;cursor:pointer;}
+.voice-item{display:block;width:100%;box-sizing:border-box;min-width:0;overflow:hidden;text-align:left;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;color:var(--text);font:inherit;cursor:pointer;}
 .voice-item:active{border-color:var(--accent-dim);}
-.voice-item b{display:block;font-size:14px;font-weight:500;}
+.voice-item b{display:block;font-size:14px;font-weight:500;overflow-wrap:anywhere;}
 .voice-item small{display:block;font-size:12px;color:var(--muted);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .topbar h1{font-size:17px;font-weight:700;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .app-version{display:block;font-size:11px;line-height:1.2;color:var(--muted);}
@@ -122,6 +122,7 @@ button.primary:disabled{background:var(--accent-dim);color:#c7d8ce;cursor:not-al
 .file-info{margin-top:12px;display:none;font-size:14px;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;}
 .file-info.show{display:block;}
 .file-info b{color:var(--accent);}
+.file-info{overflow-wrap:anywhere;}
 
 /* ---------- status / progress / errors ---------- */
 .status{display:none;margin-top:12px;font-size:13px;color:var(--muted);}

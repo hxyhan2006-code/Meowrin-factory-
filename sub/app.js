@@ -1,8 +1,8 @@
-import { alignLinesToWords, refineSegmentBoundariesWithEnergy } from './aligner.js?v=1.11';
-import { buildSrt } from './srt.js?v=1.11';
-import { callGroqWhisper, buildTranscriptForGemini, callGeminiSplit, GEMINI_MODELS, DEFAULT_GEMINI_MODEL } from './ai.js?v=1.11';
-import { loadMediabunny, decodeAudioFile, isVideoFile, extractAudioFromVideo, computePeaks, buildTrimmedAudioBuffer, audioBufferToWavBlob } from './media.js?v=1.11';
-import { CANVAS_W, FONT_FAMILY, BOTTOM_MARGIN_RATIO, renderVideo } from './render.js?v=1.11';
+import { alignLinesToWords, refineSegmentBoundariesWithEnergy } from './aligner.js?v=1.12';
+import { buildSrt } from './srt.js?v=1.12';
+import { callGroqWhisper, buildTranscriptForGemini, callGeminiSplit, GEMINI_MODELS, DEFAULT_GEMINI_MODEL } from './ai.js?v=1.12';
+import { loadMediabunny, decodeAudioFile, isVideoFile, extractAudioFromVideo, computePeaks, buildTrimmedAudioBuffer, audioBufferToWavBlob } from './media.js?v=1.12';
+import { CANVAS_W, FONT_FAMILY, BOTTOM_MARGIN_RATIO, renderVideo } from './render.js?v=1.12';
 
 // ===== ที่เก็บข้อมูลร่วมกับแอพหลัก (MWStore จาก ../store.js) — service worker ของแอพหลักคุมหน้านี้อยู่แล้ว =====
   const S = window.MWStore;
@@ -588,6 +588,11 @@ import { CANVAS_W, FONT_FAMILY, BOTTOM_MARGIN_RATIO, renderVideo } from './rende
       closeVoiceModal();
       const name = (rec.name || String(id)).replace(/\.[^.]+$/, '');
       await loadAudioFile(new File([rec.blob], `${name}.mp3`, { type: 'audio/mpeg' }));
+      // บทของเทคนี้ = บทที่ใช้เจนเสียงนี้ ใส่ช่อง "สคริปต์ดิบ" ให้เลย (ทับของเดิม เพราะเสียงกับบทต้องเป็นชุดเดียวกัน)
+      if (rec.text && rec.text.trim()) {
+        rawScriptInput.value = rec.text.trim();
+        fileInfo.insertAdjacentHTML('beforeend', ' <span class="badge">ใส่บทของเสียงนี้ให้แล้ว</span>');
+      }
     } catch (err) {
       item.querySelector('small').textContent = `เปิดไม่ได้: ${err.message || err}`;
     }
