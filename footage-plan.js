@@ -48,11 +48,11 @@
   }
   $("plVoiceBtn").addEventListener("click", function(){
     var t = norm($("plText").value), match = matchText(t), time = function(id){ return new Date(id).toLocaleTimeString("th-TH", { hour:"2-digit", minute:"2-digit" }); };
-    FT.pick.open({ title:"เสียงพากย์", search:false, icon:"speaker", items:function(){
-      return [{ k:"", name:"ไม่ใส่เสียง", desc:"ประมาณเวลาจากตัวอักษร", icon:"x", on:!voiceSel }]
-        .concat(voices.map(function(v){ return { k:String(v.id), name:(match(v) ? "ตรงกับบทนี้ · " : "") + (v.name || "เสียง"), desc:time(v.id) + (v.align ? " · มีเวลาคำพูด" : " · ไม่มีเวลาคำพูด (ประมาณตามตัวอักษร)"), on:String(v.id) === voiceSel }; }))
-        .concat(cl.map(function(c){ return { k:String(c.id), name:"(ในคลัง) " + new Date(c.id).toLocaleString("th-TH", { day:"numeric", month:"short", hour:"2-digit", minute:"2-digit" }), desc:"ดึงมาให้ตอนกำกับ", icon:"cloud", on:String(c.id) === voiceSel }; })); },
-      onPick:function(k){ voiceSel = k; showVoice(); } });
+    FT.pick.open({ title:"เสียงพากย์", search:false, icon:"speaker", items:function(){ /* มีบทอยู่แล้ว = โชว์เฉพาะเสียงที่ตรงกับบทนั้น · แตะตัวที่เลือกอยู่ซ้ำ = ยกเลิก */
+      return [{ k:"", name:"ไม่ใส่เสียง", desc:t ? "ประมาณเวลาจากตัวอักษร" : "ประมาณเวลาจากตัวอักษร · เลือกบทก่อนจะเห็นเฉพาะเสียงของบทนั้น", icon:"x", on:!voiceSel }]
+        .concat(voices.filter(function(v){ return !t || match(v) || String(v.id) === voiceSel; }).map(function(v){ return { k:String(v.id), name:(v.name || "เสียง"), desc:time(v.id) + (v.align ? " · มีเวลาคำพูด" : " · ไม่มีเวลาคำพูด (ประมาณตามตัวอักษร)"), on:String(v.id) === voiceSel }; }))
+        .concat(t ? [] : cl.map(function(c){ return { k:String(c.id), name:"(ในคลัง) " + new Date(c.id).toLocaleString("th-TH", { day:"numeric", month:"short", hour:"2-digit", minute:"2-digit" }), desc:"ดึงมาให้ตอนกำกับ", icon:"cloud", on:String(c.id) === voiceSel }; })); },
+      onPick:function(k){ voiceSel = k === voiceSel ? "" : k; showVoice(); } });
   });
   /* เปิดจากปุ่ม "ตัดต่อภาพ" ในแอพหลัก (footage.html?voice=รหัสเทค): ไปแท็บผู้กำกับ โหมด AI ตัดให้ ใส่บทและเลือกเสียงของเทคนั้นให้ */
   var voiceQ = new URLSearchParams(location.search).get("voice");
@@ -62,10 +62,10 @@
       var rec = await MWVoice.get(+voiceQ) || await MWVoice.pull(+voiceQ);
       document.querySelector('nav button[data-p="plan"]').click();
       mode = "fast"; showMode(); if(rec.text) $("plText").value = rec.text;
-      voiceSel = String(rec.id); await refreshVoices(); voiceSel = String(rec.id); showVoice();
+      voiceSel = String(rec.id); await refreshVoices(); voiceSel = String(rec.id); showVoice(); render();
     }catch(err){ say("เปิดเสียงที่เลือกไม่ได้: " + err.message, "err"); }
   })();
-  $("plText").addEventListener("input", function(){ if(mode === "fast") autoVoice(); });
+  $("plText").addEventListener("input", function(){ if(mode === "fast") autoVoice(); if($("plOut").hidden === sameScript()) render(); });
   async function audioDur(blob){ return new Promise(function(ok){ var a = new Audio(), u = URL.createObjectURL(blob); a.preload = "metadata"; a.src = u;
     a.onloadedmetadata = function(){ URL.revokeObjectURL(u); ok(isFinite(a.duration) ? a.duration : 0); }; a.onerror = function(){ URL.revokeObjectURL(u); ok(0); }; }); }
   function timeShots(shots, al, total){ /* หาเวลาเริ่ม (x.at) กับความยาว (x.dur) ของแต่ละช็อตให้ตรงเสียง: จับข้อความช็อตกับเวลาตัวอักษร ที่จับไม่ได้ประมาณตามจำนวนตัวอักษร */
@@ -108,7 +108,9 @@
     FT.pick.open({ title:"บทที่เคยสร้างเสียง", placeholder:"พิมพ์ชื่อคลิปเพื่อหา", icon:"speaker",
       items:function(q){ return srcs.map(function(x, i){ return { k:String(i), name:x.title, desc:(x.pname ? x.pname + " · " : "") + (x.vid ? "" : "เสียง " + x.n + " เทค"), on:i === srcSel, x:x }; })
         .filter(function(it){ return !q || (it.name + " " + it.desc).toLowerCase().indexOf(q) >= 0; }); },
-      onPick:function(k){ srcSel = +k; var s = srcs[srcSel]; $("plText").value = s.text; renderSrc(); if(mode === "fast"){ voiceSel = s.vid || ""; autoVoice(); } } });
+      onPick:function(k){
+        if(+k === srcSel){ srcSel = -1; $("plText").value = ""; voiceSel = ""; renderSrc(); showVoice(); render(); return; } /* แตะบทที่เลือกอยู่ซ้ำ = ยกเลิก ล้างบทกับเสียงที่ผูกไว้ */
+        srcSel = +k; var s = srcs[srcSel]; $("plText").value = s.text; renderSrc(); if(mode === "fast"){ voiceSel = s.vid || ""; autoVoice(); } render(); } });
   });
   document.querySelector(".tabs").addEventListener("click", function(e){ var b = e.target.closest("button[data-p]"); if(b && b.dataset.p === "plan"){ renderSrc(); render(); } });
 
@@ -194,8 +196,9 @@
     var len = ch.sc.e - ch.sc.s; if(len <= x.dur) return { from:ch.sc.s, to:ch.sc.e };
     var from = ch.sc.s + Math.min(0.2, len - x.dur); return { from:from, to:from + x.dur };
   }
+  function sameScript(){ return !!plan && norm(plan.script) === norm($("plText").value.trim().slice(0, MAX_CHARS)); } /* ตารางเก่าโชว์เฉพาะตอนบทในช่องตรงกับบทที่กำกับไว้ */
   function render(){
-    if(!plan || !plan.shots || !plan.shots.length){ $("plOut").hidden = true; $("plRows").innerHTML = ""; return; }
+    if(!plan || !plan.shots || !plan.shots.length || !sameScript()){ $("plOut").hidden = true; $("plRows").innerHTML = ""; return; }
     var found = plan.shots.filter(function(x){ return chosen(x); }).length, secs = plan.shots.reduce(function(t, x){ return t + x.dur; }, 0);
     $("plOut").hidden = false;
     $("plInfo").textContent = (isLong() ? "แบบ 1 ไปตัดเอง · " : plan.voice ? "แบบ 2 AI ตัดให้ + เสียงพากย์ · " : "แบบ 2 AI ตัดให้ · ") + plan.shots.length + " ช็อต (เจอฉาก " + found + ") · เสียงยาวราว " + Math.round(secs) + " วิ · ใช้ไป " + U.money(plan.cost || 0) + " · " + ((plan.ms || 0) / 1000).toFixed(0) + " วิ · แตะรูปเล็กเพื่อสลับฉาก";
