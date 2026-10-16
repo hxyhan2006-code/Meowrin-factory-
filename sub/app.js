@@ -1,8 +1,8 @@
-import { alignLinesToWords, refineSegmentBoundariesWithEnergy } from './aligner.js?v=1.13';
-import { buildSrt } from './srt.js?v=1.13';
-import { callGroqWhisper, buildTranscriptForGemini, callGeminiSplit, removeThaiSpaces, GEMINI_MODELS, DEFAULT_GEMINI_MODEL } from './ai.js?v=1.13';
-import { loadMediabunny, decodeAudioFile, isVideoFile, extractAudioFromVideo, computePeaks, buildTrimmedAudioBuffer, audioBufferToWavBlob } from './media.js?v=1.13';
-import { CANVAS_W, FONT_FAMILY, BOTTOM_MARGIN_RATIO, renderVideo } from './render.js?v=1.13';
+import { alignLinesToWords, refineSegmentBoundariesWithEnergy } from './aligner.js?v=1.14';
+import { buildSrt } from './srt.js?v=1.14';
+import { callGroqWhisper, buildTranscriptForGemini, callGeminiSplit, removeThaiSpaces, GEMINI_MODELS, DEFAULT_GEMINI_MODEL } from './ai.js?v=1.14';
+import { loadMediabunny, decodeAudioFile, isVideoFile, extractAudioFromVideo, computePeaks, buildTrimmedAudioBuffer, audioBufferToWavBlob } from './media.js?v=1.14';
+import { CANVAS_W, FONT_FAMILY, BOTTOM_MARGIN_RATIO, renderVideo } from './render.js?v=1.14';
 
 // ===== ที่เก็บข้อมูลร่วมกับแอพหลัก (MWStore จาก ../store.js) — service worker ของแอพหลักคุมหน้านี้อยู่แล้ว =====
   const S = window.MWStore;
@@ -432,13 +432,13 @@ import { CANVAS_W, FONT_FAMILY, BOTTOM_MARGIN_RATIO, renderVideo } from './rende
   }
   editedScript.addEventListener('input', updateLineCount);
 
-  function bindPasteClear(pasteEl, clearEl, textarea, errBox){
+  function bindPasteClear(pasteEl, clearEl, textarea, errBox, tidy = (t) => t){
     pasteEl.addEventListener('click', async () => {
       hideError(errBox);
       try {
         const text = await navigator.clipboard.readText();
         if (!text){ showError('คลิปบอร์ดว่างเปล่า — คัดลอกข้อความมาก่อนแล้วค่อยกดวาง', errBox); return; }
-        textarea.value = text;
+        textarea.value = tidy(text);
         textarea.dispatchEvent(new Event('input', { bubbles: true }));
       } catch (err){
         showError('วางอัตโนมัติไม่ได้ (เบราว์เซอร์ไม่อนุญาต clipboard) — ลองกดค้างในช่องแล้วเลือก "วาง" เอง', errBox);
@@ -451,7 +451,11 @@ import { CANVAS_W, FONT_FAMILY, BOTTOM_MARGIN_RATIO, renderVideo } from './rende
     });
   }
   bindPasteClear(pasteRawBtn, clearRawBtn, rawScriptInput, rawErrorBox);
-  bindPasteClear(pasteBtn, clearScriptBtn, editedScript, scriptErrorBox);
+  bindPasteClear(pasteBtn, clearScriptBtn, editedScript, scriptErrorBox, removeThaiSpaces);
+  editedScript.addEventListener('change', () => { // พิมพ์/แก้เองในกล่อง 2 เสร็จ (ออกจากช่อง) → ตัดเว้นวรรคไทย-ไทยให้ด้วย
+    const t = removeThaiSpaces(editedScript.value);
+    if (t !== editedScript.value){ editedScript.value = t; updateLineCount(); }
+  });
   clearScriptBtn.addEventListener('click', hideAutoSplitStats); // stats describe the box that was just emptied
 
   // ---------- 3-step tab wizard (top tabs + sticky footer back/next) ----------
@@ -487,7 +491,8 @@ import { CANVAS_W, FONT_FAMILY, BOTTOM_MARGIN_RATIO, renderVideo } from './rende
   // ---------- file selection ----------
   fileDrop.addEventListener('click', () => audioFileInput.click());
   audioFileInput.addEventListener('change', (e) => { const f = e.target.files[0]; if (f) loadAudioFile(f); });
-  async function loadAudioFile(f){
+  // fromApp = เลือกจากเสียงที่เจนไว้ในแอพ → ซ่อนกล่องตัดท่อนเสียงไว้ในแถบพับ (แนบไฟล์จากข้างนอกเปิดไว้เหมือนเดิม)
+  async function loadAudioFile(f, { fromApp = false } = {}){
 
     // reset trim state for the newly selected file up front
     cutRegions = [];
@@ -546,14 +551,20 @@ import { CANVAS_W, FONT_FAMILY, BOTTOM_MARGIN_RATIO, renderVideo } from './rende
       audioBuffer = extractedBuffer || await decodeAudioFile(fileForPipeline);
       waveformPeaks = computePeaks(audioBuffer, 2000);
       trimCard.style.display = 'block';
+      trimCard.open = !fromApp;
       wfSplitBtn.disabled = false;
       renderCutList();
-      requestAnimationFrame(() => { recomputeBasePxPerSecond(); layoutWaveform(); drawWaveform(); });
+      if (trimCard.open) requestAnimationFrame(() => { recomputeBasePxPerSecond(); layoutWaveform(); drawWaveform(); });
       updatePlayheadAndTime();
     } catch (err){
       console.warn('waveform decode failed, trimming UI unavailable for this file', err);
     }
   }
+
+  // เปิดแถบตัดท่อนเสียง (ที่พับไว้ตอนเลือกจากแอพ) → จัดคลื่นเสียงใหม่ เพราะตอนพับวัดความกว้างไม่ได้
+  trimCard.addEventListener('toggle', () => {
+    if (trimCard.open && audioBuffer) requestAnimationFrame(() => { recomputeBasePxPerSecond(); layoutWaveform(); drawWaveform(); updatePlayheadAndTime(); });
+  });
 
   // ---------- เลือกเสียงที่เจนไว้ในแอพ (MWVoice ในเครื่อง + คลัง R2 ที่ยังไม่ได้ดึงมา) ----------
   const pickVoiceBtn = document.getElementById('pickVoiceBtn');
@@ -587,7 +598,7 @@ import { CANVAS_W, FONT_FAMILY, BOTTOM_MARGIN_RATIO, renderVideo } from './rende
       if (!rec || !rec.blob) throw new Error('ไม่เจอไฟล์เสียงนี้');
       closeVoiceModal();
       const name = (rec.name || String(id)).replace(/\.[^.]+$/, '');
-      await loadAudioFile(new File([rec.blob], `${name}.mp3`, { type: 'audio/mpeg' }));
+      await loadAudioFile(new File([rec.blob], `${name}.mp3`, { type: 'audio/mpeg' }), { fromApp: true });
       // บทของเทคนี้ = บทที่ใช้เจนเสียงนี้ ใส่ช่อง "สคริปต์ดิบ" ให้เลย (ทับของเดิม เพราะเสียงกับบทต้องเป็นชุดเดียวกัน)
       if (rec.text && rec.text.trim()) {
         rawScriptInput.value = rec.text.trim();

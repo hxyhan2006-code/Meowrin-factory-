@@ -136,7 +136,7 @@ export function buildGeminiSplitPrompt(rawScript, transcriptText, fillMode, word
 
 // ซับไม่ควรมีเว้นวรรคระหว่างตัวอักษรไทยกับไทย (เช่น "โบอา แฮนค็อก" → "โบอาแฮนค็อก") · เว้นข้างตัวเลข/อังกฤษคงไว้ เช่น "2 ครั้งที่"
 export function removeThaiSpaces(text){
-  return String(text ?? '').replace(/(?<=[\u0E00-\u0E7F])[ \t\u00A0]+(?=[\u0E00-\u0E7F])/g, '');
+  return String(text ?? '').replace(/(?<=[\u0E00-\u0E7F])[\p{Zs}\t]+(?=[\u0E00-\u0E7F])/gu, '');
 }
 
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';

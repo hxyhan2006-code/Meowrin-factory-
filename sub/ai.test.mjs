@@ -42,6 +42,9 @@ await test('ตัดเว้นวรรคระหว่างไทยก�
   assert.equal(removeThaiSpaces('2 ครั้งที่'), '2 ครั้งที่');
   assert.equal(removeThaiSpaces('ลูฟี่ Gear 5'), 'ลูฟี่ Gear 5');
   assert.equal(removeThaiSpaces('[AI] กับ โรบิน'), '[AI] กับโรบิน');
+  assert.equal(removeThaiSpaces('นี่คือ 2 ครั้ง'), 'นี่คือ 2 ครั้ง');
+  assert.equal(removeThaiSpaces('จังหวะ\u2009แอบ\u3000พา\u202fลูฟี่'), 'จังหวะแอบพาลูฟี่'); // ช่องว่างแบบอื่นๆ (บางๆ/เต็มความกว้าง/ไม่ตัดบรรทัด)
+  assert.equal(removeThaiSpaces('เริ่มจาก นามิ\nกับ โรบิน'), 'เริ่มจากนามิ\nกับโรบิน');
   assert.equal(removeThaiSpaces(null), '');
 });
 
