@@ -4,8 +4,10 @@ import { readFileSync, writeFileSync } from 'node:fs';
 
 const TARGETS = [
   ['index.html', [/(style\.css\?v=)([\d.]+)/g, /(app\.js\?v=)([\d.]+)/g, /(id="appVersion">v)([\d.]+)/g]],
-  ['app.js', [/(\.\/(?:aligner|srt|ai|media|render)\.js\?v=)([\d.]+)/g]],
+  ['app.js', [/(\.\/(?:aligner|srt|ai|media|render|waveform|ui|voicepick)\.js\?v=)([\d.]+)/g]],
   ['media.js', [/(mediabunny\.min\.js\?v=)([\d.]+)/g]],
+  ['waveform.js', [/(\.\/media\.js\?v=)([\d.]+)/g]],
+  ['voicepick.js', [/(\.\/ui\.js\?v=)([\d.]+)/g]],
 ];
 
 const arg = process.argv[2];
