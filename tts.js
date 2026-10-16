@@ -223,37 +223,76 @@
   /* ---------- เสียงที่เก็บไว้ (MWVoice: 50 เทคล่าสุดในเครื่อง + สำรองบนคลัง R2 ถ้าตั้งค่าไว้ · หน้าฟุตเทจใช้ต่อได้) ---------- */
   function setSavedN(n){ $("vSavedN").textContent = n; $("vSavedN").hidden = !n; } /* เลขบนปุ่มสามขีด */
   function countSaved(){ if(window.MWVoice) MWVoice.list().then(function(l){ setSavedN(l.length); }).catch(function(){}); }
-  var savedUrls = [], dateOf = function(id){ return new Date(id).toLocaleString("th-TH", { day:"numeric", month:"short", hour:"2-digit", minute:"2-digit" }); };
-  async function renderSaved(){
-    if(!window.MWVoice) return;
-    var box = $("vSavedList"), list = [], cloud = null, on = MWVoice.cloudOn();
-    try{ list = await MWVoice.list(); }catch(err){ box.innerHTML = '<p class="empty">เปิดที่เก็บเสียงไม่ได้</p>'; return; }
-    savedUrls.forEach(function(u){ URL.revokeObjectURL(u); }); savedUrls = [];
-    var draw = function(){
-      var only = cloud ? cloud.filter(function(c){ return !list.some(function(r){ return r.id === c.id; }); }) : [];
-      setSavedN(list.length + only.length);
-      box.innerHTML = (list.map(function(r){
-        var u = URL.createObjectURL(r.blob); savedUrls.push(u);
-        return '<div class="vsaved"><div class="vsh"><b>' + MW.esc(dateOf(r.id)) + '</b> · ' + (r.blob.size / 1048576).toFixed(1) + ' MB · ' + (r.text || "").length.toLocaleString() + ' ตัวอักษร · ' + (r.cloud ? "☁ อยู่ในคลัง" : on ? "ยังไม่อยู่ในคลัง" : "เฉพาะเครื่องนี้") + '</div>'
-          + '<p class="vstxt">' + MW.esc((r.text || "").replace(/\s+/g, " ").slice(0, 60)) + '...</p><audio controls preload="none" src="' + u + '"></audio>'
-          + '<div class="row"><a class="btn ghost small" href="' + u + '" download="' + MW.esc(r.name || "meowrin.mp3") + '" style="flex:1">ดาวน์โหลด</a><a class="btn ghost small" href="sub/?voice=' + r.id + '" style="flex:1">ทำซับ</a>'
-          + (on && !r.cloud ? '<button class="btn ghost small" data-vup="' + r.id + '" style="flex:1">☁ อัปขึ้นคลัง</button>' : "")
-          + '<button class="btn ghost small" data-vdel="' + r.id + '" style="flex:1">ลบ</button></div></div>';
-      }).join("") || '<p class="empty">ยังไม่มีเสียงที่เก็บไว้ · สร้างเสียงแล้วจะเก็บให้อัตโนมัติ (50 เทคล่าสุด' + (on ? " + สำรองบนคลัง" : "") + ')</p>')
-        + (only.length ? '<p class="hint" style="margin-top:12px">☁ อยู่ในคลังแต่ยังไม่ได้ดึงมาเครื่องนี้</p>' + only.map(function(c){
-          return '<div class="vsaved"><div class="vsh"><b>' + MW.esc(dateOf(c.id)) + '</b> · ' + (c.size / 1048576).toFixed(1) + ' MB · ☁ อยู่ในคลัง</div><div class="row"><button class="btn ghost small" data-vpull="' + c.id + '" style="flex:1">⬇ ดึงมาเครื่องนี้</button><button class="btn ghost small" data-vdelc="' + c.id + '" style="flex:1">ลบจากคลัง</button></div></div>'; }).join("") : "");
-    };
-    draw();
-    if(on){ try{ cloud = await MWVoice.cloudList(); draw(); }catch(err){ /* คลังไม่ตอบ = แสดงเฉพาะในเครื่อง */ } }
+  var savedUrls = {}, rsTok = 0, dateOf = function(id){ return new Date(id).toLocaleString("th-TH", { day:"numeric", month:"short", hour:"2-digit", minute:"2-digit" }); };
+  var PLAY = '<svg viewBox="0 0 24 24" aria-hidden="true"><path class="ip" d="M8 5v14l11-7z"/><path class="ipa" d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg>';
+  var pAudio = null, pId = 0; /* ตัวเล่นเดียวใช้ร่วมทุกการ์ด (เล่นได้ทีละเทค) · ปิดชีต = หยุดทันที */
+  function mmss(t){ t = Math.max(0, Math.round(t || 0)); return Math.floor(t / 60) + ":" + String(t % 60).padStart(2, "0"); }
+  function card(id){ return $("vSavedList").querySelector('.vcard[data-id="' + id + '"]'); }
+  function paintPlay(){
+    $("vSavedList").querySelectorAll(".vplay").forEach(function(x){ x.classList.toggle("on", !!pAudio && !pAudio.paused && +x.dataset.vplay === pId); });
   }
-  $("vSavedBtn").addEventListener("click", function(){ renderSaved(); MW.openModal("vSavedSheet"); });
-  $("vSavedClose").addEventListener("click", function(){ MW.closeModal("vSavedSheet"); });
-  $("vSavedSheet").addEventListener("click", function(e){ if(e.target === this) MW.closeModal("vSavedSheet"); });
-  document.addEventListener("keydown", function(e){ if(e.key === "Escape" && !$("vSavedSheet").hidden) MW.closeModal("vSavedSheet"); });
+  function stopSaved(){ if(!pAudio) return; pAudio.pause(); pAudio.removeAttribute("src"); pAudio.load(); pId = 0; paintPlay(); $("vSavedList").querySelectorAll(".vbar i").forEach(function(i){ i.style.width = "0"; }); }
+  function playSaved(id){
+    if(!pAudio){
+      pAudio = new Audio();
+      pAudio.addEventListener("timeupdate", function(){
+        var c = card(pId); if(!c || !pAudio.duration) return;
+        c.querySelector(".vbar i").style.width = (pAudio.currentTime / pAudio.duration * 100) + "%";
+        c.querySelector(".vtime").textContent = mmss(pAudio.currentTime) + " / " + mmss(pAudio.duration);
+      });
+      pAudio.addEventListener("pause", paintPlay); pAudio.addEventListener("play", paintPlay);
+      pAudio.addEventListener("ended", function(){ paintPlay(); var c = card(pId); if(c) c.querySelector(".vbar i").style.width = "0"; });
+    }
+    if(pId === id && !pAudio.paused){ pAudio.pause(); return; }
+    if(pId !== id){ stopSaved(); pId = id; pAudio.src = savedUrls[id]; }
+    pAudio.play().catch(function(err){ MW.toast("เล่นไม่ได้: " + err.message, true); });
+  }
+  function localCard(r, on){
+    var st = r.cloud ? "☁ อยู่ในคลัง" : on ? "ยังไม่อยู่ในคลัง" : "เฉพาะเครื่องนี้";
+    return '<div class="vcard" data-id="' + r.id + '"><div class="vtop"><button class="vplay" data-vplay="' + r.id + '" aria-label="เล่น/หยุด">' + PLAY + '</button>'
+      + '<div class="vmeta"><b>' + MW.esc(dateOf(r.id)) + '</b><small>' + (r.blob.size / 1048576).toFixed(1) + ' MB · ' + (r.text || "").length.toLocaleString() + ' ตัวอักษร · ' + st + '</small></div></div>'
+      + '<p class="vstxt">' + MW.esc((r.text || "").replace(/\s+/g, " ").slice(0, 140)) + '</p>'
+      + '<div class="vprog"><div class="vbar" data-vbar="' + r.id + '"><i></i></div><span class="vtime">0:00</span></div>'
+      + '<div class="vact"><a class="btn small" href="sub/?voice=' + r.id + '">ทำซับ</a>'
+      + '<a class="btn ghost small" href="' + savedUrls[r.id] + '" download="' + MW.esc(r.name || "meowrin.mp3") + '">ดาวน์โหลด</a>'
+      + (on && !r.cloud ? '<button class="btn ghost small" data-vup="' + r.id + '">☁ อัปขึ้นคลัง</button>' : "")
+      + '<button class="btn ghost small" data-vdel="' + r.id + '">ลบ</button></div></div>';
+  }
+  function cloudCard(c){
+    return '<div class="vcard"><div class="vtop"><div class="vmeta"><b>' + MW.esc(dateOf(c.id)) + '</b><small>' + (c.size / 1048576).toFixed(1) + ' MB · ☁ อยู่ในคลัง</small></div></div>'
+      + '<div class="vact"><button class="btn small" data-vpull="' + c.id + '">⬇ ดึงมาเครื่องนี้</button><button class="btn ghost small" data-vdelc="' + c.id + '">ลบจากคลัง</button></div></div>';
+  }
+  async function renderSaved(){ /* วาดเสียงในเครื่องก่อน (resolve เมื่อเสร็จ) · เสียงที่อยู่แค่ในคลังเติมทีหลังเฉพาะส่วนของมัน ไม่วาดการ์ดในเครื่องซ้ำ (กันกะพริบ/เสียงสะดุด) */
+    if(!window.MWVoice) return;
+    var tok = ++rsTok, box = $("vSavedList"), list = [], on = MWVoice.cloudOn();
+    try{ list = await MWVoice.list(); }catch(err){ box.innerHTML = '<p class="empty">เปิดที่เก็บเสียงไม่ได้</p>'; return; }
+    stopSaved(); Object.keys(savedUrls).forEach(function(k){ URL.revokeObjectURL(savedUrls[k]); }); savedUrls = {};
+    list.forEach(function(r){ savedUrls[r.id] = URL.createObjectURL(r.blob); });
+    var empty = '<p class="empty">ยังไม่มีเสียงที่เก็บไว้ · สร้างเสียงแล้วจะเก็บให้อัตโนมัติ (50 เทคล่าสุด' + (on ? " + สำรองบนคลัง" : "") + ')</p>';
+    box.innerHTML = '<div id="vSavedLocal">' + (list.map(function(r){ return localCard(r, on); }).join("") || (on ? '<p class="empty">กำลังโหลด...</p>' : empty)) + '</div><div id="vSavedCloud"></div>';
+    setSavedN(list.length);
+    if(!on) return;
+    try{
+      var cloud = await MWVoice.cloudList();
+      if(tok !== rsTok) return; /* มีการวาดรอบใหม่แล้ว ผลเก่าทิ้ง */
+      var only = cloud.filter(function(c){ return !list.some(function(r){ return r.id === c.id; }); });
+      setSavedN(list.length + only.length);
+      if(!list.length) $("vSavedLocal").innerHTML = only.length ? "" : empty;
+      $("vSavedCloud").innerHTML = only.length ? '<p class="hint" style="margin:12px 0 4px">☁ อยู่ในคลังแต่ยังไม่ได้ดึงมาเครื่องนี้</p>' + only.map(cloudCard).join("") : "";
+    }catch(err){ if(tok === rsTok && !list.length) $("vSavedLocal").innerHTML = empty; /* คลังไม่ตอบ = แสดงเฉพาะในเครื่อง */ }
+  }
+  function closeSaved(){ stopSaved(); MW.closeModal("vSavedSheet"); }
+  $("vSavedBtn").addEventListener("click", async function(){ await renderSaved(); MW.openModal("vSavedSheet"); }); /* เปิดชีตหลังข้อมูลในเครื่องพร้อมแล้ว ไม่โชว์ของว่าง/ของเก่าแว้บ */
+  $("vSavedClose").addEventListener("click", closeSaved);
+  $("vSavedSheet").addEventListener("click", function(e){ if(e.target === this) closeSaved(); });
+  document.addEventListener("keydown", function(e){ if(e.key === "Escape" && !$("vSavedSheet").hidden) closeSaved(); });
   document.addEventListener("mw:tab", function(e){ $("vSavedBtn").hidden = e.detail !== "voice"; }); /* ปุ่มโชว์เฉพาะแท็บเสียง (แบบเดียวกับปุ่มประวัติในแท็บบท) */
   countSaved();
   $("vSavedList").addEventListener("click", async function(e){
+    var bar = e.target.closest(".vbar");
+    if(bar){ if(pAudio && pId === +bar.dataset.vbar && pAudio.duration){ var r0 = bar.getBoundingClientRect(); pAudio.currentTime = Math.min(1, Math.max(0, (e.clientX - r0.left) / r0.width)) * pAudio.duration; } return; } /* แตะแถบเวลา = กรอ */
     var b = e.target.closest("button"); if(!b) return; var d = b.dataset;
+    if(d.vplay){ playSaved(+d.vplay); return; }
     if(d.vdel || d.vdelc){ /* ลบ: แตะครั้งแรกปุ่มเปลี่ยนเป็น "แน่ใจนะ?" แตะซ้ำภายใน 3 วิถึงลบ (ไม่ใช้กล่องของเบราว์เซอร์) */
       MW.confirmTap(b, b.textContent, async function(){
         try{
