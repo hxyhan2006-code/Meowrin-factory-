@@ -404,9 +404,9 @@
       var id = esc(p.id);
       return '<details class="fold" data-fold="'+id+'"'+(p.id === openId ? ' open' : '')+'><summary><span>'+esc(p.name)+'</span><em class="state'+(p.text.trim() ? ' ok' : '')+'">'+promptState(p)+'</em></summary><div class="fbody">'
         + '<label for="pn_'+id+'" style="margin-top:0">ชื่อ</label><input id="pn_'+id+'" data-pname="'+id+'" value="'+esc(p.name)+'" autocomplete="off">'
-        + '<div class="ftools" style="margin-top:12px"><button type="button" class="btn small ghost" data-paste="pt_'+id+'">วาง</button><button type="button" class="btn small ghost" data-clear="pt_'+id+'">ลบ</button></div>'
+        + '<div class="ftools" style="margin-top:12px"><button type="button" class="btn small ghost" data-paste="pt_'+id+'">วาง</button><button type="button" class="rowmore" data-pmore aria-label="เมนู prompt นี้">'+MWIcon("more")+'</button></div>'
         + '<textarea id="pt_'+id+'" data-ptext="'+id+'" rows="14" placeholder="วาง prompt ทั้งก้อนที่นี่" aria-label="ข้อความ prompt">'+esc(p.text)+'</textarea>'
-        + '<div class="row" style="margin-top:10px"><button type="button" class="btn small ghost" data-pdup="'+id+'">ทำสำเนา</button><button type="button" class="btn small ghost" data-pdel="'+id+'">ลบ prompt นี้</button></div>'
+        + '<div class="fmenu"><button type="button" class="btn small ghost" data-clear="pt_'+id+'">ล้างข้อความ</button><button type="button" class="btn small ghost" data-pdup="'+id+'">ทำสำเนา</button><button type="button" class="btn small ghost" data-pdel="'+id+'">ลบ prompt นี้</button></div>'
         + '</div></details>';
     }).join("");
   }
@@ -422,6 +422,7 @@
     var ok = saveCfg(); MW.toast(ok ? "บันทึกแล้ว" : "บันทึกไม่ได้", !ok); renderChips();
   });
   $("promptList").addEventListener("click", function(e){
+    var mo = e.target.closest("[data-pmore]"); if(mo){ mo.closest(".fbody").classList.toggle("mopen"); return; } /* ล้าง/สำเนา/ลบ ซ่อนไว้ แตะสามจุดถึงโผล่ */
     var b = e.target.closest("button[data-pdup], button[data-pdel]"); if(!b) return;
     if(b.dataset.pdup){
       var src = prompt(b.dataset.pdup), cp = { id:newId(), name:src.name + " (สำเนา)", text:src.text };

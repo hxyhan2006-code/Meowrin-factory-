@@ -409,7 +409,7 @@
       return;
     }
     if(!el.value){ toast("ช่องนี้ว่างอยู่แล้ว", true); return; }
-    confirmTap(b, "ลบ", function(){ el.value = ""; fireChange(el); toast("ลบแล้ว"); });
+    confirmTap(b, b.textContent, function(){ el.value = ""; fireChange(el); toast("ลบแล้ว"); });
   });
   $("exportBtn").addEventListener("click", function(){
     var blob = new Blob([JSON.stringify({ v:3, channels:data.channels, made:data.made, saved:data.saved, history: MW.history ? MW.history.all() : [],

@@ -427,7 +427,8 @@
       return '<div class="vrow"><input data-vname="'+id+'" value="'+MW.esc(v.name)+'" placeholder="ชื่อเสียง เช่น Test7" autocomplete="off" aria-label="ชื่อเสียง">'
         + '<input id="vid_'+id+'" data-vid="'+id+'" value="'+MW.esc(v.vid)+'" placeholder="Voice ID" autocomplete="off" autocapitalize="none" aria-label="Voice ID">'
         + '<button type="button" class="btn small ghost" data-paste="vid_'+id+'" data-trim>วาง</button>'
-        + '<button type="button" class="btn small ghost" data-vdel="'+id+'">ลบ</button></div>';
+        + '<button type="button" class="rowmore" data-rowmore aria-label="เมนูเสียงนี้">'+MWIcon("more")+'</button>'
+        + '<button type="button" class="btn small ghost vdel" data-vdel="'+id+'">ลบเสียงนี้</button></div>';
     }).join("") || '<p class="hint" style="margin:0">ยังไม่มีเสียง กด "+ เพิ่มเสียง"</p>';
     if(focusId){ var el = document.querySelector('[data-vname="'+focusId+'"]'); if(el){ el.focus(); el.select(); } }
   }
@@ -441,8 +442,9 @@
     var ok = saveCfg(); MW.toast(ok ? "บันทึกแล้ว" : "บันทึกไม่ได้", !ok); renderVoiceRow();
   });
   $("voiceList").addEventListener("click", function(e){
+    var mo = e.target.closest("[data-rowmore]"); if(mo){ mo.closest(".vrow").classList.toggle("open"); return; } /* ปุ่มลบซ่อนไว้ แตะสามจุดถึงโผล่ */
     var b = e.target.closest("button[data-vdel]"); if(!b) return;
-    MW.confirmTap(b, "ลบ", function(){
+    MW.confirmTap(b, "ลบเสียงนี้", function(){
       cfg.voices = cfg.voices.filter(function(v){ return v.id !== b.dataset.vdel; });
       if(!curVoice()) cfg.voice = cfg.voices.length ? cfg.voices[0].vid : "";
       saveCfg(); renderVoiceList(); renderVoiceRow(); MW.toast("ลบเสียงแล้ว");
