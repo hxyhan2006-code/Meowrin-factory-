@@ -80,8 +80,8 @@ try {
   const playing = await main.page.evaluate(() => window.__auds.some((a) => !a.paused));
   await main.page.click('#vSavedClose'); await main.page.waitForTimeout(300);
   // แถวปุ่มใต้เสียงที่เจนแล้ว ต้องไม่ล้นจอ (ล้น = มือถือซูมออกทั้งหน้า) แม้ปุ่มโชว์ครบทั้ง 5
-  await main.page.evaluate(() => { document.querySelector('#ttsOut').hidden = false; ['ttsSub', 'ttsDirect', 'ttsRaw', 'ttsShare'].forEach((i) => { document.getElementById(i).hidden = false; }); });
-  check('แท็บเสียง: แถวปุ่มใต้เสียงที่เจนแล้วไม่ล้นจอ', !(await main.page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1)));
+  await main.page.evaluate(() => { document.querySelector('#vBody').hidden = false; document.querySelector('#vNo').hidden = true; document.querySelector('#ttsOut').hidden = false; ['ttsSub', 'ttsDirect', 'ttsRaw', 'ttsShare'].forEach((i) => { document.getElementById(i).hidden = false; }); });
+  check('แท็บเสียง: แถวปุ่มใต้เสียงที่เจนแล้วไม่ล้นจอ', await main.page.evaluate(() => { const bs = [...document.querySelectorAll('#ttsOut .row .btn')]; return bs.length === 5 && bs.every((b) => b.getBoundingClientRect().width > 0 && b.getBoundingClientRect().right <= innerWidth + 1); }));
   check('เสียงที่เก็บไว้: กดเล่นแล้วปิดหน้าต่าง เสียงหยุด', playing && !(await main.page.evaluate(() => window.__auds.some((a) => !a.paused))));
   await finishPage(main);
   // หน้าซับ (?voice=)
