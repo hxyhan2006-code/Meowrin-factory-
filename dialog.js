@@ -10,7 +10,7 @@
     + ".mwd-txt{display:block;width:100%;box-sizing:border-box;min-height:140px;margin:0 0 16px;padding:10px;border-radius:10px;border:1px solid var(--line,rgba(255,255,255,.08));background:var(--field,#1c1c21);color:inherit;font:inherit;resize:vertical}"
     + ".mwd-row{display:flex;gap:10px}"
     + ".mwd-btn{flex:1;min-height:46px;border-radius:12px;border:1px solid var(--line-strong,rgba(255,255,255,.14));background:var(--field,#1c1c21);color:inherit;font:inherit;font-weight:500;cursor:pointer}"
-    + ".mwd-btn.ok{background:var(--accent,#f59e0b);border-color:var(--accent,#f59e0b);color:var(--accent-ink,#1a1203);font-weight:600}";
+    + ".mwd-btn.ok{background:var(--accent,#39d98a);border-color:var(--accent,#39d98a);color:var(--accent-ink,#06120b);font-weight:600}";
   var root = null, msg, txt, row, done = null;
   function build(){
     if(root) return;

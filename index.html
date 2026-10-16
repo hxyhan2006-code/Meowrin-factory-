@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<meta name="theme-color" content="#09090b" />
+<meta name="theme-color" content="#0b0e0d" />
 <link rel="manifest" href="manifest.json">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -13,8 +13,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600&family=Mitr:wght@500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=20261015e">
-<link rel="stylesheet" href="sheet.css?v=20261016c">
+<link rel="stylesheet" href="style.css?v=20261016k">
+<link rel="stylesheet" href="sheet.css?v=20261016k">
 </head>
 <body>
 <div class="wrap">
@@ -174,6 +174,17 @@
 
   <!-- ตั้งค่า -->
   <section id="tab-settings">
+    <div class="sech first">เครื่องมือ</div>
+    <div class="tools">
+      <a class="tool" href="footage.html"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg><b>ดัชนีฟุตเทจ</b><small>คลังฟุตเทจ + ผู้กำกับ AI</small></a>
+      <a class="tool" href="sub/"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 14h6M7 10h10"/></svg><b>ซับจอเขียว</b><small>ทำซับจากเสียงพากย์</small></a>
+    </div>
+    <div class="qbk">
+      <div><b>สำรองขึ้น Google Drive</b><small id="gdQuickInfo">ตรวจสอบ...</small></div>
+      <button class="btn small" id="gdQuick" type="button">สำรองตอนนี้</button>
+    </div>
+    <div id="gdQuickMsg"></div>
+    <div class="sech">เชื่อมต่อ</div>
     <details class="fold top"><summary><span>คีย์ API</span><em class="state idle" id="tagKeys"></em></summary><div class="fbody">
       <details class="fold">
         <summary><span>YouTube Data API key</span><em class="state" id="ytState"></em></summary>
@@ -211,19 +222,22 @@
         </div>
       </details>
     </div></details>
-
-    <details class="fold top"><summary><span>งบและค่าใช้จ่าย</span><em class="state idle" id="bgTag"></em></summary><div class="fbody">
-      <div id="bgInfo"></div>
-      <p class="hint">เพดานในแอพ (ใส่ 0 = ไม่จำกัด) ถึงแล้วแอพหยุดเรียก AI / หยุดอัปเอง ใช้กับทั้งแอพหลักและหน้าฟุตเทจ · กันบั๊กและใช้เพลินได้ แต่ไม่กันคีย์หลุด ลิมิตแข็งจริงคือเครดิตที่เติมไว้ใน OpenRouter และ Budget Alert ใน Cloudflare</p>
-      <label for="bgDay">เพดานค่า AI ต่อวัน (USD)</label>
-      <input id="bgDay" type="number" min="0" step="0.5" inputmode="decimal">
-      <label for="bgMonth">เพดานค่า AI ต่อเดือน (USD)</label>
-      <input id="bgMonth" type="number" min="0" step="1" inputmode="decimal">
-      <label for="bgR2">เพดานขนาดคลัง R2 (GB)</label>
-      <input id="bgR2" type="number" min="0" step="10" inputmode="numeric">
-      <p class="hint">ค่าเงินบาทคิดที่ ~35 บาท/ดอลลาร์ (ประมาณ) · R2 10 GB แรกฟรี เกินนั้น $0.015/GB/เดือน</p>
+    <details class="fold top"><summary><span>เสียงพากย์ (ElevenLabs)</span><em class="state idle" id="tagVoice"></em></summary><div class="fbody">
+      <details class="fold">
+        <summary><span>ElevenLabs API key</span><em class="state" id="elState"></em></summary>
+        <div class="fbody">
+          <div class="ftools"><button type="button" class="btn small ghost" data-paste="elKey" data-trim>วาง</button><button type="button" class="btn small ghost" data-clear="elKey">ลบ</button></div>
+          <input id="elKey" type="password" placeholder="sk_..." autocomplete="off" aria-label="ElevenLabs API key">
+          <p class="hint">แนะนำสร้าง key ใหม่ที่เปิดสิทธิ์ Text to Speech อย่างเดียว เก็บในเครื่องนี้เท่านั้น บันทึกอัตโนมัติ</p>
+        </div>
+      </details>
+      <label>เสียงของฉัน</label>
+      <p class="hint" style="margin-top:0">ใส่ชื่อกับ Voice ID จากหน้าเสียงใน ElevenLabs (เลือกใช้เสียงไหน และตั้งโมเดล/Stability/วอร์ม ได้ในแท็บ เสียง ปุ่ม ⚙)</p>
+      <div id="voiceList"></div>
+      <button type="button" class="btn ghost" id="addVoice" style="margin-top:10px;width:100%">+ เพิ่มเสียง</button>
+      <p class="hint" id="ttsUsage"></p>
     </div></details>
-
+    <div class="sech">ทำบท</div>
     <details class="fold top"><summary><span>AI ทำบท</span><em class="state idle" id="tagAi"></em></summary><div class="fbody">
       <label for="gEye">ตัวดูคลิป (State 1)</label>
       <select id="gEye" data-sheet>
@@ -257,23 +271,6 @@
       <p class="hint">เลือกแล้วบันทึกให้อัตโนมัติ</p>
       <p class="hint" id="spendInfo" style="margin-top:-6px"></p>
     </div></details>
-
-    <details class="fold top"><summary><span>เสียงพากย์ (ElevenLabs)</span><em class="state idle" id="tagVoice"></em></summary><div class="fbody">
-      <details class="fold">
-        <summary><span>ElevenLabs API key</span><em class="state" id="elState"></em></summary>
-        <div class="fbody">
-          <div class="ftools"><button type="button" class="btn small ghost" data-paste="elKey" data-trim>วาง</button><button type="button" class="btn small ghost" data-clear="elKey">ลบ</button></div>
-          <input id="elKey" type="password" placeholder="sk_..." autocomplete="off" aria-label="ElevenLabs API key">
-          <p class="hint">แนะนำสร้าง key ใหม่ที่เปิดสิทธิ์ Text to Speech อย่างเดียว เก็บในเครื่องนี้เท่านั้น บันทึกอัตโนมัติ</p>
-        </div>
-      </details>
-      <label>เสียงของฉัน</label>
-      <p class="hint" style="margin-top:0">ใส่ชื่อกับ Voice ID จากหน้าเสียงใน ElevenLabs (เลือกใช้เสียงไหน และตั้งโมเดล/Stability/วอร์ม ได้ในแท็บ เสียง ปุ่ม ⚙)</p>
-      <div id="voiceList"></div>
-      <button type="button" class="btn ghost" id="addVoice" style="margin-top:10px;width:100%">+ เพิ่มเสียง</button>
-      <p class="hint" id="ttsUsage"></p>
-    </div></details>
-
     <details class="fold top"><summary><span>Prompt</span><em class="state idle" id="tagPrompts"></em></summary><div class="fbody">
       <p class="hint">กดชื่อเพื่อเปิดแก้ แก้เสร็จบันทึกให้อัตโนมัติ</p>
       <div id="promptList"></div>
@@ -282,7 +279,18 @@
         <button class="btn" id="saveAi" style="flex:1">บันทึก</button>
       </div>
     </div></details>
-
+    <div class="sech">ระบบ</div>
+    <details class="fold top"><summary><span>งบและค่าใช้จ่าย</span><em class="state idle" id="bgTag"></em></summary><div class="fbody">
+      <div id="bgInfo"></div>
+      <p class="hint">เพดานในแอพ (ใส่ 0 = ไม่จำกัด) ถึงแล้วแอพหยุดเรียก AI / หยุดอัปเอง ใช้กับทั้งแอพหลักและหน้าฟุตเทจ · กันบั๊กและใช้เพลินได้ แต่ไม่กันคีย์หลุด ลิมิตแข็งจริงคือเครดิตที่เติมไว้ใน OpenRouter และ Budget Alert ใน Cloudflare</p>
+      <label for="bgDay">เพดานค่า AI ต่อวัน (USD)</label>
+      <input id="bgDay" type="number" min="0" step="0.5" inputmode="decimal">
+      <label for="bgMonth">เพดานค่า AI ต่อเดือน (USD)</label>
+      <input id="bgMonth" type="number" min="0" step="1" inputmode="decimal">
+      <label for="bgR2">เพดานขนาดคลัง R2 (GB)</label>
+      <input id="bgR2" type="number" min="0" step="10" inputmode="numeric">
+      <p class="hint">ค่าเงินบาทคิดที่ ~35 บาท/ดอลลาร์ (ประมาณ) · R2 10 GB แรกฟรี เกินนั้น $0.015/GB/เดือน</p>
+    </div></details>
     <details class="fold top"><summary><span>สำรองข้อมูล</span><em class="state ok" id="stTag">ตรวจสอบ...</em></summary><div class="fbody">
       <div id="stInfo"></div>
       <details class="fold">
@@ -307,9 +315,6 @@
       </div>
       <div id="setMsg"></div>
     </div></details>
-
-    <a class="fold top go" href="footage.html"><span>ดัชนีฟุตเทจ</span><em class="state idle">ทดสอบ</em></a>
-    <a class="fold top go" href="sub/"><span>ซับจอเขียว</span><em class="state idle">ทำซับจากเสียง</em></a>
 
   </section>
 </div>
@@ -391,6 +396,6 @@
   </div>
 </div>
 
-<script src="store.js?v=20261015e" data-boot="dialog.js?v=20261016j budget.js?v=20261016a sync.js?v=20261015e app.js?v=20261016j llm.js?v=20261015e ai.js?v=20261016j r2.js?v=20261016d voicestore.js?v=20261016e tts.js?v=20261016i gdrive.js?v=20261016j"></script>
+<script src="store.js?v=20261015e" data-boot="dialog.js?v=20261016k budget.js?v=20261016a sync.js?v=20261015e app.js?v=20261016j llm.js?v=20261015e ai.js?v=20261016j r2.js?v=20261016d voicestore.js?v=20261016e tts.js?v=20261016i gdrive.js?v=20261016k"></script>
 </body>
 </html>

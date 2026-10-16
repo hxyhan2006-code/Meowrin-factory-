@@ -132,7 +132,7 @@
 
   /* ---------- หน้าจอ (ปุ่มที่มีในหน้านั้นๆ) ---------- */
   function ago(t){ if(!t) return "ยังไม่เคย"; var m = Math.round((Date.now() - t) / 60000); return m < 1 ? "เมื่อกี้" : m < 60 ? m + " นาทีที่แล้ว" : m < 1440 ? Math.round(m / 60) + " ชม.ที่แล้ว" : Math.round(m / 1440) + " วันที่แล้ว"; }
-  function show(text, kind){ var el = $("gdMsg"); if(el) el.innerHTML = text ? '<div class="msg ' + (kind || "") + '">' + text.replace(/</g, "&lt;") + "</div>" : ""; }
+  function show(text, kind){ var html = text ? '<div class="msg ' + (kind || "") + '">' + text.replace(/</g, "&lt;") + "</div>" : ""; ["gdMsg", "gdQuickMsg"].forEach(function(id){ var el = $(id); if(el) el.innerHTML = html; }); }
   /* ---------- สถานะ (ป้ายสี: เขียว = ปกติ · เหลือง = ควรดู/ต้องกดอะไรสักอย่าง · แดง = มีปัญหา · เทา = ยังไม่ได้ตั้ง) ---------- */
   function pill(kind, text){ return '<span class="pill ' + kind + '">' + text + "</span>"; }
   function row(label, kind, text, extra){ return '<div class="strow"><span>' + label + "</span>" + pill(kind, text) + (extra ? '<small>' + extra + "</small>" : "") + "</div>"; }
@@ -148,13 +148,15 @@
   function ageKind(t){ return !t ? "idle" : Date.now() - t > 3 * 864e5 ? "warn" : "ok"; }
   function ageText(t){ return !t ? "ยังไม่เคยสำรอง" : ageKind(t) === "warn" ? ago(t) + " (นานแล้ว)" : ago(t); }
   function render(){
-    ["gdNow", "gdRestore", "gdFootNow", "gdFootRestore"].forEach(function(id){ if($(id)) $(id).disabled = busy; });
+    ["gdNow", "gdQuick", "gdRestore", "gdFootNow", "gdFootRestore"].forEach(function(id){ if($(id)) $(id).disabled = busy; });
     if($("gdConnect")) $("gdConnect").textContent = ready() ? "✓ เชื่อมแล้ว" : "เชื่อม Google Drive";
     var d = driveStatus(), kd = ageKind(cfg.last), kf = ageKind(cfg.lastFoot);
     tag("gdTag", d.kind === "ok" && kd === "warn" ? "warn" : d.kind, d.kind === "ok" && kd === "warn" ? "สำรองนานแล้ว" : d.text);
     var st = $("gdState");
     if(st) st.innerHTML = row("การเชื่อมต่อ", d.kind, d.text, d.why) + row("ข้อมูลแอพ", kd, ageText(cfg.last))
       + row("ดัชนีฟุตเทจ", kf, ageText(cfg.lastFoot), kf === "idle" ? "สำรองที่หน้าฟุตเทจ" : "");
+    var qi = $("gdQuickInfo"); /* แถบสำรองด่วนในหน้าตั้งค่า */
+    if(qi) qi.textContent = !cfg.client ? "ยังไม่ได้ตั้ง Client ID (ตั้งที่ ระบบ > สำรองข้อมูล)" : "ล่าสุด " + ageText(cfg.last) + (ready() ? "" : " · แตะแล้วจะเชื่อมให้ก่อน");
     renderStorage(d, kd);
   }
   function renderStorage(d, kd){
@@ -180,7 +182,8 @@
     $("gdClient").addEventListener("change", function(){ cfg.client = this.value.trim(); cfg.ok = false; tok = null; saveCfg(); render(); if(cfg.client) gis().catch(function(){}); });
   }
   if($("gdConnect")) $("gdConnect").addEventListener("click", function(){ connect().then(function(){ show("เชื่อมแล้ว", "ok"); }, function(err){ show(err.message, "err"); }); });
-  bind("gdNow", async function(){ var r = await backupData(); return "สำรองขึ้น Drive แล้ว (" + r.keys + " รายการ · " + r.kb.toFixed(0) + " KB)"; });
+  var backupNow = async function(){ var r = await backupData(); return "สำรองขึ้น Drive แล้ว (" + r.keys + " รายการ · " + r.kb.toFixed(0) + " KB)"; };
+  bind("gdNow", backupNow); bind("gdQuick", backupNow);
   bind("gdRestore", async function(){
     if(!await MWDialog.confirm("กู้คืนจาก Drive? ข้อมูลในเครื่อง (ประวัติ/prompt/ช่อง/ตั้งค่า) จะถูกแทนด้วยของบน Drive · API key ไม่ถูกแตะ", { ok:"กู้คืน" })) return "ยกเลิก";
     var r = await restoreData(); setTimeout(function(){ location.reload(); }, 1200);

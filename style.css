@@ -6,9 +6,9 @@
 /* ---------- 1. Design tokens ---------- */
 :root{
   /* Surfaces */
-  --bg:#09090b;            /* Zinc-950 — body */
-  --surface:#141417;       /* Zinc-900 — cards / containers */
-  --field:#1c1c21;         /* inputs / textarea / select */
+  --bg:#0b0e0d;            /* Zinc-950 — body */
+  --surface:#131917;       /* Zinc-900 — cards / containers */
+  --field:#1a221f;         /* inputs / textarea / select */
 
   /* Text */
   --text:#f4f4f5;
@@ -19,10 +19,12 @@
   --line-strong:rgba(255,255,255,.14);
 
   /* Accents */
-  --accent:#f59e0b;                      /* Amber Gold — actions / highlights */
-  --accent-ink:#1a1203;                  /* text on amber */
-  --accent-soft:rgba(245,158,11,.14);
-  --accent-glow:rgba(245,158,11,.22);
+  --accent:#39d98a;                      /* เขียว (โทนเดียวกับซับจอเขียว) — ปุ่ม/ไฮไลต์ */
+  --accent-ink:#06120b;                  /* ตัวอักษรบนสีเขียว */
+  --accent-soft:rgba(57,217,138,.14);
+  --accent-glow:rgba(57,217,138,.22);
+  --warn:#f59e0b;                        /* เตือน/ควรดูแล (แยกจากสีหลักที่เป็นเขียว) */
+  --warn-soft:rgba(245,158,11,.14);
   --ok:#10b981;                          /* Neon Emerald — score / badge */
   --ok-soft:rgba(16,185,129,.15);
   --err:#f43f5e;                         /* Rose Red — error / alert */
@@ -92,7 +94,7 @@ header p{color:var(--muted);font-size:12.5px;margin-top:1px}
   flex:none;width:38px;height:38px;border-radius:11px;
   display:grid;place-items:center;
   font:500 22px/1 Mitr,sans-serif;color:var(--accent-ink);
-  background:linear-gradient(145deg,#fbbf24,#f59e0b 55%,#d97706);
+  background:linear-gradient(145deg,#7ef0b5,#39d98a 55%,#1f9d62);
   box-shadow:0 4px 16px var(--accent-glow);
 }
 h2{font-size:16px;margin-bottom:2px}
@@ -171,9 +173,9 @@ button:disabled:active,.btn:disabled:active{transform:none}
   white-space:nowrap;
   text-decoration:none;
   cursor:pointer;
-  box-shadow:0 2px 10px rgba(245,158,11,.2);
+  box-shadow:0 2px 10px rgba(57,217,138,.2);
 }
-.btn:hover{background:#fbab1c}
+.btn:hover{background:#5fe3a3}
 .btn.ghost{
   background:rgba(255,255,255,.03);
   border-color:var(--line-strong);
@@ -207,8 +209,8 @@ textarea::placeholder{color:#71717a}
 input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):focus,
 select:focus,
 textarea:focus{
-  border-color:rgba(245,158,11,.65);
-  box-shadow:0 0 0 3px var(--accent-glow), 0 0 22px rgba(245,158,11,.14);
+  border-color:rgba(57,217,138,.65);
+  box-shadow:0 0 0 3px var(--accent-glow), 0 0 22px rgba(57,217,138,.14);
 }
 
 select{
@@ -296,7 +298,7 @@ label{
 .fchip i{font-style:normal;opacity:.7;margin-left:2px}
 .fchip.on{
   background:var(--accent-soft);
-  border-color:rgba(245,158,11,.55);
+  border-color:rgba(57,217,138,.55);
   color:var(--accent);
 }
 
@@ -309,7 +311,7 @@ label{
 .listinfo{color:var(--muted);font-size:12px;margin:-4px 0 12px}
 .listbar .chk{margin-right:auto}
 .svbtn{flex:none;padding:0 12px}
-.svbtn.on{background:var(--accent-soft);border-color:rgba(245,158,11,.55);color:var(--accent)}
+.svbtn.on{background:var(--accent-soft);border-color:rgba(57,217,138,.55);color:var(--accent)}
 
 .msg{
   padding:11px 14px;
@@ -445,7 +447,7 @@ label{
 .wrapchips{flex-wrap:wrap;overflow:visible;margin:0;padding:0}
 #vTabs:not(:empty){margin:16px 0 4px;padding:4px;gap:4px;background:var(--surface);border:1px solid var(--line);border-radius:14px}
 #vTabs .fchip{flex:1 1 auto;border-radius:10px;border-color:transparent;background:transparent}
-#vTabs .fchip.on{background:var(--accent-soft);border-color:rgba(245,158,11,.55)}
+#vTabs .fchip.on{background:var(--accent-soft);border-color:rgba(57,217,138,.55)}
 #vWrap .fold{margin-top:12px}
 
 /* ค้นหา + แถบความคืบหน้า + โหลดเพิ่ม */
@@ -462,7 +464,7 @@ label{
   background:rgba(9,9,11,.6);color:#fff;font-size:18px;line-height:1;
   -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
 }
-.bm.on{color:var(--accent);border-color:rgba(245,158,11,.6)}
+.bm.on{color:var(--accent);border-color:rgba(57,217,138,.6)}
 .vbtn{flex:none;width:38px;padding:0}
 .vbtn svg{width:18px;height:18px;fill:currentColor}
 #list.cols3{grid-template-columns:repeat(3, minmax(0, 1fr));gap:8px}
@@ -513,7 +515,7 @@ label{
   background:rgba(20,20,23,.92);
   -webkit-backdrop-filter:blur(14px);
   backdrop-filter:blur(14px);
-  border:1px solid rgba(245,158,11,.35);
+  border:1px solid rgba(57,217,138,.35);
   border-radius:18px;
   box-shadow:var(--shadow-float);
 }
