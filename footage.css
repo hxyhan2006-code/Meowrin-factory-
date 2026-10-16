@@ -166,3 +166,6 @@ html:not(.tips) .hint.tip{display:none}
 .alrow{display:flex;align-items:center;gap:10px;width:100%;min-height:52px;margin-bottom:6px;padding:0 14px;border-radius:var(--rc);border:1px solid var(--line-strong);background:var(--field);color:var(--text);font:inherit;text-align:left}
 .alrow b{flex:1;font-weight:500;overflow-wrap:anywhere}.alrow i{font-style:normal;color:var(--muted);font-size:13px}.alrow .ic{margin:0;flex:none}
 .alrow.on{background:var(--accent-soft);border-color:rgba(57,217,138,.55);color:var(--accent)}
+/* ชีตเลือกตัวละคร: รายการเลื่อนเองให้ช่องค้นหากับปุ่มล่างอยู่กับที่ */
+#chQ{margin-bottom:8px}#chList{max-height:46vh;overflow-y:auto}
+.charbtn{display:flex;align-items:center;gap:6px;max-width:100%;overflow:hidden;text-overflow:ellipsis}.charbtn .ic{margin:0;flex:none}

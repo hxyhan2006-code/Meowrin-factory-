@@ -93,8 +93,8 @@
      ชื่อใน NAMES รวมสะกดต่างให้เป็นคนเดียวกัน · ตัวละครอื่นที่ AI เห็น ≥ MINSC ฉากได้ชิปเอง · เลือกหลายชิป = ต้องมีทุกคน · ชิปจำนวนคน = เดี่ยว/คู่/กลุ่ม/หมู่ */
   var NAMEX = NAMES.map(function(g){ var en = g.filter(function(n){ return /^[a-z ]+$/.test(n); }); /* ชื่ออังกฤษทุกแบบในกลุ่ม · ที่เหลือเป็นชื่อไทย */
     return { key:g[0], th:g[1], en:new RegExp("(^|[^a-z])(" + en.join("|") + ")([^a-z]|$)"), ths:g.filter(function(n){ return !/^[a-z ]+$/.test(n); }) }; });
-  var MINSC = 3, TOPN = 14, SKIPN = /^(unknown|none|n\/a|na|-|unnamed)$/;
-  var chipCache = new WeakMap(), labelOf = {}, sel = [], only = false, sizeSel = "", chipAll = false, albumSel = ""; /* albumSel = อัลบั้มที่ Han จัดไว้ (ชื่อตอนอัป) */
+  var MINSC = 3, SKIPN = /^(unknown|none|n\/a|na|-|unnamed)$/;
+  var chipCache = new WeakMap(), labelOf = {}, sel = [], only = false, sizeSel = "", albumSel = ""; /* albumSel = อัลบั้มที่ Han จัดไว้ (ชื่อตอนอัป) */
   NAMEX.forEach(function(n){ labelOf[n.key] = n.th; });
   function sceneChars(sc){ /* คืนรายการ key ตัวละครในฉากนี้ (จากป้าย AI) */
     var r = chipCache.get(sc); if(r) return r;
@@ -119,12 +119,10 @@
     var cnt = {}, none = 0, total = 0, sz = { "1":0, "2":0, "3":0, "5":0 };
     U.lib().forEach(function(c){ if(c.status !== "done" || c.hide) return; c.scenes.forEach(function(sc){ total++; var cs = sceneChars(sc); if(!cs.length) none++; else sz[sizeOf(cs.length)]++; cs.forEach(function(k){ cnt[k] = (cnt[k] || 0) + 1; }); }); });
     if(!total){ $("chips").innerHTML = $("sizes").innerHTML = ""; $("onlyRow").hidden = true; return; }
-    var ks = Object.keys(cnt).filter(function(k){ return cnt[k] >= MINSC || labelOf[k] && NAMEX.some(function(n){ return n.key === k; }) || sel.indexOf(k) >= 0; }).sort(function(a, b){ return cnt[b] - cnt[a]; });
-    var shownKs = chipAll ? ks : ks.filter(function(k, i){ return i < TOPN || sel.indexOf(k) >= 0; });
-    $("chips").classList.toggle("wrap", chipAll);
-    var chip = function(k, label, n){ return '<button class="chip' + (sel.indexOf(k) >= 0 || (k === "" && !sel.length) ? " on" : "") + '" data-c="' + esc(k) + '">' + esc(label) + " <i>" + n + "</i></button>"; };
-    $("chips").innerHTML = chip("", "ทั้งหมด", total) + shownKs.map(function(k){ return chip(k, labelOf[k] || k, cnt[k]); }).join("") + (none ? chip("?", "ไม่ระบุตัวละคร", none) : "")
-      + (ks.length > shownKs.length ? '<button class="chip" data-more="1">ดูทั้งหมด +' + (ks.length - shownKs.length) + "</button>" : chipAll && ks.length > TOPN ? '<button class="chip" data-more="1">ย่อ</button>' : "");
+    var ks = Object.keys(cnt).filter(function(k){ return cnt[k] >= MINSC || labelOf[k] && NAMEX.some(function(n){ return n.key === k; }) || sel.indexOf(k) >= 0; }).sort(function(x, y){ return enName(x).localeCompare(enName(y)); });
+    chData = { ks:ks, cnt:cnt, none:none, total:total };
+    var pickLab = !sel.length ? "ตัวละคร · ทั้งหมด" : sel.map(function(k){ return k === "?" ? "ไม่ระบุตัวละคร" : enName(k); }).join(", ");
+    $("chips").innerHTML = '<button class="chip charbtn' + (sel.length ? " on" : "") + '" data-open="1">' + MWIcon("user") + esc(pickLab) + " <i>" + (sel.length ? "" : total) + "</i></button>" + (sel.length ? '<button class="chip" data-clr="1">ล้าง</button>' : "");
     var st = function(k, label){ return '<button class="chip' + (sizeSel === k ? " on" : "") + '" data-z="' + k + '">' + label + (k ? " <i>" + sz[k] + "</i>" : "") + "</button>"; };
     $("sizes").innerHTML = st("", "ทุกจำนวนคน") + st("1", "เดี่ยว") + st("2", "คู่") + st("3", "กลุ่ม 3-4") + st("5", "หมู่ 5+");
     $("onlyRow").hidden = !sel.length || sel.indexOf("?") >= 0; $("onlySel").checked = only;
@@ -133,12 +131,31 @@
     $("albums").innerHTML = an.length > 1 ? '<button class="chip' + (albumSel ? "" : " on") + '" data-a="">ทุกอัลบั้ม</button>' + an.map(function(a){ return '<button class="chip' + (albumSel === a ? " on" : "") + '" data-a="' + esc(a) + '">' + MWIcon("folder") + esc(a) + " <i>" + al[a] + "</i></button>"; }).join("") : "";
   }
   $("albums").addEventListener("click", function(e){ var b = e.target.closest("[data-a]"); if(!b) return; albumSel = b.dataset.a === albumSel ? "" : b.dataset.a; chipMax = 40; search(); });
-  $("chips").addEventListener("click", function(e){
-    if(e.target.closest("[data-more]")){ chipAll = !chipAll; renderChips(); return; }
-    var b = e.target.closest("[data-c]"); if(!b) return; var k = b.dataset.c, i = sel.indexOf(k);
-    if(!k) sel = []; else if(k === "?") sel = i >= 0 ? [] : ["?"]; else { sel = sel.filter(function(x){ return x !== "?"; }); if(i >= 0) sel.splice(i, 1); else sel.push(k); } /* แตะซ้ำ = เอาออก · "ไม่ระบุ" เลือกร่วมกับตัวอื่นไม่ได้ */
+  /* ---------- ชีตเลือกตัวละคร: ชื่อ canon ภาษาอังกฤษ เรียง A-Z + ช่องพิมพ์ค้นหา (เลือกหลายคนได้ = ต้องมีทุกคน) ---------- */
+  var chData = null;
+  function enName(k){ return /^[\x20-\x7e]+$/.test(k) ? k.replace(/(^| )\w/g, function(m){ return m.toUpperCase(); }) : (labelOf[k] || k); }
+  function toggleChar(k){
+    var i = sel.indexOf(k);
+    if(k === "?") sel = i >= 0 ? [] : ["?"]; else { sel = sel.filter(function(x){ return x !== "?"; }); if(i >= 0) sel.splice(i, 1); else sel.push(k); } /* แตะซ้ำ = เอาออก · "ไม่ระบุตัวละคร" เลือกร่วมกับตัวอื่นไม่ได้ */
     chipMax = 40; search();
+  }
+  function renderCharSheet(){
+    if(!chData) return; var q = $("chQ").value.trim().toLowerCase(), list = $("chList"), top = list.scrollTop;
+    var row = function(k, name, n){ var on = sel.indexOf(k) >= 0; return '<button type="button" class="alrow' + (on ? " on" : "") + '" data-k="' + esc(k) + '">' + MWIcon(on ? "check" : "user") + "<b>" + esc(name) + "</b><i>" + n + " ฉาก</i></button>"; };
+    var rows = chData.ks.filter(function(k){ var nx = NAMEX.find(function(x){ return x.key === k; }); return !q || (enName(k) + " " + k + " " + (labelOf[k] || "") + " " + (nx ? nx.ths.join(" ") : "")).toLowerCase().indexOf(q) >= 0; }).map(function(k){ return row(k, enName(k), chData.cnt[k]); });
+    if(chData.none && (!q || "ไม่ระบุตัวละคร unknown".indexOf(q) >= 0)) rows.unshift(row("?", "ไม่ระบุตัวละคร", chData.none));
+    list.innerHTML = rows.join("") || '<p class="hint">ไม่เจอตัวละครนี้</p>'; list.scrollTop = top;
+  }
+  $("chips").addEventListener("click", function(e){
+    if(e.target.closest("[data-clr]")){ sel = []; chipMax = 40; search(); return; }
+    if(!e.target.closest("[data-open]")) return;
+    $("chQ").value = ""; renderCharSheet(); $("chSheet").hidden = false;
   });
+  $("chList").addEventListener("click", function(e){ var b = e.target.closest("[data-k]"); if(b){ toggleChar(b.dataset.k); renderCharSheet(); } });
+  $("chQ").addEventListener("input", renderCharSheet);
+  $("chClear").addEventListener("click", function(){ sel = []; chipMax = 40; search(); renderCharSheet(); });
+  $("chDone").addEventListener("click", function(){ $("chSheet").hidden = true; });
+  $("chSheet").addEventListener("click", function(e){ if(e.target === this) this.hidden = true; });
   $("sizes").addEventListener("click", function(e){ var b = e.target.closest("[data-z]"); if(!b) return; sizeSel = b.dataset.z === sizeSel ? "" : b.dataset.z; chipMax = 40; search(); });
   $("onlySel").addEventListener("change", function(){ only = this.checked; chipMax = 40; search(); });
   var sT = 0, shown = [], lastQ = "", showPartial = false, chipMax = 40; /* shown = รายการที่โชว์อยู่ (ให้ปุ่มดูรูปใหญ่อ้างถึง) */
