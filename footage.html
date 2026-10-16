@@ -5,12 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="theme-color" content="#0b0e0d" />
 <title>ฟุตเทจ · Meowrin factory</title>
-<link rel="icon" type="image/png" href="icon-192.png?v=3.5">
-<link rel="apple-touch-icon" href="icon-192.png?v=3.5">
+<link rel="icon" type="image/png" href="icon-192.png?v=3.6">
+<link rel="apple-touch-icon" href="icon-192.png?v=3.6">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600&family=Mitr:wght@500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="footage.css?v=3.5">
+<link rel="stylesheet" href="footage.css?v=3.6">
 </head>
 <body>
 <header>
@@ -27,7 +27,8 @@
       <label for="albumName">อัลบั้มของคลิปที่เลือก</label>
       <input id="albumName" type="text" placeholder="พิมพ์ชื่อใหม่ หรือแตะอัลบั้มด้านล่าง" autocomplete="off" maxlength="40">
       <div class="chips wrap" id="albumPick"></div>
-      <div id="albumRen" class="row" hidden style="margin-top:8px"><input id="albumNew" type="text" placeholder="ชื่อใหม่ของอัลบั้มนี้" autocomplete="off" maxlength="40"><button class="btn ghost" id="albumRenBtn" type="button">เปลี่ยนชื่อ</button></div>
+      <label id="albumRenLbl" for="albumNew" hidden></label>
+      <div id="albumRen" class="row" hidden style="margin-top:0"><input id="albumNew" type="text" placeholder="พิมพ์ชื่อใหม่" autocomplete="off" maxlength="40"><button class="btn ghost" id="albumRenBtn" type="button">เปลี่ยนชื่อ</button></div>
       <p class="hint" id="albumMsg" hidden></p>
       <input id="filesDocs" type="file" multiple hidden><!-- ไม่ใส่ accept → Android เปิดแอพไฟล์ เข้า Pictures/Gallery/owner/<อัลบั้ม> แล้วเลือกทั้งหมดได้ -->
       <p class="hint tip" style="margin-top:6px">เลือกทั้งโฟลเดอร์มั่วๆ ได้เลย (Pictures → Gallery → owner → ชื่ออัลบั้ม · กดค้างไฟล์แรก → เลือกทั้งหมด) · คลิปที่ทำแล้วข้ามเอง · ถ้าตั้งค่าคลังไว้ จะอัปไฟล์ขึ้นคลังให้อัตโนมัติ · AI ดูและจัดหมวดตัวละครให้เอง</p>
@@ -237,6 +238,6 @@
 <input id="pickDocs" type="file" multiple hidden><!-- ไม่ใส่ accept → Android เปิดแอพไฟล์ (เข้าโฟลเดอร์ + เลือกทั้งหมดได้) แทนตัวเลือกรูป -->
 <video id="vid" muted playsinline preload="auto" style="position:fixed;left:-9999px;width:2px;height:2px"></video>
 
-<script src="store.js?v=3.5" data-boot="icons.js?v=3.5 dialog.js?v=3.5 budget.js?v=3.5 footage-core.js?v=3.5 r2.js?v=3.5 footage.js?v=3.5 footage-find.js?v=3.5 footage-dup.js?v=3.5 footage-audit.js?v=3.5 footage-cloud.js?v=3.5 mp4fix.js?v=3.5 footage-stitch.js?v=3.5 voicestore.js?v=3.5 footage-plan.js?v=3.5 gdrive.js?v=3.5"></script>
+<script src="store.js?v=3.6" data-boot="icons.js?v=3.6 dialog.js?v=3.6 budget.js?v=3.6 footage-core.js?v=3.6 r2.js?v=3.6 footage.js?v=3.6 footage-find.js?v=3.6 footage-dup.js?v=3.6 footage-audit.js?v=3.6 footage-cloud.js?v=3.6 mp4fix.js?v=3.6 footage-stitch.js?v=3.6 voicestore.js?v=3.6 footage-plan.js?v=3.6 gdrive.js?v=3.6"></script>
 </body>
 </html>

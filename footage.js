@@ -426,10 +426,11 @@
             addQueue:function(items){ queue = queue.filter(function(q){ return q.status !== "skip"; }).concat(items.filter(function(a){ return !queue.some(function(q){ return q.id === a.id; }); })); renderQueue(); },
             addCost:function(x){ runCost += x; renderStats(); }, wake:wake };
   function renderAlbums(){ /* ชิปอัลบั้มที่มี: แตะ = ใส่ชื่อในช่อง (และเปิดช่องเปลี่ยนชื่อ) */
-    var n = {}; lib.forEach(function(c){ if(c.album && c.album !== "ไม่ระบุ") n[c.album] = (n[c.album] || 0) + 1; });
+    var n = {}; lib.forEach(function(c){ if(c.album) n[c.album] = (n[c.album] || 0) + 1; });
     var cur = $("albumName").value.trim();
     $("albumPick").innerHTML = Object.keys(n).sort().map(function(a){ return '<button type="button" class="chip' + (a === cur ? " on" : "") + '" data-a="' + esc(a) + '">' + MWIcon("folder") + esc(a) + " <i>" + n[a] + "</i></button>"; }).join("");
-    $("albumRen").hidden = !n[cur]; if(n[cur] && !$("albumNew").value) $("albumNew").value = cur;
+    $("albumRenLbl").textContent = "เปลี่ยนชื่ออัลบั้ม “" + cur + "” (" + (n[cur] || 0) + " คลิป) เป็น:";
+    $("albumRen").hidden = $("albumRenLbl").hidden = !n[cur]; if(n[cur] && !$("albumNew").value) $("albumNew").value = cur;
   }
   $("albumPick").addEventListener("click", function(e){ var b = e.target.closest("[data-a]"); if(!b) return; $("albumName").value = b.dataset.a === $("albumName").value.trim() ? "" : b.dataset.a; $("albumNew").value = ""; renderAlbums(); });
   $("albumName").addEventListener("input", function(){ $("albumNew").value = ""; renderAlbums(); });
