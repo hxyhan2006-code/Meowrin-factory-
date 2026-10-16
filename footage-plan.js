@@ -29,6 +29,17 @@
     var m = voices.find(match); $("plVoice").value = voices.concat(cl).some(function(v){ return String(v.id) === keep; }) ? keep : (m ? String(m.id) : "");
     $("plVoiceInfo").textContent = voices.length ? "" : "ยังไม่มีเสียง · สร้างเสียงในแอพหลัก (แท็บ เสียง) ก่อน แล้วกลับมาเลือกที่นี่";
   }
+  /* เปิดจากปุ่ม "ตัดต่อภาพ" ในแอพหลัก (footage.html?voice=รหัสเทค): ไปแท็บผู้กำกับ โหมด AI ตัดให้ ใส่บทและเลือกเสียงของเทคนั้นให้ */
+  var voiceQ = new URLSearchParams(location.search).get("voice");
+  if(voiceQ && window.MWVoice) (async function(){
+    history.replaceState(null, "", location.pathname);
+    try{
+      var rec = await MWVoice.get(+voiceQ) || await MWVoice.pull(+voiceQ);
+      document.querySelector('nav button[data-p="plan"]').click();
+      $("plMode").value = "fast"; if(rec.text) $("plText").value = rec.text;
+      await refreshVoices(); $("plVoice").value = String(rec.id);
+    }catch(err){ say("เปิดเสียงที่เลือกไม่ได้: " + err.message, "err"); }
+  })();
   $("plMode").addEventListener("change", refreshVoices);
   $("plText").addEventListener("input", refreshVoices);
   async function audioDur(blob){ return new Promise(function(ok){ var a = new Audio(), u = URL.createObjectURL(blob); a.preload = "metadata"; a.src = u;

@@ -192,6 +192,7 @@
     $("ttsInfo").textContent = k.cut !== null ? "ตัดช่วงวอร์ม " + k.cut.toFixed(1) + " วิแรกออกให้แล้ว ถ้าตัดผิด ใช้ไฟล์เต็มด้านล่างแทน"
       : k.warm ? "ไฟล์นี้ยังมีช่วงวอร์มอยู่ข้างหน้า ตัดเองใน CapCut ตามเดิม" + (cfg.tsOff ? " (โมเดลนี้ไม่ส่งเวลาตัวอักษรมา เลยตัดให้ไม่ได้)" : "") : "";
     $("ttsSub").hidden = !k.vid; if(k.vid) $("ttsSub").href = "sub/?voice=" + k.vid;
+    $("ttsDirect").hidden = !k.vid; if(k.vid) $("ttsDirect").href = "footage.html?voice=" + k.vid;
     $("ttsShare").hidden = !canShareFile(new File([k.blob], k.name, { type:"audio/mpeg" }));
   }
   document.addEventListener("mw:script", sync);
@@ -270,7 +271,7 @@
       + '<div class="vmeta"><b>' + MW.esc(dateOf(r.id)) + '</b><small>' + (r.blob.size / 1048576).toFixed(1) + ' MB · ' + (r.text || "").length.toLocaleString() + ' ตัวอักษร · ' + st + '</small></div></div>'
       + '<p class="vstxt">' + MW.esc((r.text || "").replace(/\s+/g, " ").slice(0, 140)) + '</p>'
       + '<div class="vprog"><div class="vbar" data-vbar="' + r.id + '"><i></i></div><span class="vtime">0:00</span></div>'
-      + '<div class="vact"><a class="btn small" href="sub/?voice=' + r.id + '">ทำซับ</a>'
+      + '<div class="vact"><a class="btn small" href="sub/?voice=' + r.id + '">ทำซับ</a><a class="btn small ghost" href="footage.html?voice=' + r.id + '">' + MWIcon("film") + 'ตัดต่อภาพ</a>'
       + '<a class="btn ghost small" href="' + savedUrls[r.id] + '" download="' + MW.esc(r.name || "meowrin.mp3") + '">ดาวน์โหลด</a>'
       + (on && !r.cloud ? '<button class="btn ghost small" data-vup="' + r.id + '">' + MWIcon("cloud") + 'อัปขึ้นคลัง</button>' : "")
       + '<button class="btn ghost small" data-vdel="' + r.id + '">ลบ</button></div></div>';

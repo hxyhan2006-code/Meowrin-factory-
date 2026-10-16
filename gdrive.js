@@ -169,7 +169,9 @@
         + row("พื้นที่", full ? "warn" : "ok", (i.used / 1048576).toFixed(1) + " MB" + (i.quota ? " / " + (i.quota / 1073741824).toFixed(1) + " GB" : ""), full ? "ใกล้เต็ม" : "");
       kinds = [idb ? "ok" : "err", i.persisted ? "ok" : "warn", full ? "warn" : "ok"];
       var el = $("stInfo"); if(el) el.innerHTML = html;
-      var all = worst(kinds.concat([d.kind === "idle" ? "warn" : d.kind === "ok" && kd === "warn" ? "warn" : d.kind]));
+      /* Drive: ยังไม่ได้เชื่อมในรอบนี้เป็นเรื่องปกติ (ต้องกดเชื่อมทุกครั้งที่เปิดแอพ) เตือนเฉพาะตอนสำรองล่าสุดนานเกิน 3 วันหรือไม่เคยสำรอง */
+      var dk = d.kind === "idle" ? "warn" : d.kind === "ok" ? (kd === "warn" ? "warn" : "ok") : d.kind === "warn" ? (kd === "ok" ? "ok" : "warn") : d.kind;
+      var all = worst(kinds.concat([dk]));
       tag("stTag", all, all === "ok" ? "ปกติ" : all === "err" ? "มีปัญหา" : "ควรดูแล");
     });
   }
