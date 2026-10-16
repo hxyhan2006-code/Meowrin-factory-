@@ -236,7 +236,7 @@
         var u = URL.createObjectURL(r.blob); savedUrls.push(u);
         return '<div class="vsaved"><div class="vsh"><b>' + MW.esc(dateOf(r.id)) + '</b> · ' + (r.blob.size / 1048576).toFixed(1) + ' MB · ' + (r.text || "").length.toLocaleString() + ' ตัวอักษร · ' + (r.cloud ? "☁ อยู่ในคลัง" : on ? "ยังไม่อยู่ในคลัง" : "เฉพาะเครื่องนี้") + '</div>'
           + '<p class="vstxt">' + MW.esc((r.text || "").replace(/\s+/g, " ").slice(0, 60)) + '...</p><audio controls preload="none" src="' + u + '"></audio>'
-          + '<div class="row"><a class="btn ghost small" href="' + u + '" download="' + MW.esc(r.name || "meowrin.mp3") + '" style="flex:1">ดาวน์โหลด</a>'
+          + '<div class="row"><a class="btn ghost small" href="' + u + '" download="' + MW.esc(r.name || "meowrin.mp3") + '" style="flex:1">ดาวน์โหลด</a><a class="btn ghost small" href="sub/?voice=' + r.id + '" style="flex:1">ทำซับ</a>'
           + (on && !r.cloud ? '<button class="btn ghost small" data-vup="' + r.id + '" style="flex:1">☁ อัปขึ้นคลัง</button>' : "")
           + '<button class="btn ghost small" data-vdel="' + r.id + '" style="flex:1">ลบ</button></div></div>';
       }).join("") || '<p class="empty">ยังไม่มีเสียงที่เก็บไว้ · สร้างเสียงแล้วจะเก็บให้อัตโนมัติ (50 เทคล่าสุด' + (on ? " + สำรองบนคลัง" : "") + ')</p>')
