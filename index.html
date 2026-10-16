@@ -4,19 +4,19 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="theme-color" content="#0b0e0d" />
-<link rel="manifest" href="manifest.json?v=3.1">
+<link rel="manifest" href="manifest.json?v=3.2">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Meowrin">
-<link rel="icon" type="image/png" href="icon-192.png?v=3.1">
-<link rel="apple-touch-icon" href="icon-192.png?v=3.1">
+<link rel="icon" type="image/png" href="icon-192.png?v=3.2">
+<link rel="apple-touch-icon" href="icon-192.png?v=3.2">
 <title>Meowrin factory</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600&family=Mitr:wght@500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=3.1">
-<link rel="stylesheet" href="sheet.css?v=3.1">
+<link rel="stylesheet" href="style.css?v=3.2">
+<link rel="stylesheet" href="sheet.css?v=3.2">
 </head>
 <body>
 <div class="wrap">
@@ -102,7 +102,7 @@
         <div id="s2Wrap" hidden>
           <label>ชื่อคลิปกับข้อความบนจอ <span class="lhint">แตะเพื่อคัดลอก</span></label>
           <div class="p1card" id="p1Card"></div>
-          <label>บทพากย์</label>
+          <label>บทพากย์ (ต้นฉบับ) <span class="lhint">แก้ในแท็บเสียงไม่เปลี่ยนตรงนี้</span></label>
           <div class="s2view" id="s2View"></div>
           <button class="btn" id="toVoice" style="width:100%;margin-top:10px">แก้บท + สร้างเสียง →</button>
         </div>
@@ -122,8 +122,9 @@
       <textarea id="vText" class="vtext" rows="1" aria-label="บทพากย์" placeholder="บทพากย์ (แตะตรงนี้เพื่อแก้)" spellcheck="false"></textarea>
       <div class="vcount"><span class="lhint" id="s2Count"></span></div>
       <div id="vMsg"></div>
-      <div class="row" style="margin-top:8px">
+      <div class="row wrap" style="margin-top:8px">
         <button class="btn ghost" id="copyBtn" style="flex:1">คัดลอกบท</button>
+        <button class="btn ghost" id="s2Orig" style="flex:1" hidden>กลับไปบทต้นฉบับ</button>
         <button class="btn ghost" id="s2Undo" style="flex:1" hidden>↶ สลับกับบทก่อนแก้</button>
       </div>
       <div class="tts">
@@ -400,6 +401,6 @@
   </div>
 </div>
 
-<script src="store.js?v=3.1" data-boot="version.js?v=3.1 icons.js?v=3.1 dialog.js?v=3.1 budget.js?v=3.1 sync.js?v=3.1 app.js?v=3.1 llm.js?v=3.1 ai.js?v=3.1 r2.js?v=3.1 voicestore.js?v=3.1 tts.js?v=3.1 gdrive.js?v=3.1"></script>
+<script src="store.js?v=3.2" data-boot="version.js?v=3.2 icons.js?v=3.2 dialog.js?v=3.2 budget.js?v=3.2 sync.js?v=3.2 app.js?v=3.2 llm.js?v=3.2 ai.js?v=3.2 r2.js?v=3.2 voicestore.js?v=3.2 tts.js?v=3.2 gdrive.js?v=3.2"></script>
 </body>
 </html>

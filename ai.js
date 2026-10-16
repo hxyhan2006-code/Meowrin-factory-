@@ -51,7 +51,7 @@
     var vs = c.vers.filter(function(v){ return v.s1Len; });
     if(!vs.length) return;
     var e = { id:c.clip.id, clip:c.clip, at:Date.now(), trans:c.trans, active:Math.max(0, vs.indexOf(c.vers[c.active])),
-              vers: vs.map(function(v){ return { pid:v.pid, pname:v.pname, eye:v.eye, writer:v.writer, chat:v.chat, s1Len:v.s1Len, s1:v.s1, s2:v.s2, prev:v.prev || "", cost:v.cost || 0, free:v.free || 0, at:v.at }; }) };
+              vers: vs.map(function(v){ return { pid:v.pid, pname:v.pname, eye:v.eye, writer:v.writer, chat:v.chat, s1Len:v.s1Len, s1:v.s1, s2:v.s2, prev:v.prev || "", orig:v.orig || "", cost:v.cost || 0, free:v.free || 0, at:v.at }; }) };
     hist = [e].concat(hist.filter(function(h){ return h.id !== e.id; })).slice(0, HIST_MAX);
     if(!save(HIST, hist)) MW.toast("พื้นที่เก็บเต็ม บันทึกประวัติไม่ได้", true);
     renderHistCount();
@@ -117,7 +117,7 @@
       v.s1 = await callAI(ch, sys, v.eye, v);
       v.chat = ch.concat([{ role:"assistant", content: v.s1 }]); v.s1Len = v.chat.length;
       saveHist(c); v.step = "กำลังเขียนบท..."; paint(c, v);
-      v.s2 = await callAI(chatS1(v).concat([{ role:"user", content:"รัน" }]), sys, v.writer, v); tidy(v);
+      v.s2 = await callAI(chatS1(v).concat([{ role:"user", content:"รัน" }]), sys, v.writer, v); tidy(v); v.orig = v.s2;
     });
   }
 
@@ -164,6 +164,7 @@
     ["s1FbBtn","s1Run","s2FbBtn"].forEach(function(id){ $(id).disabled = v.busy || !v.s1Len; });
     $("s2Wrap").hidden = !v.s2;
     $("s2Undo").hidden = !v.prev;
+    $("s2Orig").hidden = !edited(v);
     $("vBody").hidden = !v.s2; $("vNo").hidden = !!v.s2;
     $("vMsg").innerHTML = $("vStatus").innerHTML; /* แก้บทด้วย AI จากหน้าเสียงก็เห็นสถานะ */
     $("vText").readOnly = v.busy;
@@ -176,7 +177,7 @@
     $("s1Fold").hidden = !v.s1Len;
     var p = parts(v.s2 || "");
     renderP1(p.title);
-    $("s2View").textContent = p.script;
+    $("s2View").textContent = v.orig ? parts(v.orig).script : p.script; /* หน้าบทโชว์ต้นฉบับที่ AI เขียน แก้ในหน้าเสียงไม่เปลี่ยนตรงนี้ */
     $("vText").value = p.script; fit();
     $("vClip").textContent = cur.clip.title;
     $("vVer").textContent = v.pname + " · เขียนโดย " + short(v.writer);
@@ -211,7 +212,7 @@
   /* แก้บทในหน้าเสียง = แก้เฉพาะ PART 2 ของเวอร์ชันที่เปิดอยู่ (PART 1 คงเดิม) */
   $("vText").addEventListener("input", function(){
     var v = activeV(); if(!v) return;
-    setScript(v, this.value); $("s2View").textContent = this.value; fit(); renderCount();
+    keepOrig(v); setScript(v, this.value); fit(); renderCount(); $("s2Orig").hidden = !edited(v);
   });
   ["s1Out","vText","sTrans"].forEach(function(id){ $(id).addEventListener("change", function(){ if(cur) saveHist(cur); }); }); /* แก้เองแล้วเก็บให้ด้วย */
 
@@ -228,7 +229,7 @@
     var c = cur, v = activeV(); if(!v || !v.s1Len) return;
     v.writer = cfg.model; /* เขียนใหม่ด้วยตัวเขียนบทที่ตั้งไว้ตอนนี้ */
     step(c, v, "กำลังเขียนบท...", async function(){
-      v.s2 = await callAI(chatS1(v).concat([{ role:"user", content:"รัน" }]), promptText(v), v.writer, v); tidy(v);
+      v.s2 = await callAI(chatS1(v).concat([{ role:"user", content:"รัน" }]), promptText(v), v.writer, v); tidy(v); v.orig = v.s2;
     }).then(function(){ finishMade(c); });
   });
   /* แก้บท: อันเดิมเก็บไว้ใน v.prev ให้สลับกลับได้ */
@@ -237,8 +238,8 @@
   function editScript(fb){
     var c = cur, v = activeV(), txt = v ? parts(v.s2 || "").script : ""; if(!v || v.busy || !fb || !txt) return;
     step(c, v, "กำลังแก้บท...", async function(){
-      var out = await callAI([{ role:"user", content: "แก้บทพากย์ด้านล่างตามคำสั่ง แล้วตอบกลับมาเฉพาะบทพากย์ฉบับแก้ทั้งหมด ไม่ต้องมีหัวข้อ ชื่อคลิป หรือคำอธิบายเพิ่ม\nคงรูปแบบการขึ้นบรรทัดแบบเดิม: หนึ่งประโยคหรือหนึ่งช่วงหายใจต่อหนึ่งบรรทัด ไม่เว้นบรรทัดว่าง ห้ามรวมเป็นย่อหน้ายาว\n\nคำสั่ง: " + fb + "\n\n----\n" + txt }], "", v.writer, v, true);
-      v.prev = v.s2; setScript(v, reflow(parts(out).script));
+      var out = await callAI([{ role:"user", content: "แก้บทพากย์ด้านล่างตามคำสั่ง แล้วตอบกลับมาเฉพาะบทพากย์ฉบับแก้ทั้งหมด ไม่ต้องมีหัวข้อ ชื่อคลิป หรือคำอธิบายเพิ่ม\nคงการเว้นบรรทัดว่างคั่นท่อนแบบเดิม ภายในท่อนให้เขียนต่อเนื่องเป็นบรรทัดเดียว ห้ามขึ้นบรรทัดใหม่กลางประโยค\n\nคำสั่ง: " + fb + "\n\n----\n" + txt }], "", v.writer, v, true);
+      keepOrig(v); v.prev = v.s2; setScript(v, reflow(parts(out).script));
     });
   }
   $("s2FbBtn").addEventListener("click", function(){ var fb = $("s2Fb").value.trim(); if(!fb) return; $("s2Fb").value = ""; editScript(fb); });
@@ -246,7 +247,13 @@
     var b = e.target.closest("button[data-q]"); if(!b) return;
     if(b.dataset.q !== "lines") return editScript(QUICK[b.dataset.q]);
     var v = activeV(); if(!v || v.busy || !v.s2) return; /* จัดบรรทัดด้วยโค้ด ฟรี ไม่เรียก AI */
-    v.prev = v.s2; tidy(v); saveHist(cur); renderVersion();
+    keepOrig(v); v.prev = v.s2; tidy(v); saveHist(cur); renderVersion();
+  });
+  function keepOrig(v){ if(!v.orig) v.orig = v.s2; } /* บทที่ยังไม่เคยแก้ (หรือเก็บก่อนมีระบบนี้) = ต้นฉบับ เก็บไว้ก่อนแก้ครั้งแรก */
+  function edited(v){ return !!(v && v.orig && parts(v.orig).script.trim() !== parts(v.s2 || "").script.trim()); }
+  $("s2Orig").addEventListener("click", function(){
+    var v = activeV(); if(!v || v.busy || !edited(v)) return;
+    v.prev = v.s2; v.s2 = v.orig; saveHist(cur); renderVersion(); /* ไม่พอใจที่แก้ → กลับไปบทต้นฉบับ กดสลับกับบทก่อนแก้เพื่อเอาที่แก้คืนได้ */
   });
   $("s2Undo").addEventListener("click", function(){
     var v = activeV(); if(!v || v.busy || !v.prev) return;
@@ -260,46 +267,12 @@
     var m1 = /^[^\n]*PART\s*1[^\n]*$/im.exec(t.slice(0, m2.index));
     return { head: t.slice(0, m2.index + m2[0].length), title: m1 ? t.slice(m1.index + m1[0].length, m2.index).trim() : "", script: t.slice(m2.index + m2[0].length).trim() };
   }
-  /* รับประกันรูปแบบบทด้วยโค้ด (ไม่พึ่ง AI): บรรทัดยาวเกิน LINE_MAX ตัดที่ช่องว่างระหว่างวลีให้ยาวพอๆ กัน
-     ข้อความไม่มีช่องว่างตัดด้วย Intl.Segmenter('th') ถ้ามี (ไม่มี = ปล่อยไว้ ไม่พัง) · บรรทัดสั้นกว่า LINE_MIN รวมกับบรรทัดติดกัน
-     บรรทัดว่างคั่นท่อนคงไว้ตามเดิมและไม่รวมข้ามท่อน */
-  var LINE_MAX = 40, LINE_MIN = 16, LINE_SOFT = 44;
-  var seg = null; try { seg = new Intl.Segmenter("th", { granularity:"word" }); } catch(e){}
-  function pieces(line){ /* คำ/วลี + ตัวบอกว่าต่อด้วยช่องว่างไหม */
-    var out = [];
-    line.trim().split(/\s+/).forEach(function(w){
-      if(w.length > LINE_MAX && seg){
-        var parts = Array.from(seg.segment(w), function(x){ return x.segment; });
-        parts.forEach(function(p, i){ out.push({ t:p, sp: i === parts.length - 1 }); });
-      } else out.push({ t:w, sp:true });
-    });
-    return out;
-  }
-  function wrapLine(line){
-    var t = line.trim(); if(t.length <= LINE_MAX) return [t];
-    var ps = pieces(t), n = Math.ceil(t.length / LINE_MAX), lim = Math.min(LINE_MAX, Math.ceil(t.length / n) + 8);
-    var out = [], row = "", gap = "";
-    ps.forEach(function(p){
-      if(row && (row + gap + p.t).length > lim){ out.push(row); row = p.t; } else row = row + gap + p.t;
-      gap = p.sp ? " " : "";
-    });
-    if(row) out.push(row);
-    return out;
-  }
+  /* จัดรูปแบบบทด้วยโค้ด (ไม่พึ่ง AI): ภายในท่อนเดียวกันรวมเป็นบรรทัดต่อเนื่อง ไม่ตัดตามความกว้างจอ (ให้จอตัดบรรทัดให้เอง เหมือน ElevenLabs)
+     ขึ้นบรรทัดจริงเฉพาะที่เว้นบรรทัดว่างคั่นท่อน · ทุกขึ้นบรรทัดในช่องบทถูกส่งไปเจนเสียงเป็นจังหวะหยุด จึงห้ามมีบรรทัดที่ตัดเพราะความกว้าง */
   function reflow(text){
-    var rows = [];
-    text.split("\n").forEach(function(l){ if(!l.trim()) rows.push(""); else wrapLine(l).forEach(function(r){ rows.push(r); }); });
-    var res = [];
-    for(var i = 0; i < rows.length; i++){ /* รวมบรรทัดสั้นกับบรรทัดถัดไป (หรือก่อนหน้า) ในท่อนเดียวกัน */
-      var r = rows[i];
-      if(r && r.length < LINE_MIN){
-        if(rows[i+1] && (r + " " + rows[i+1]).length <= LINE_SOFT){ rows[i+1] = r + " " + rows[i+1]; continue; }
-        var p = res.length - 1;
-        if(p >= 0 && res[p] && (res[p] + " " + r).length <= LINE_SOFT){ res[p] += " " + r; continue; }
-      }
-      res.push(r);
-    }
-    return res.join("\n");
+    return text.split(/\n[ \t]*\n/).map(function(p){
+      return p.split("\n").map(function(l){ return l.trim(); }).filter(Boolean).join(" ");
+    }).filter(Boolean).join("\n\n");
   }
   function tidy(v){ setScript(v, reflow(parts(v.s2 || "").script)); } /* ใช้หลังทุกครั้งที่ AI ส่งบทมา */
   function setScript(v, script){ var h = parts(v.s2 || "").head; v.s2 = h ? h + "\n" + script : script; }

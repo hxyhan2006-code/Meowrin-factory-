@@ -83,6 +83,21 @@ try {
   await main.page.evaluate(() => { document.querySelector('#vBody').hidden = false; document.querySelector('#vNo').hidden = true; document.querySelector('#ttsOut').hidden = false; ['ttsSub', 'ttsDirect', 'ttsRaw', 'ttsShare'].forEach((i) => { document.getElementById(i).hidden = false; }); });
   check('แท็บเสียง: แถวปุ่มใต้เสียงที่เจนแล้วไม่ล้นจอ', await main.page.evaluate(() => { const bs = [...document.querySelectorAll('#ttsOut .row .btn')]; return bs.length === 5 && bs.every((b) => b.getBoundingClientRect().width > 0 && b.getBoundingClientRect().right <= innerWidth + 1); }));
   check('เสียงที่เก็บไว้: กดเล่นแล้วปิดหน้าต่าง เสียงหยุด', playing && !(await main.page.evaluate(() => window.__auds.some((a) => !a.paused))));
+  // บทพากย์: แก้ในหน้าเสียงต้องไม่ทับต้นฉบับในหน้าบท · จัดบรรทัดใหม่ต้องรวมบรรทัดที่ถูกตัด (ไม่ตัดตามความกว้างจอ)
+  await main.page.evaluate(() => {
+    const clip = { id: 'smokeclip', title: 'คลิปทดสอบ', channel: 'ช่อง', views: 1, published: '2026-01-01', score: 1 };
+    MW.history.merge([{ id: 'smokeclip', clip, at: Date.now(), trans: '', active: 0, vers: [{ pid: 'A', pname: 'A', eye: 'x', writer: 'x', chat: [{ role: 'user', content: 'u' }, { role: 'assistant', content: 's1' }], s1Len: 2, s1: 's1', s2: 'PART 1\nชื่อ\nPART 2\nลูฟี่เคยสร้างอุบัติเหตุ\nพุ่งชนหน้าอกสาว\n\nรอบแรกเกิดขึ้นที่เกาะ', at: Date.now() }] }]);
+    MW.data.picked = clip; MW.persist();
+  });
+  await main.page.click('nav [data-tab=script]'); await main.page.click('nav [data-tab=voice]'); await main.page.waitForTimeout(500);
+  const orig = 'ลูฟี่เคยสร้างอุบัติเหตุ\nพุ่งชนหน้าอกสาว\n\nรอบแรกเกิดขึ้นที่เกาะ';
+  await main.page.evaluate(() => document.querySelector('#quickFb [data-q=lines]').click()); await main.page.waitForTimeout(300);
+  check('จัดบรรทัดใหม่: รวมบรรทัดที่ถูกตัดในท่อนเดียวกัน คงบรรทัดว่างคั่นท่อน', (await main.page.inputValue('#vText')) === 'ลูฟี่เคยสร้างอุบัติเหตุ พุ่งชนหน้าอกสาว\n\nรอบแรกเกิดขึ้นที่เกาะ', await main.page.inputValue('#vText'));
+  check('หน้าบทยังโชว์ต้นฉบับ แม้แก้ในหน้าเสียงแล้ว', (await main.page.textContent('#s2View')) === orig);
+  check('มีปุ่มกลับไปบทต้นฉบับหลังแก้', await main.page.evaluate(() => !document.querySelector('#s2Orig').hidden));
+  await main.page.evaluate(() => document.querySelector('#s2Orig').click()); await main.page.waitForTimeout(300);
+  check('กดกลับไปบทต้นฉบับ: บทในหน้าเสียงกลับเป็นต้นฉบับ', (await main.page.inputValue('#vText')) === orig);
+  check('แท็บเสียง: แถวปุ่มคัดลอก/กลับต้นฉบับ/สลับบทก่อนแก้ ไม่ล้นจอ', await main.page.evaluate(() => { ['s2Orig', 's2Undo'].forEach((i) => { document.getElementById(i).hidden = false; }); const bs = ['copyBtn', 's2Orig', 's2Undo'].map((i) => document.getElementById(i).getBoundingClientRect()); return bs.every((b) => b.width > 0 && b.right <= innerWidth + 1); }));
   await finishPage(main);
   // หน้าซับ (?voice=)
   const sub = await open('/sub/?voice=1700000000001', 'หน้าซับ');
