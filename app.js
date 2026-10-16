@@ -198,7 +198,7 @@
   $("pCopy").addEventListener("click", function(){
     var url = $("pOpen").href;
     (navigator.clipboard ? navigator.clipboard.writeText(url) : Promise.reject()).then(function(){ toast("คัดลอกลิงก์แล้ว"); })
-      .catch(function(){ window.prompt("คัดลอกลิงก์ตรงนี้", url); });
+      .catch(function(){ MWDialog.copy(url); });
   });
   $("pMade").addEventListener("click", function(){
     var id = playing.id; if(data.made[id]) delete data.made[id]; else data.made[id] = true;
@@ -421,13 +421,13 @@
   $("importFile").addEventListener("change", function(){
     var f = this.files[0]; if(!f) return;
     var r = new FileReader();
-    r.onload = function(){
+    r.onload = async function(){
       try{
         var j = JSON.parse(r.result);
         if(!Array.isArray(j.channels) || typeof j.made !== "object") throw 0;
         /* prompt/เสียงในไฟล์จะทับของที่มีในเครื่อง → ถามก่อนถ้าของเดิมมีเนื้อหาและต่างจากในไฟล์ */
         var clash = (j.ai && MW.aiCfg && MW.aiCfg.differs(j.ai)) || (j.tts && MW.ttsCfg && MW.ttsCfg.differs(j.tts));
-        if(clash && !window.confirm("ไฟล์สำรองมี prompt/เสียง ที่ต่างจากในเครื่อง นำเข้าแล้วจะทับของในเครื่อง ตกลงไหม?")){ msg("setMsg","ยกเลิกการนำเข้า ไม่มีอะไรเปลี่ยน"); return; }
+        if(clash && !await MWDialog.confirm("ไฟล์สำรองมี prompt/เสียง ที่ต่างจากในเครื่อง นำเข้าแล้วจะทับของในเครื่อง ตกลงไหม?")){ msg("setMsg","ยกเลิกการนำเข้า ไม่มีอะไรเปลี่ยน"); return; }
         data.channels = j.channels.map(function(ch){ ch.full = false; return ch; }); /* คลิปไม่อยู่ในไฟล์สำรอง → ให้ดึงย้อนหลังใหม่ */
         data.made = j.made; if(j.saved && typeof j.saved === "object") data.saved = j.saved; persist();
         if(Array.isArray(j.history) && MW.history) MW.history.merge(j.history);

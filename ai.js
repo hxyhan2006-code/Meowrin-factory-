@@ -333,7 +333,7 @@
     (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(function(){
       MW.toast("คัดลอกแล้ว"); b.classList.add("done"); b.querySelector("em").textContent = "✓ คัดลอกแล้ว";
       setTimeout(function(){ b.classList.remove("done"); b.querySelector("em").textContent = "คัดลอก"; }, 1500);
-    }).catch(function(){ window.prompt("คัดลอกตรงนี้", txt); });
+    }).catch(function(){ MWDialog.copy(txt); });
   });
   $("toVoice").addEventListener("click", function(){ MW.showTab("voice"); });
   function renderCount(){
@@ -344,7 +344,7 @@
   function copy(btn, txt, idle){
     if(!txt){ MW.toast("ยังไม่มีบทให้คัดลอก", true); return; }
     var done = function(){ btn.textContent = "คัดลอกแล้ว"; setTimeout(function(){ btn.textContent = idle; }, 1500); };
-    (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(done).catch(function(){ window.prompt("คัดลอกตรงนี้", txt); });
+    (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(done).catch(function(){ MWDialog.copy(txt); });
   }
   $("copyBtn").addEventListener("click", function(){ copy(this, $("vText").value.trim(), "คัดลอกบท"); });
 

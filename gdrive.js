@@ -182,7 +182,7 @@
   if($("gdConnect")) $("gdConnect").addEventListener("click", function(){ connect().then(function(){ show("เชื่อมแล้ว", "ok"); }, function(err){ show(err.message, "err"); }); });
   bind("gdNow", async function(){ var r = await backupData(); return "สำรองขึ้น Drive แล้ว (" + r.keys + " รายการ · " + r.kb.toFixed(0) + " KB)"; });
   bind("gdRestore", async function(){
-    if(!window.confirm("กู้คืนจาก Drive? ข้อมูลในเครื่อง (ประวัติ/prompt/ช่อง/ตั้งค่า) จะถูกแทนด้วยของบน Drive · API key ไม่ถูกแตะ")) return "ยกเลิก";
+    if(!await MWDialog.confirm("กู้คืนจาก Drive? ข้อมูลในเครื่อง (ประวัติ/prompt/ช่อง/ตั้งค่า) จะถูกแทนด้วยของบน Drive · API key ไม่ถูกแตะ", { ok:"กู้คืน" })) return "ยกเลิก";
     var r = await restoreData(); setTimeout(function(){ location.reload(); }, 1200);
     return "กู้คืนแล้ว " + r.keys + " รายการ (สำรองเมื่อ " + new Date(r.at).toLocaleString("th-TH") + ") กำลังโหลดใหม่...";
   });

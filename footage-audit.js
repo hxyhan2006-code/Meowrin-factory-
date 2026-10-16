@@ -58,7 +58,7 @@
     else if(b.id === "auditNext"){ commit(); next(); }
     else if(b.id === "auditSkip") next();
     else if(b.id === "auditStop"){ run.i = run.list.length; view(); }
-    else if(b.id === "auditClear"){ if(window.confirm("ล้างผลการตรวจทั้งหมด?")){ log = []; run = null; save(); view(); } }
+    else if(b.id === "auditClear"){ MWDialog.confirm("ล้างผลการตรวจทั้งหมด?", { ok:"ล้าง" }).then(function(ok){ if(ok){ log = []; run = null; save(); view(); } }); }
   });
   view();
 })();

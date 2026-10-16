@@ -238,7 +238,7 @@
       return (k + 1) + ". " + x.t + "\n   → " + (ch ? ch.c.name + " ช่วง " + U.tm(r.from) + "–" + U.tm(r.to) + " (" + (r.to - r.from).toFixed(1) + " วิ)" : "ไม่มีในคลัง: " + x.want); }).join("\n");
     var b = this;
     (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(function(){ b.textContent = "คัดลอกแล้ว"; setTimeout(function(){ b.textContent = "คัดลอกตาราง"; }, 1500); })
-      .catch(function(){ window.prompt("คัดลอกตรงนี้", txt); });
+      .catch(function(){ MWDialog.copy(txt); });
   });
 
   renderSrc();

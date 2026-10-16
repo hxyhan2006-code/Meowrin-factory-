@@ -281,7 +281,7 @@
     if(rcRun){ rcStop = true; return; }
     var todo = rcTodo(); if(!todo.length) return;
     if(!FT.orKey()){ $("rcInfo").textContent = "ยังไม่มี OpenRouter key ในเบราว์เซอร์นี้"; return; }
-    if(!window.confirm("ให้ AI ตรวจตัวละครซ้ำ " + todo.length + " ฉาก ค่า AI ประมาณ " + money(todo.length * 0.0012) + "\nเติมเฉพาะตัวละครที่ขาด ไม่ลบของเดิม ฉากที่ Han แก้เองไม่แตะ · เปิดหน้านี้ค้างไว้")) return;
+    if(!await MWDialog.confirm("ให้ AI ตรวจตัวละครซ้ำ " + todo.length + " ฉาก ค่า AI ประมาณ " + money(todo.length * 0.0012) + "\nเติมเฉพาะตัวละครที่ขาด ไม่ลบของเดิม ฉากที่ Han แก้เองไม่แตะ · เปิดหน้านี้ค้างไว้")) return;
     rcRun = true; rcStop = false; rcMsg = ""; var done = 0, added = 0, cost = 0, dirty = {}, groups = [], i;
     for(i = 0; i < todo.length; i += RC_CHUNK) groups.push(todo.slice(i, i + RC_CHUNK));
     renderRc(); await wake(true);
@@ -323,16 +323,16 @@
     $("deepBtn").textContent = d.ok.length ? "🔬 อัปเกรด " + d.ok.length + " คลิป (ค่า AI ≈ " + money(d.cost) + ")" : "🔬 ไม่มีคลิปที่ต้องอัปเกรด";
   }
   $("godInfo").textContent = "";
-  $("godBtn").addEventListener("click", function(){
+  $("godBtn").addEventListener("click", async function(){
     var d = deepState(); if(!d.gok.length) return;
-    if(!window.confirm("ตรวจขั้นเทพ " + d.gok.length + " คลิป (AI ดูทีละเฟรม 2-5 เฟรมต่อฉาก) ค่า AI ประมาณ " + money(d.gcost) + "\nงบต่อรอบตั้งไว้ " + money(cfg.budget) + " ถึงแล้วจะพักเอง กด ทำต่อ ได้\nเปิดหน้านี้ค้างไว้ระหว่างทำ")) return;
+    if(!await MWDialog.confirm("ตรวจขั้นเทพ " + d.gok.length + " คลิป (AI ดูทีละเฟรม 2-5 เฟรมต่อฉาก) ค่า AI ประมาณ " + money(d.gcost) + "\nงบต่อรอบตั้งไว้ " + money(cfg.budget) + " ถึงแล้วจะพักเอง กด ทำต่อ ได้\nเปิดหน้านี้ค้างไว้ระหว่างทำ")) return;
     queue = queue.filter(function(q){ return q.status === "wait" || q.status === "run"; }).concat(d.gok.map(function(c){
       return { id:c.id, mode:"deep", god:true, album:c.album, status:"wait", err:"", p:0, file:null, toCloud:false, info:{ name:c.name, type:c.type, size:c.size, lastModified:c.lastModified, picked:Date.now() } }; }));
     renderQueue(); run();
   });
-  $("deepBtn").addEventListener("click", function(){
+  $("deepBtn").addEventListener("click", async function(){
     var d = deepState(); if(!d.ok.length) return;
-    if(!window.confirm("อัปเกรด " + d.ok.length + " คลิปเป็นดัชนีละเอียด ค่า AI ประมาณ " + money(d.cost) + "\nงบต่อรอบตั้งไว้ " + money(cfg.budget) + " ถึงแล้วจะพักเอง กด ทำต่อ ได้ (ปรับงบได้ที่ ตั้งค่า)\nเปิดหน้านี้ค้างไว้ระหว่างทำ")) return;
+    if(!await MWDialog.confirm("อัปเกรด " + d.ok.length + " คลิปเป็นดัชนีละเอียด ค่า AI ประมาณ " + money(d.cost) + "\nงบต่อรอบตั้งไว้ " + money(cfg.budget) + " ถึงแล้วจะพักเอง กด ทำต่อ ได้ (ปรับงบได้ที่ ตั้งค่า)\nเปิดหน้านี้ค้างไว้ระหว่างทำ")) return;
     queue = queue.filter(function(q){ return q.status === "wait" || q.status === "run"; }).concat(d.ok.map(function(c){
       return { id:c.id, mode:"deep", album:c.album, status:"wait", err:"", p:0, file:null, toCloud:false, info:{ name:c.name, type:c.type, size:c.size, lastModified:c.lastModified, picked:Date.now() } }; }));
     renderQueue(); run();
@@ -412,8 +412,8 @@
       return FT.store.putMany(arr).then(function(){ msg("setMsg", "กู้คืนแล้ว " + arr.length + " คลิป (คลิปเดิมที่ id ซ้ำถูกแทนที่)", "ok"); return refreshLib(); });
     }).catch(function(err){ msg("setMsg", "กู้คืนไม่ได้: " + err.message, "err"); });
   });
-  $("wipeBtn").addEventListener("click", function(){
-    if(!window.confirm("ลบดัชนีฟุตเทจทั้งหมดในเครื่องนี้? (โหลดไฟล์สำรองไว้ก่อนถ้ายังต้องใช้)")) return;
+  $("wipeBtn").addEventListener("click", async function(){
+    if(!await MWDialog.confirm("ลบดัชนีฟุตเทจทั้งหมดในเครื่องนี้? (โหลดไฟล์สำรองไว้ก่อนถ้ายังต้องใช้)", { ok:"ลบ" })) return;
     FT.store.clear().then(function(){ msg("setMsg", "ลบแล้ว", "ok"); return refreshLib(); });
   });
   function renderDb(){

@@ -244,7 +244,7 @@
     if(has){ en = keep(en); th = keep(th); }
     else { en.push(nx ? nx.key.replace(/(^| )\w/g, function(m){ return m.toUpperCase(); }) : k); th.push(labelOf[k] || k); }
     a.characters = en; a.characters_th = th; a.fixed = true; chipCache.delete(sc);
-    try{ await FT.store.put(bigCur.c); }catch(err){ window.alert("บันทึกไม่ได้: " + err.message); }
+    try{ await FT.store.put(bigCur.c); }catch(err){ await MWDialog.alert("บันทึกไม่ได้: " + err.message); }
     renderBigChars(); search();
   });
   function openBig(c, sc, src, text){
